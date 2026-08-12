@@ -1,0 +1,116 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "VEH-.####",
+ "creation": "2026-07-03 14:12:40.977229",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "vehicle_type",
+  "registration_number",
+  "make",
+  "model",
+  "color",
+  "belongs_to",
+  "active",
+  "remarks",
+  "flat",
+  "owner_reference",
+  "tenant_reference"
+ ],
+ "fields": [
+  {
+   "fieldname": "vehicle_type",
+   "fieldtype": "Select",
+   "label": "Vehicle Type",
+   "options": "Car\nBike\nBicycle\nOther"
+  },
+  {
+   "fieldname": "registration_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Registration Number",
+   "reqd": 1
+  },
+  {
+   "fieldname": "make",
+   "fieldtype": "Data",
+   "label": "Make"
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Model"
+  },
+  {
+   "fieldname": "color",
+   "fieldtype": "Data",
+   "label": "Color"
+  },
+  {
+   "fieldname": "belongs_to",
+   "fieldtype": "Select",
+   "label": "Belongs to",
+   "options": "Owner\nTenant"
+  },
+  {
+   "default": "0",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "flat",
+   "fieldtype": "Link",
+   "label": "Flat",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "owner_reference",
+   "fieldtype": "Link",
+   "label": "Owner Reference",
+   "options": "Owners"
+  },
+  {
+   "fieldname": "tenant_reference",
+   "fieldtype": "Link",
+   "label": "Tenant Reference",
+   "options": "Tenants"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-12 09:20:12.770031",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Resident Vehicles",
+ "naming_rule": "Expression",
+ "owner": "md.faisalpapa@gmail.com",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

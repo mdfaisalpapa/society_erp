@@ -1,0 +1,126 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "MT-.####",
+ "creation": "2026-06-26 10:29:53.909605",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_9m1v",
+  "received_on",
+  "resident",
+  "category",
+  "description",
+  "status",
+  "photo",
+  "amended_from",
+  "priority_level",
+  "preferred_visit_time",
+  "resolution_remarks",
+  "resident_feedbackrating"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_9m1v",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "Now",
+   "fieldname": "received_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Received On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "resident",
+   "fieldtype": "Link",
+   "label": "Resident",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "label": "Category",
+   "options": "Plumbing\nElectrical\nCivil\nCarpentry\nHanding Over\nDefects Rectification\nOther"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "default": "Open",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nAssigned\nResolved"
+  },
+  {
+   "fieldname": "photo",
+   "fieldtype": "Attach Image",
+   "label": "Photo"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Maintenance Ticket",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "priority_level",
+   "fieldtype": "Select",
+   "label": "Priority Level",
+   "options": "Low\nRoutine\nHigh\nEmergency"
+  },
+  {
+   "fieldname": "preferred_visit_time",
+   "fieldtype": "Datetime",
+   "label": "Preferred Visit Time"
+  },
+  {
+   "fieldname": "resolution_remarks",
+   "fieldtype": "Text",
+   "label": "Resolution Remarks"
+  },
+  {
+   "fieldname": "resident_feedbackrating",
+   "fieldtype": "Rating",
+   "label": "Resident Feedback/Rating"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-12 09:21:01.054183",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Maintenance Ticket",
+ "naming_rule": "Expression",
+ "owner": "md.faisalpapa@gmail.com",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

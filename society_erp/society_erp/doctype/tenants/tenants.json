@@ -1,0 +1,150 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "prompt",
+ "creation": "2026-07-03 12:49:58.902110",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "flat",
+  "tenant_name",
+  "relationship",
+  "mobile_no",
+  "email",
+  "telegram_chat_id",
+  "telegram_user_id",
+  "start_date",
+  "end_date",
+  "active",
+  "registration_status",
+  "remarks",
+  "rental_agreement",
+  "police_verification",
+  "id_proof",
+  "photo",
+  "ntfy_topic"
+ ],
+ "fields": [
+  {
+   "fieldname": "flat",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Flat",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tenant_name",
+   "fieldtype": "Data",
+   "label": "Tenant Name"
+  },
+  {
+   "fieldname": "relationship",
+   "fieldtype": "Select",
+   "label": "Relationship",
+   "options": "Tenant\nCaretaker\nCompany Lease\nGuest House"
+  },
+  {
+   "fieldname": "mobile_no",
+   "fieldtype": "Data",
+   "label": "Mobile No"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email"
+  },
+  {
+   "fieldname": "telegram_chat_id",
+   "fieldtype": "Data",
+   "label": "Telegram Chat ID"
+  },
+  {
+   "fieldname": "telegram_user_id",
+   "fieldtype": "Data",
+   "label": "Telegram User ID"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date"
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "End Date"
+  },
+  {
+   "default": "0",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active"
+  },
+  {
+   "fieldname": "registration_status",
+   "fieldtype": "Select",
+   "label": "Registration Status",
+   "options": "Unverified\nPending\nVerified by Bot\nVerified Physically\nRejected"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "rental_agreement",
+   "fieldtype": "Attach",
+   "label": "Rental Agreement"
+  },
+  {
+   "fieldname": "police_verification",
+   "fieldtype": "Attach",
+   "label": "Police Verification"
+  },
+  {
+   "fieldname": "id_proof",
+   "fieldtype": "Attach",
+   "label": "ID Proof"
+  },
+  {
+   "fieldname": "photo",
+   "fieldtype": "Attach Image",
+   "label": "Photo"
+  },
+  {
+   "fieldname": "ntfy_topic",
+   "fieldtype": "Data",
+   "label": "ntfy Topic"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-12 09:19:16.842983",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Tenants",
+ "naming_rule": "Expression",
+ "owner": "md.faisalpapa@gmail.com",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

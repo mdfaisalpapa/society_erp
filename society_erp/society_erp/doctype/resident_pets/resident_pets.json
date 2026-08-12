@@ -1,0 +1,111 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "PET-.####",
+ "creation": "2026-06-30 12:58:08.819228",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_5pom",
+  "pet_name",
+  "license_no",
+  "license_issue_date",
+  "license_expiry_date",
+  "vaccination_certificate_no",
+  "vaccination_date",
+  "vaccination_due_date",
+  "flat",
+  "pet_photo",
+  "belongs_to",
+  "owner_reference",
+  "tenant_reference"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_5pom",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "pet_name",
+   "fieldtype": "Data",
+   "label": "Pet Name"
+  },
+  {
+   "fieldname": "license_no",
+   "fieldtype": "Data",
+   "label": "License no"
+  },
+  {
+   "fieldname": "license_issue_date",
+   "fieldtype": "Date",
+   "label": "License Issue Date"
+  },
+  {
+   "fieldname": "license_expiry_date",
+   "fieldtype": "Date",
+   "label": "License Expiry Date"
+  },
+  {
+   "fieldname": "vaccination_certificate_no",
+   "fieldtype": "Data",
+   "label": "Vaccination Certificate No"
+  },
+  {
+   "fieldname": "vaccination_date",
+   "fieldtype": "Date",
+   "label": "Vaccination Date"
+  },
+  {
+   "fieldname": "vaccination_due_date",
+   "fieldtype": "Date",
+   "label": "Vaccination Due Date"
+  },
+  {
+   "fieldname": "flat",
+   "fieldtype": "Link",
+   "label": "Flat",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "pet_photo",
+   "fieldtype": "Attach Image",
+   "label": "Pet Photo"
+  },
+  {
+   "fieldname": "belongs_to",
+   "fieldtype": "Select",
+   "label": "Belongs To",
+   "options": "Owner\nTenant"
+  },
+  {
+   "fieldname": "owner_reference",
+   "fieldtype": "Link",
+   "label": "Owner reference",
+   "options": "Owners"
+  },
+  {
+   "fieldname": "tenant_reference",
+   "fieldtype": "Link",
+   "label": "Tenant Reference",
+   "options": "Tenants"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-08-12 09:20:23.164016",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Resident Pets",
+ "naming_rule": "Expression",
+ "owner": "md.faisalpapa@gmail.com",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

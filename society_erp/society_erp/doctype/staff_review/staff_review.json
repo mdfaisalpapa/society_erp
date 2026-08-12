@@ -1,0 +1,90 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "REV-.####",
+ "creation": "2026-07-12 05:32:43.005815",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_cd9h",
+  "amended_from",
+  "staff",
+  "flat",
+  "review_type",
+  "rating",
+  "comments"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_cd9h",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Staff Review",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "staff",
+   "fieldtype": "Link",
+   "label": "Staff",
+   "options": "Domestic Staff"
+  },
+  {
+   "fieldname": "flat",
+   "fieldtype": "Link",
+   "label": "Flat",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "review_type",
+   "fieldtype": "Select",
+   "label": "Review Type",
+   "options": "Rating\nComplaint"
+  },
+  {
+   "fieldname": "rating",
+   "fieldtype": "Int",
+   "label": "Rating"
+  },
+  {
+   "fieldname": "comments",
+   "fieldtype": "Text",
+   "label": "Comments"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-12 09:18:46.083753",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Staff Review",
+ "naming_rule": "Expression",
+ "owner": "md.faisalpapa@gmail.com",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

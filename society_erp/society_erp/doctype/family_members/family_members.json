@@ -1,0 +1,99 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "FAM-.####",
+ "creation": "2026-07-11 03:55:20.323069",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "parent_flat",
+  "member_name",
+  "relationship",
+  "telegram_chat_id",
+  "status",
+  "mobile_no",
+  "telegram_user_id",
+  "ntfy_topic",
+  "registration_status"
+ ],
+ "fields": [
+  {
+   "fieldname": "parent_flat",
+   "fieldtype": "Link",
+   "label": "Parent Flat",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "member_name",
+   "fieldtype": "Data",
+   "label": "Member Name"
+  },
+  {
+   "fieldname": "relationship",
+   "fieldtype": "Select",
+   "label": "Relationship",
+   "options": "Spouse\nChild\nParent\nSibling\nOther"
+  },
+  {
+   "fieldname": "telegram_chat_id",
+   "fieldtype": "Data",
+   "label": "Telegram Chat ID"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Active\nInactive"
+  },
+  {
+   "fieldname": "mobile_no",
+   "fieldtype": "Phone",
+   "label": "Mobile No"
+  },
+  {
+   "fieldname": "telegram_user_id",
+   "fieldtype": "Data",
+   "label": "Telegram User ID"
+  },
+  {
+   "fieldname": "ntfy_topic",
+   "fieldtype": "Data",
+   "label": "ntfy Topic"
+  },
+  {
+   "fieldname": "registration_status",
+   "fieldtype": "Select",
+   "label": "Registration Status",
+   "options": "Pending\nVerified by Bot\nVerified Physically\nRejected"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-12 09:21:12.642289",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Family Members",
+ "naming_rule": "Autoincrement",
+ "owner": "md.faisalpapa@gmail.com",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,156 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "creation": "2026-07-07 03:54:40.705923",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "flat",
+  "owner_name",
+  "owner_address",
+  "mobile_no",
+  "email",
+  "telegram_chat_id",
+  "telegram_user_id",
+  "start_date",
+  "end_date",
+  "active",
+  "registration_status",
+  "remarks",
+  "sale_deed",
+  "id_proof",
+  "photo",
+  "disable_tenant_notifications",
+  "ntfy_topic",
+  "is_aoa_member"
+ ],
+ "fields": [
+  {
+   "fieldname": "flat",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Flat",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "owner_name",
+   "fieldtype": "Data",
+   "label": "Owner Name"
+  },
+  {
+   "fieldname": "owner_address",
+   "fieldtype": "Data",
+   "label": "Owner Address"
+  },
+  {
+   "fieldname": "mobile_no",
+   "fieldtype": "Data",
+   "label": "Mobile No"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email"
+  },
+  {
+   "fieldname": "telegram_chat_id",
+   "fieldtype": "Data",
+   "label": "Telegram Chat ID"
+  },
+  {
+   "fieldname": "telegram_user_id",
+   "fieldtype": "Data",
+   "label": "Telegram User ID"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date"
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "End Date"
+  },
+  {
+   "default": "0",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active"
+  },
+  {
+   "fieldname": "registration_status",
+   "fieldtype": "Select",
+   "label": "Registration Status",
+   "options": "Unverified\nPending\nVerified by Bot\nVerified Physically\nRejected\nNot Registered"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "sale_deed",
+   "fieldtype": "Attach",
+   "label": "Sale Deed"
+  },
+  {
+   "fieldname": "id_proof",
+   "fieldtype": "Attach",
+   "label": "ID Proof"
+  },
+  {
+   "fieldname": "photo",
+   "fieldtype": "Attach Image",
+   "label": "Photo"
+  },
+  {
+   "default": "0",
+   "fieldname": "disable_tenant_notifications",
+   "fieldtype": "Check",
+   "label": "Disable Tenant Notifications"
+  },
+  {
+   "fieldname": "ntfy_topic",
+   "fieldtype": "Data",
+   "label": "ntfy Topic"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_aoa_member",
+   "fieldtype": "Check",
+   "label": "Is AoA Member"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-12 09:20:47.847064",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Owners",
+ "naming_rule": "Expression",
+ "owner": "md.faisalpapa@gmail.com",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

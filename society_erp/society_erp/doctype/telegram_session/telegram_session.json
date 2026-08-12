@@ -1,0 +1,81 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-07-03 17:10:05.736158",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "chat_id",
+  "module",
+  "step",
+  "state_data",
+  "last_updated",
+  "status"
+ ],
+ "fields": [
+  {
+   "fieldname": "chat_id",
+   "fieldtype": "Data",
+   "label": "Chat ID",
+   "unique": 1
+  },
+  {
+   "fieldname": "module",
+   "fieldtype": "Select",
+   "label": "Module",
+   "options": "Tenant\nVehicle\nPet\nVisitor\nMaintenance\nGeneral"
+  },
+  {
+   "fieldname": "step",
+   "fieldtype": "Data",
+   "label": "Step"
+  },
+  {
+   "fieldname": "state_data",
+   "fieldtype": "Code",
+   "label": "State Data"
+  },
+  {
+   "fieldname": "last_updated",
+   "fieldtype": "Datetime",
+   "label": "Last Updated",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Active\nCompleted\nCancelled"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-12 09:19:04.619218",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Telegram Session",
+ "naming_rule": "Random",
+ "owner": "md.faisalpapa@gmail.com",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

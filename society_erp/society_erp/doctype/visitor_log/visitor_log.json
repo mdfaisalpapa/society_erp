@@ -1,0 +1,131 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "VIS-LOG-.YYYY.-.#####",
+ "creation": "2026-06-30 03:19:23.899328",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "resident_details_section",
+  "resident",
+  "entry_type",
+  "visitor_name",
+  "passcode",
+  "expected_date",
+  "expected_end_date",
+  "status",
+  "in_time",
+  "out_time",
+  "visitor_photo",
+  "purpose",
+  "vehicle_number"
+ ],
+ "fields": [
+  {
+   "fieldname": "resident_details_section",
+   "fieldtype": "Section Break",
+   "label": "Resident Details"
+  },
+  {
+   "fieldname": "resident",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Resident",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "entry_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Entry Type",
+   "options": "Walk-in\nPre-Approved\nDelivery\nService Staff",
+   "reqd": 1
+  },
+  {
+   "fieldname": "visitor_name",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Visitor Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "passcode",
+   "fieldtype": "Data",
+   "label": "Passcode"
+  },
+  {
+   "fieldname": "expected_date",
+   "fieldtype": "Date",
+   "label": "Expected Date"
+  },
+  {
+   "fieldname": "expected_end_date",
+   "fieldtype": "Date",
+   "label": "Expected End Date"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Pending\nApproved\nDenied\nEntered\nExited",
+   "reqd": 1
+  },
+  {
+   "fieldname": "in_time",
+   "fieldtype": "Datetime",
+   "label": "In Time"
+  },
+  {
+   "fieldname": "out_time",
+   "fieldtype": "Datetime",
+   "label": "Out Time"
+  },
+  {
+   "fieldname": "visitor_photo",
+   "fieldtype": "Attach Image",
+   "label": "Visitor Photo"
+  },
+  {
+   "fieldname": "purpose",
+   "fieldtype": "Select",
+   "label": "Purpose",
+   "options": "Delivery\nRelative\nGuest\nService\nMaid\nDriver\nTaxi\nOthers"
+  },
+  {
+   "fieldname": "vehicle_number",
+   "fieldtype": "Data",
+   "label": "Vehicle Number"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-12 09:19:30.052491",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Visitor Log",
+ "naming_rule": "Expression",
+ "owner": "md.faisalpapa@gmail.com",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
