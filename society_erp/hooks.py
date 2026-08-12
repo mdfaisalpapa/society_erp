@@ -262,5 +262,17 @@ fixtures = [
         "filters": [
             ["dt", "in", ["Customer", "File"]]
         ]
+    },
+    {
+        "dt": "Server Script",
+        "filters": [
+            ["module", "=", "Society ERP"] 
+        ]
+    },
+    {
+        "dt": "Client Script",
+        "filters": [
+            ["module", "=", "Society ERP"]
+        ]
     }
 ]
