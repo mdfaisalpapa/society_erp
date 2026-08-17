@@ -86,7 +86,7 @@
    "fieldname": "registration_status",
    "fieldtype": "Select",
    "label": "Registration Status",
-   "options": "Unverified\nPending\nVerified by Bot\nVerified Physically\nRejected\nNot Registered"
+   "options": "Unverified\nPending\nVerified by Bot\nVerified Physically\nVerified with CGEWHO Data\nRejected\nNot Registered"
   },
   {
    "fieldname": "remarks",
@@ -129,7 +129,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-17 06:44:52.168932",
+ "modified": "2026-08-17 10:33:09.138781",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Owners",
