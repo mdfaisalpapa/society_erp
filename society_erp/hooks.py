@@ -260,19 +260,25 @@ fixtures = [
     {
         "dt": "Custom Field",
         "filters": [
-            ["dt", "in", ["Customer", "File"]]
+            ["module", "=", "Society Erp"]
+        ]
+    },
+    {
+        "dt": "Property Setter",
+        "filters": [
+            ["module", "=", "Society Erp"]
         ]
     },
     {
         "dt": "Server Script",
         "filters": [
-            ["module", "=", "Society ERP"] 
+            ["module", "=", "Society Erp"]
         ]
     },
     {
         "dt": "Client Script",
         "filters": [
-            ["module", "=", "Society ERP"]
+            ["module", "=", "Society Erp"]
         ]
     }
 ]

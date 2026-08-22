@@ -1,1 +1,46 @@
-[]
+[
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Resident Pets",
+  "enabled": 1,
+  "modified": "2026-08-22 07:32:22.136462",
+  "module": "Society Erp",
+  "name": "Pet Auto-Link Resident",
+  "script": "frappe.ui.form.on('Resident Pets', {\n    // Triggers when the admin selects the flat\n    flat: function(frm) {\n        if (frm.doc.flat) {\n            \n            // 1. Check for active tenant\n            frappe.db.get_value('Tenants', \n                {'parent': frm.doc.flat, 'active': 1}, \n                'name', \n                (r) => {\n                    if (r && r.name) {\n                        frm.set_value('belongs_to', 'Tenant');\n                        frm.set_value('tenant_reference', r.name);\n                    } else {\n                        // 2. Check for active owner\n                        frappe.db.get_value('Custom Owners', \n                            {'parent': frm.doc.flat, 'active': 1}, \n                            'name', \n                            (r2) => {\n                                if (r2 && r2.name) {\n                                    frm.set_value('belongs_to', 'Owner');\n                                    frm.set_value('owner_reference', r2.name);\n                                } else {\n                                    frappe.msgprint(`No active resident found for Flat ${frm.doc.flat}`);\n                                }\n                            }\n                        );\n                    }\n                }\n            );\n        } else {\n            // Clear fields if flat is removed\n            frm.set_value('belongs_to', '');\n            frm.set_value('tenant_reference', '');\n            frm.set_value('owner_reference', '');\n        }\n    }\n});",
+  "view": "Form"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Resident Vehicles",
+  "enabled": 1,
+  "modified": "2026-08-22 07:32:50.603998",
+  "module": "Society Erp",
+  "name": "Vehicle Auto-Link Resident",
+  "script": "frappe.ui.form.on('Resident Vehicles', {\n    // This function triggers the moment someone changes the \"flat\" field\n    flat: function(frm) {\n        if (frm.doc.flat) {\n            \n            // 1. First, check if the flat has an active tenant\n            frappe.db.get_value('Tenants', \n                {'parent': frm.doc.flat, 'active': 1}, \n                'name', \n                (r) => {\n                    \n                    if (r && r.name) {\n                        // Active tenant found! Set the dropdown and link the tenant.\n                        frm.set_value('belongs_to', 'Tenant');\n                        frm.set_value('tenant_reference', r.name);\n                        \n                    } else {\n                        // 2. No active tenant found. Let's check for an active owner instead.\n                        frappe.db.get_value('Custom Owners', \n                            {'parent': frm.doc.flat, 'active': 1}, \n                            'name', \n                            (r2) => {\n                                if (r2 && r2.name) {\n                                    // Active owner found! Set the dropdown and link the owner.\n                                    frm.set_value('belongs_to', 'Owner');\n                                    frm.set_value('owner_reference', r2.name);\n                                } else {\n                                    frappe.msgprint(`No active resident found for Flat ${frm.doc.flat}`);\n                                }\n                            }\n                        );\n                    }\n                }\n            );\n        } else {\n            // If the admin clears the flat field, clear out our auto-populated fields too\n            frm.set_value('belongs_to', '');\n            frm.set_value('tenant_reference', '');\n            frm.set_value('owner_reference', '');\n        }\n    }\n});",
+  "view": "Form"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Customer",
+  "enabled": 1,
+  "modified": "2026-08-22 07:32:40.767812",
+  "module": "Society Erp",
+  "name": "Display Owner and Tenant on Customer Form",
+  "script": "frappe.ui.form.on('Customer', {\r\n    refresh: function(frm) {\r\n        if (frm.doc.__islocal) return;\r\n\r\n        // 1. Fetch and Display Active Owner\r\n        frm.get_field('custom_owner_details').$wrapper.html('<i>Loading Owner...</i>');\r\n        frappe.db.get_list('Owners', {\r\n            filters: { 'flat': frm.doc.name, 'active': 1 },\r\n            fields: ['owner_name', 'mobile_no', 'email']\r\n        }).then(records => {\r\n            if(records && records.length > 0) {\r\n                let owner = records[0];\r\n                let html = `\r\n                    <div style=\"padding: 10px; background-color: #f4f5f6; border-radius: 6px; border-left: 4px solid #2f73e5;\">\r\n                        <b style=\"color: #36414c; font-size: 14px;\">${owner.owner_name}</b><br>\r\n                        <span style=\"color: #6c7680;\">📞 ${owner.mobile_no || 'N/A'} &nbsp; | &nbsp; ✉️ ${owner.email || 'N/A'}</span>\r\n                    </div>`;\r\n                frm.get_field('custom_owner_details').$wrapper.html(html);\r\n            } else {\r\n                frm.get_field('custom_owner_details').$wrapper.html('<b style=\"color: #e74c3c;\">No Active Owner Found</b>');\r\n            }\r\n        });\r\n\r\n        // 2. Fetch and Display Active Tenant\r\n        if (frm.doc.custom_let_out_for_rent) {\r\n            frm.get_field('custom_tenant_details').$wrapper.html('<i>Loading Tenant...</i>');\r\n            frappe.db.get_list('Tenants', {\r\n                filters: { 'flat': frm.doc.name, 'active': 1 },\r\n                fields: ['tenant_name', 'mobile_no', 'email']\r\n            }).then(records => {\r\n                if(records && records.length > 0) {\r\n                    let tenant = records[0];\r\n                    let html = `\r\n                        <div style=\"padding: 10px; background-color: #f4f5f6; border-radius: 6px; border-left: 4px solid #e67e22;\">\r\n                            <b style=\"color: #36414c; font-size: 14px;\">${tenant.tenant_name}</b><br>\r\n                            <span style=\"color: #6c7680;\">📞 ${tenant.mobile_no || 'N/A'} &nbsp; | &nbsp; ✉️ ${tenant.email || 'N/A'}</span>\r\n                        </div>`;\r\n                    frm.get_field('custom_tenant_details').$wrapper.html(html);\r\n                } else {\r\n                    frm.get_field('custom_tenant_details').$wrapper.html('<b style=\"color: #e74c3c;\">No Active Tenant Found</b>');\r\n                }\r\n            });\r\n        } else {\r\n            frm.get_field('custom_tenant_details').$wrapper.html('<i style=\"color: #6c7680;\">Flat is not let out for rent.</i>');\r\n        }\r\n    }\r\n});",
+  "view": "Form"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Owners",
+  "enabled": 1,
+  "modified": "2026-08-22 07:32:31.740943",
+  "module": "Society Erp",
+  "name": "Prompt for Active Owner",
+  "script": "frappe.ui.form.on('Owners', {\r\n    validate: function(frm) {\r\n        // Only run this check if the user is trying to save an ACTIVE owner\r\n        if (frm.doc.active) {\r\n            \r\n            // If the user already clicked \"Yes\" on the prompt, let the save continue\r\n            if (frm.doc.__deactivate_confirmed) return;\r\n\r\n            // Pause the save process to do an asynchronous database check\r\n            frappe.validated = false;\r\n            \r\n            frappe.db.get_list('Owners', {\r\n                filters: {\r\n                    'flat': frm.doc.flat,\r\n                    'active': 1,\r\n                    'name': ['!=', frm.doc.name] // Exclude the current document\r\n                },\r\n                fields: ['name']\r\n            }).then(records => {\r\n                if (records && records.length > 0) {\r\n                    let old_owner = records[0].name;\r\n                    \r\n                    // Show the interactive prompt\r\n                    frappe.confirm(\r\n                        `An active owner (<b>${old_owner}</b>) already exists for Flat ${frm.doc.flat}. <br><br>Do you want to deactivate them and make this new owner active?`,\r\n                        () => {\r\n                            // User clicked YES: Set the bypass flag and trigger save again\r\n                            frm.doc.__deactivate_confirmed = true;\r\n                            frm.save();\r\n                        },\r\n                        () => {\r\n                            // User clicked NO: Cancel the save\r\n                            frappe.msgprint(\"Save cancelled. You can uncheck 'Active' if you want to save this owner as inactive.\");\r\n                        }\r\n                    );\r\n                } else {\r\n                    // No existing active owner found, proceed with save normally\r\n                    frm.doc.__deactivate_confirmed = true;\r\n                    frm.save();\r\n                }\r\n            });\r\n        }\r\n    }\r\n});",
+  "view": "Form"
+ }
+]
