@@ -255,7 +255,14 @@ app_license = "mit"
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
+# Permissions evaluated in scripted ways
+permission_query_conditions = {
+    "Board Resolution": "society_erp.society_erp.doctype.board_resolution.board_resolution.get_permission_query_conditions",
+}
 
+has_permission = {
+    "Board Resolution": "society_erp.society_erp.doctype.board_resolution.board_resolution.has_permission",
+}
 fixtures = [
     {
         "dt": "Custom Field",
@@ -279,6 +286,12 @@ fixtures = [
         "dt": "Client Script",
         "filters": [
             ["module", "=", "Society Erp"]
+        ]
+    },
+    {
+        "dt": "Role",
+        "filters": [
+            ["name","in",["Society Committee Member"]]
         ]
     }
 ]
