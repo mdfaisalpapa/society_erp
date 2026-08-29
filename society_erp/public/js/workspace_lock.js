@@ -1,14 +1,15 @@
 $(document).ready(function() {
     let style = document.createElement('style');
     style.innerHTML = `
-        /* 1. Hide the Select All button in report filter dropdowns */
-        .dropdown-menu .btn-group button:first-child,
-        button[data-action="selectAll"] { 
+        /* Target the exact data-action attribute used in Frappe v15/v16 MultiSelect */
+        button[data-action="select_all"], 
+        .frappe-control[data-fieldtype="MultiSelect"] .btn-group button:first-child { 
             display: none !important; 
+            visibility: hidden !important;
         }
         
-        /* 2. Expand the Clear All button to fill the space cleanly */
-        .dropdown-menu .btn-group button:last-child {
+        /* Expand the Clear button to look normal */
+        button[data-action="clear_all"] {
             width: 100% !important;
             border-radius: 4px !important;
         }

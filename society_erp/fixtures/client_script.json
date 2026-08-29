@@ -2,6 +2,17 @@
  {
   "docstatus": 0,
   "doctype": "Client Script",
+  "dt": "Journal Entry",
+  "enabled": 1,
+  "modified": "2026-08-28 11:48:21.812142",
+  "module": "Society Erp",
+  "name": "Apportionment Button",
+  "script": "frappe.listview_settings['Journal Entry'] = {\r\n    onload: function(listview) {\r\n        listview.page.add_inner_button(__('Apportion Amenity Costs'), function() {\r\n            \r\n            // 1. Create a quick prompt dialog for the company selection\r\n            let d = new frappe.ui.Dialog({\r\n                title: __('Select Company for Apportionment'),\r\n                fields: [\r\n                    {\r\n                        fieldname: 'company',\r\n                        label: __('Company'),\r\n                        fieldtype: 'Link',\r\n                        options: 'Company',\r\n                        reqd: 1,\r\n                        // Automatically default to the user's current active company\r\n                        default: frappe.defaults.get_user_default('company') || frappe.boot.default_company\r\n                    }\r\n                ],\r\n                primary_action_label: __('Generate Apportionment JE'),\r\n                primary_action(values) {\r\n                    d.hide();\r\n                    \r\n                    // 2. Call the backend API and pass the selected company\r\n                    frappe.call({\r\n                        method: \"apportion_amenity_costs\",\r\n                        args: {\r\n                            company_name: values.company\r\n                        },\r\n                        freeze: true,\r\n                        freeze_message: __(\"Calculating and generating Journal Entry...\"),\r\n                        callback: function(r) {\r\n                            if (!r.exc) {\r\n                                listview.refresh();\r\n                            }\r\n                        }\r\n                    });\r\n                }\r\n            });\r\n            \r\n            d.show();\r\n        });\r\n    }\r\n};",
+  "view": "List"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
   "dt": "Resident Pets",
   "enabled": 1,
   "modified": "2026-08-22 07:32:22.136462",

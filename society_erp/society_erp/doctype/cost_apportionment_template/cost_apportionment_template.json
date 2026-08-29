@@ -1,0 +1,100 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "creation": "2026-08-29 05:26:44.386728",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_mtad",
+  "amended_from",
+  "company",
+  "parent_cost_center",
+  "column_break_ermh",
+  "latest_unallocated_balance",
+  "section_break_qiqz",
+  "allocation_rules"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_mtad",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Cost Apportionment Template",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "frappe.defaults.get_user_default(\"company\")",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "parent_cost_center",
+   "fieldtype": "Link",
+   "label": "Parent Cost Center",
+   "options": "Cost Center",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_ermh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "latest_unallocated_balance",
+   "fieldtype": "Currency",
+   "label": "Latest Unallocated Balance",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_qiqz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "allocation_rules",
+   "fieldtype": "Table",
+   "label": "Allocation Rules",
+   "options": "Cost Apportionment Target",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-08-29 05:30:26.171954",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Cost Apportionment Template",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
