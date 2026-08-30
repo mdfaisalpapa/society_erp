@@ -16,19 +16,22 @@ frappe.ui.form.on('Cost Apportionment Template', {
 
         // --- Generate Apportionment JE Button ---
         if (frm.doc.docstatus === 1) {
-            frm.add_custom_button(__('Generate Apportionment JE'), function() {
-                frappe.confirm('Generate a new Journal Entry based on these locked rules?', () => {
+            frm.add_custom_button(__('Generate Apportionment JEs'), function() {
+                frappe.confirm('Generate new Journal Entries based on these locked rules?', () => {
                     frappe.call({
                         method: 'society_erp.society_erp.doctype.cost_apportionment_template.cost_apportionment_template.generate_apportionment_je',
                         args: { template_name: frm.doc.name },
                         freeze: true,
-                        freeze_message: "Generating Apportionment...",
+                        freeze_message: "Generating Apportionment Batch...",
                         callback: function(r) {
                             if (!r.exc && r.message) {
+                                // Create clickable links for every generated JV
+                                let jv_links = r.message.map(jv => `<a href="/app/journal-entry/${jv}"><b>${jv}</b></a>`).join("<br>");
+                                
                                 frappe.msgprint({
                                     title: __('Success'),
                                     indicator: 'green',
-                                    message: `Draft Journal Entry <a href="/app/journal-entry/${r.message}"><b>${r.message}</b></a> generated!`
+                                    message: `Draft Journal Entries successfully generated for each amenity:<br><br>${jv_links}`
                                 });
                             }
                         }
