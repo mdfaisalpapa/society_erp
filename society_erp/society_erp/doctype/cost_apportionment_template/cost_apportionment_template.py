@@ -1,3 +1,25 @@
+import frappe
+from frappe.model.document import Document
+from frappe.utils import flt, today
+
+class CostApportionmentTemplate(Document):
+    def on_update(self):
+        if self.parent_cost_center and self.company:
+            check_unallocated_balance(self.name, self.parent_cost_center, self.company)
+
+def get_all_child_cost_centers(parent_cost_center, company):
+    parent = frappe.get_doc("Cost Center", parent_cost_center)
+    return frappe.get_all(
+        "Cost Center", 
+        filters={
+            "lft": (">=", parent.lft), 
+            "rgt": ("<=", parent.rgt), 
+            "is_group": 0, 
+            "company": company
+        }, 
+        pluck="name"
+    )
+
 @frappe.whitelist()
 def check_unallocated_balance(template_name, parent_cost_center, company):
     if not parent_cost_center or not company:
