@@ -3,11 +3,17 @@ from frappe.model.document import Document
 from frappe.utils import flt
 
 class MaintenanceBillingRun(Document):
+    def before_submit(self):
+        # Safely assign the status right before the document is locked
+        auto_generate = frappe.db.get_single_value("Society ERP Settings", "auto_generate_invoices")
+        if auto_generate:
+            self.generation_status = "Queued"
+
     def on_submit(self):
         auto_generate = frappe.db.get_single_value("Society ERP Settings", "auto_generate_invoices")
         
         if auto_generate:
-            # Bypass the manual button and queue immediately
+            # Trigger the background queue
             frappe.enqueue(
                 'society_erp.society_erp.doctype.maintenance_billing_run.maintenance_billing_run.process_bulk_invoices',
                 queue='long',
@@ -15,9 +21,8 @@ class MaintenanceBillingRun(Document):
                 doc_name=self.name
             )
             frappe.msgprint("Billing Run Locked. Invoices are generating in the background.")
-        else:
-            frappe.msgprint("Billing Run Locked. Please generate invoices manually using the button.")
 
+# ... [Keep your existing fetch_and_calculate_blocks, trigger_invoice_generation, and process_bulk_invoices functions unchanged below this point] ...
 @frappe.whitelist()
 def fetch_and_calculate_blocks(doc_name):
     """
@@ -64,26 +69,6 @@ def fetch_and_calculate_blocks(doc_name):
     doc.save()
     return "Success"
 
-@frappe.whitelist()
-def trigger_invoice_generation(doc_name):
-    """
-    Validates document submission and queues the heavy background worker 
-    to prevent browser gateway timeouts.
-    """
-    doc = frappe.get_doc("Maintenance Billing Run", doc_name)
-    
-    if doc.docstatus != 1:
-        frappe.throw("Please Submit (Lock) the Billing Run before generating invoices.")
-        
-    frappe.enqueue(
-        'society_erp.society_erp.doctype.maintenance_billing_run.maintenance_billing_run.process_bulk_invoices',
-        queue='long',
-        timeout=1500,
-        doc_name=doc_name
-    )
-    
-    return "Background job started! Your draft invoices will appear in the Sales Invoice list shortly."
-
 def process_bulk_invoices(doc_name):
     try:
         doc = frappe.get_doc("Maintenance Billing Run", doc_name)
@@ -93,6 +78,7 @@ def process_bulk_invoices(doc_name):
             return 
             
         maintenance_item_code = frappe.db.get_single_value("Society ERP Settings", "monthly_maintenance_item")
+        auto_submit = frappe.db.get_single_value("Society ERP Settings", "submit_invoices_automatically")
         
         if not maintenance_item_code:
             frappe.log_error("Monthly Maintenance Item is missing in Settings", "Billing Run Error")
@@ -125,7 +111,11 @@ def process_bulk_invoices(doc_name):
                 si = frappe.new_doc("Sales Invoice")
                 si.customer = flat.name
                 si.company = doc.company
+                
+                # 1. Lock the date so ERPNext cannot overwrite it to today
+                si.set_posting_time = 1 
                 si.posting_date = doc.posting_date
+                
                 si.remarks = f"Maintenance for {doc.billing_month} - {owner_text}"
                 
                 si.append("items", {
@@ -142,8 +132,15 @@ def process_bulk_invoices(doc_name):
                 si.run_method("set_missing_values")
                 si.run_method("calculate_taxes_and_totals")
                 
-                # Invoices inserted as Drafts (docstatus = 0)
+                # 2. Strip conflicting templates and enforce the master date
+                si.payment_terms_template = None
+                si.set("payment_schedule", [])
+                si.due_date = doc.posting_date 
+                
+                # 3. Insert and optionally submit
                 si.insert(ignore_permissions=True)
+                if auto_submit:
+                    si.submit()
                 
         # Lock the document from further generation
         frappe.db.set_value("Maintenance Billing Run", doc_name, "generation_status", "Completed")

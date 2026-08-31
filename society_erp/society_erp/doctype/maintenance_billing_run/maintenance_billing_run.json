@@ -48,18 +48,20 @@
    "search_index": 1
   },
   {
+   "allow_on_submit": 1,
    "default": "Pending",
    "fieldname": "generation_status",
    "fieldtype": "Select",
    "label": "Generation Status",
-   "options": "Pending\nQueued\nCompleted"
+   "options": "Pending\nQueued\nCompleted",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-01 04:01:56.171280",
+ "modified": "2026-09-01 04:33:43.728356",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Maintenance Billing Run",

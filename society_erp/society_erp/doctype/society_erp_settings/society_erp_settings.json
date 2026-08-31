@@ -8,7 +8,8 @@
  "field_order": [
   "infrastructure_asset_depreciation_template",
   "monthly_maintenance_item",
-  "auto_generate_invoices"
+  "auto_generate_invoices",
+  "submit_invoices_automatically"
  ],
  "fields": [
   {
@@ -28,13 +29,19 @@
    "fieldtype": "Link",
    "label": "Monthly Maintenance Item",
    "options": "Item"
+  },
+  {
+   "default": "0",
+   "fieldname": "submit_invoices_automatically",
+   "fieldtype": "Check",
+   "label": "Submit Invoices Automatically"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-01 02:49:20.577774",
+ "modified": "2026-09-01 04:35:32.490722",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Society ERP Settings",
