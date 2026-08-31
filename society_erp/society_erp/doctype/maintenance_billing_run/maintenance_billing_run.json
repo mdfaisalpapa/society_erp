@@ -10,7 +10,8 @@
   "posting_date",
   "billing_month",
   "block_details",
-  "amended_from"
+  "amended_from",
+  "generation_status"
  ],
  "fields": [
   {
@@ -45,13 +46,20 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "generation_status",
+   "fieldtype": "Select",
+   "label": "Generation Status",
+   "options": "Pending\nQueued\nCompleted"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-31 04:53:54.203813",
+ "modified": "2026-09-01 04:01:56.171280",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Maintenance Billing Run",

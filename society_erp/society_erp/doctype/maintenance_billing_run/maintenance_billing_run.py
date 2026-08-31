@@ -4,9 +4,19 @@ from frappe.utils import flt
 
 class MaintenanceBillingRun(Document):
     def on_submit(self):
-        # Directly call the function to force it onto the main terminal thread
-        process_bulk_invoices(self.name)
-        frappe.msgprint("Billing Run Locked. Invoices generated directly.")
+        auto_generate = frappe.db.get_single_value("Society ERP Settings", "auto_generate_invoices")
+        
+        if auto_generate:
+            # Bypass the manual button and queue immediately
+            frappe.enqueue(
+                'society_erp.society_erp.doctype.maintenance_billing_run.maintenance_billing_run.process_bulk_invoices',
+                queue='long',
+                timeout=1500,
+                doc_name=self.name
+            )
+            frappe.msgprint("Billing Run Locked. Invoices are generating in the background.")
+        else:
+            frappe.msgprint("Billing Run Locked. Please generate invoices manually using the button.")
 
 @frappe.whitelist()
 def fetch_and_calculate_blocks(doc_name):
@@ -75,28 +85,27 @@ def trigger_invoice_generation(doc_name):
     return "Background job started! Your draft invoices will appear in the Sales Invoice list shortly."
 
 def process_bulk_invoices(doc_name):
-    print(f"\n--- [DEBUG] STARTING INVOICE JOB FOR: {doc_name} (TEST MODE: 10 INVOICES) ---")
-    frappe.log_error(f"Test Job triggered for {doc_name}", "Billing Run Debug")
-    
     try:
         doc = frappe.get_doc("Maintenance Billing Run", doc_name)
-        maintenance_item_code = "Monthly Maintenance Charge" 
         
+        # Failsafe to block duplicate background jobs
+        if doc.generation_status == "Completed":
+            return 
+            
+        maintenance_item_code = frappe.db.get_single_value("Society ERP Settings", "monthly_maintenance_item")
+        
+        if not maintenance_item_code:
+            frappe.log_error("Monthly Maintenance Item is missing in Settings", "Billing Run Error")
+            frappe.db.set_value("Maintenance Billing Run", doc_name, "generation_status", "Pending")
+            frappe.db.commit()
+            return
+            
         global_tax_template = frappe.db.get_single_value(
             "Society ERP Settings", 
             "infrastructure_asset_depreciation_template"
         )
-        print(f"[DEBUG] Fetched Tax Template: {global_tax_template}")
-        
-        test_counter = 0 # Initialize counter
         
         for row in doc.block_details:
-            # Stop processing blocks if we hit 10
-            if test_counter >= 10:
-                break
-                
-            print(f"[DEBUG] Processing Block: {row.block}")
-            
             flats = frappe.get_all(
                 "Customer", 
                 filters={"custom_block": row.block}, 
@@ -104,17 +113,12 @@ def process_bulk_invoices(doc_name):
             )
             
             for flat in flats:
-                # Stop processing flats if we hit 10
-                if test_counter >= 10:
-                    break
-                    
                 flat_uds = flt(flat.custom_uds)
                 if flat_uds <= 0:
                     continue 
                     
                 flat_share_amount = flt(row.rate_per_uds * flat_uds, 2)
                 
-                # Fetching active owner from the correct Owners doctype and field mapping
                 active_owner = frappe.db.get_value("Owners", {"flat": flat.name, "active": 1}, "owner_name")
                 owner_text = f"Attn: {active_owner}" if active_owner else "Attn: Current Resident"
                 
@@ -132,21 +136,22 @@ def process_bulk_invoices(doc_name):
                     "description": f"Maintenance for {doc.billing_month} ({flat_uds} UDS)"
                 })
                 
-                # Apply standard ERPNext taxes field and trigger calculations
                 if global_tax_template:
                     si.taxes_and_charges = global_tax_template
                     
                 si.run_method("set_missing_values")
                 si.run_method("calculate_taxes_and_totals")
-                    
-                si.insert()
                 
-                test_counter += 1
-                print(f"[DEBUG] Successfully inserted SI for {flat.name} with Taxes (Test {test_counter}/10)")
+                # Invoices inserted as Drafts (docstatus = 0)
+                si.insert(ignore_permissions=True)
                 
-        print(f"--- [DEBUG] INVOICE TEST JOB COMPLETED ---")
-        frappe.log_error("Test Invoice generation completed successfully.", "Billing Run Debug")
+        # Lock the document from further generation
+        frappe.db.set_value("Maintenance Billing Run", doc_name, "generation_status", "Completed")
+        frappe.db.commit()
+        frappe.log_error(f"Bulk billing completed successfully for {doc_name}.", "Billing Run Success")
         
     except Exception as e:
-        print(f"[DEBUG] ERROR: {str(e)}")
+        # Revert status to allow retrying in case of critical failure
+        frappe.db.set_value("Maintenance Billing Run", doc_name, "generation_status", "Pending")
+        frappe.db.commit()
         frappe.log_error(frappe.get_traceback(), f"Billing Run Failed: {doc_name}")
