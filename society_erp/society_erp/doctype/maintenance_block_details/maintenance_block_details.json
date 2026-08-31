@@ -9,60 +9,53 @@
   "block",
   "cost_center",
   "total_expense",
-  "number_of_flats",
-  "per_flat_charge"
+  "total_block_uds",
+  "rate_per_uds"
  ],
  "fields": [
   {
    "fieldname": "block",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Block",
    "options": "Block"
   },
   {
    "fieldname": "cost_center",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Cost Center",
    "options": "Cost Center"
   },
   {
    "fieldname": "total_expense",
    "fieldtype": "Currency",
+   "in_list_view": 1,
    "label": "Total Expense"
   },
   {
-   "fieldname": "number_of_flats",
-   "fieldtype": "Int",
-   "label": "Number of Flats"
+   "fieldname": "total_block_uds",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Total Block UDS"
   },
   {
-   "fieldname": "per_flat_charge",
+   "fieldname": "rate_per_uds",
    "fieldtype": "Currency",
-   "label": "Per Flat Charge"
+   "in_list_view": 1,
+   "label": "Rate per UDS"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "istable": 1,
  "links": [],
- "modified": "2026-08-30 06:12:33.449152",
+ "modified": "2026-08-31 03:22:41.912428",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Maintenance Block Details",
  "owner": "Administrator",
- "permissions": [
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "System Manager",
-   "share": 1,
-   "write": 1
-  }
- ],
+ "permissions": [],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",

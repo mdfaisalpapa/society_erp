@@ -256,6 +256,8 @@ app_license = "mit"
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 # Permissions evaluated in scripted ways
+# Install Hooks
+after_install = "society_erp.setup.after_install"
 permission_query_conditions = {
     "Board Resolution": "society_erp.society_erp.doctype.board_resolution.board_resolution.get_permission_query_conditions",
 }

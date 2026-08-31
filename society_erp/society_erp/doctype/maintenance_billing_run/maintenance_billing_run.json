@@ -6,9 +6,11 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "company",
   "posting_date",
   "billing_month",
-  "company"
+  "block_details",
+  "amended_from"
  ],
  "fields": [
   {
@@ -27,12 +29,29 @@
    "fieldtype": "Link",
    "label": "company",
    "options": "Company"
+  },
+  {
+   "fieldname": "block_details",
+   "fieldtype": "Table",
+   "label": "Block Details",
+   "options": "Maintenance Block Details"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Maintenance Billing Run",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-08-30 06:10:30.620934",
+ "modified": "2026-08-31 04:53:54.203813",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Maintenance Billing Run",
