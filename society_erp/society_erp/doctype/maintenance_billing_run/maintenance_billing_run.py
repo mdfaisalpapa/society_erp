@@ -90,6 +90,9 @@ def process_bulk_invoices(doc_name):
             "Society ERP Settings", 
             "infrastructure_asset_depreciation_template"
         )
+        # ... [Keep initial setup variables unchanged] ...
+        
+        #invoice_counter = 0  # 1. Initialize the counter
         
         for row in doc.block_details:
             flats = frappe.get_all(
@@ -99,23 +102,22 @@ def process_bulk_invoices(doc_name):
             )
             
             for flat in flats:
+                #if invoice_counter >= 10:  # 2. Stop after 10 invoices
+                    #break
+                    
                 flat_uds = flt(flat.custom_uds)
                 if flat_uds <= 0:
                     continue 
                     
                 flat_share_amount = flt(row.rate_per_uds * flat_uds, 2)
-                
                 active_owner = frappe.db.get_value("Owners", {"flat": flat.name, "active": 1}, "owner_name")
                 owner_text = f"Attn: {active_owner}" if active_owner else "Attn: Current Resident"
                 
                 si = frappe.new_doc("Sales Invoice")
                 si.customer = flat.name
                 si.company = doc.company
-                
-                # 1. Lock the date so ERPNext cannot overwrite it to today
                 si.set_posting_time = 1 
                 si.posting_date = doc.posting_date
-                
                 si.remarks = f"Maintenance for {doc.billing_month} - {owner_text}"
                 
                 si.append("items", {
@@ -130,18 +132,31 @@ def process_bulk_invoices(doc_name):
                     si.taxes_and_charges = global_tax_template
                     
                 si.run_method("set_missing_values")
+                
+                # Force the cost center
+                for item in si.get("items"):
+                    item.cost_center = row.cost_center
+                    
                 si.run_method("calculate_taxes_and_totals")
                 
-                # 2. Strip conflicting templates and enforce the master date
                 si.payment_terms_template = None
                 si.set("payment_schedule", [])
                 si.due_date = doc.posting_date 
                 
-                # 3. Insert and optionally submit
                 si.insert(ignore_permissions=True)
+                
+                # 3. Print debug message to the bench terminal
+                frappe.log_error(title="Invoice Debug",message=f"Successfully assigned Cost Center '{row.cost_center}' to {flat.name} (Draft: {si.name})")
+                
                 if auto_submit:
                     si.submit()
                 
+                #invoice_counter += 1
+                
+            #if invoice_counter >= 10:
+                #break
+                
+        # ... [Keep your generation_status lock and log_error unchanged] ...        
         # Lock the document from further generation
         frappe.db.set_value("Maintenance Billing Run", doc_name, "generation_status", "Completed")
         frappe.db.commit()
