@@ -90,9 +90,6 @@ def process_bulk_invoices(doc_name):
             "Society ERP Settings", 
             "infrastructure_asset_depreciation_template"
         )
-        # ... [Keep initial setup variables unchanged] ...
-        
-        #invoice_counter = 0  # 1. Initialize the counter
         
         for row in doc.block_details:
             flats = frappe.get_all(
@@ -102,9 +99,6 @@ def process_bulk_invoices(doc_name):
             )
             
             for flat in flats:
-                #if invoice_counter >= 10:  # 2. Stop after 10 invoices
-                    #break
-                    
                 flat_uds = flt(flat.custom_uds)
                 if flat_uds <= 0:
                     continue 
@@ -133,9 +127,16 @@ def process_bulk_invoices(doc_name):
                     
                 si.run_method("set_missing_values")
                 
-                # Force the cost center
+                # 1. Force the cost center at the Header Level
+                si.cost_center = row.cost_center
+                
+                # 2. Force the cost center at the Item Level (Income)
                 for item in si.get("items"):
                     item.cost_center = row.cost_center
+                    
+                # 3. Force the cost center onto the Reserve Funds (Taxes Table)
+                for tax in si.get("taxes"):
+                    tax.cost_center = row.cost_center
                     
                 si.run_method("calculate_taxes_and_totals")
                 
@@ -145,18 +146,9 @@ def process_bulk_invoices(doc_name):
                 
                 si.insert(ignore_permissions=True)
                 
-                # 3. Print debug message to the bench terminal
-                frappe.log_error(title="Invoice Debug",message=f"Successfully assigned Cost Center '{row.cost_center}' to {flat.name} (Draft: {si.name})")
-                
                 if auto_submit:
                     si.submit()
                 
-                #invoice_counter += 1
-                
-            #if invoice_counter >= 10:
-                #break
-                
-        # ... [Keep your generation_status lock and log_error unchanged] ...        
         # Lock the document from further generation
         frappe.db.set_value("Maintenance Billing Run", doc_name, "generation_status", "Completed")
         frappe.db.commit()
