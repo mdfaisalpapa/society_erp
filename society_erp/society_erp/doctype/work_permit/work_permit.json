@@ -16,7 +16,8 @@
   "start_date",
   "end_date",
   "status",
-  "remarks"
+  "remarks",
+  "payment_id"
  ],
  "fields": [
   {
@@ -76,12 +77,17 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
+  },
+  {
+   "fieldname": "payment_id",
+   "fieldtype": "Data",
+   "label": "Payment ID"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-12 09:17:11.462461",
+ "modified": "2026-09-07 16:05:55.052808",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Work Permit",
