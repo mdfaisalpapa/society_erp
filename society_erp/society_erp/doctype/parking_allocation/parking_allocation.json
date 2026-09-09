@@ -1,0 +1,93 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "PA-{YYYY}-{#####}",
+ "creation": "2026-09-09 06:07:57.568722",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "parking_slot",
+  "occupied_by",
+  "allocation_type",
+  "start_date",
+  "end_date",
+  "status",
+  "monthly_rent"
+ ],
+ "fields": [
+  {
+   "fieldname": "parking_slot",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Parking Slot",
+   "options": "Parking Slot",
+   "reqd": 1
+  },
+  {
+   "fieldname": "occupied_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Occupied By",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "allocation_type",
+   "fieldtype": "Select",
+   "label": "Allocation Type",
+   "options": "Self-Occupied\nAOA Rental\nPrivate Neighbor Rental"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Start Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "End Date"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Active\nExpired\nCancelled"
+  },
+  {
+   "fieldname": "monthly_rent",
+   "fieldtype": "Currency",
+   "label": "Monthly Rent"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-09 06:14:51.346102",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Parking Allocation",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

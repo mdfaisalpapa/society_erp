@@ -16,6 +16,7 @@
   "model",
   "color",
   "belongs_to",
+  "parking_slot",
   "active",
   "remarks",
   "flat",
@@ -132,12 +133,18 @@
    "fieldtype": "Select",
    "label": "Approval Status",
    "options": "Pending\nApproved\nRejected"
+  },
+  {
+   "fieldname": "parking_slot",
+   "fieldtype": "Link",
+   "label": "Parking Slot",
+   "options": "Parking Slot"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-09 05:36:47.960858",
+ "modified": "2026-09-09 05:54:25.291966",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Resident Vehicle",
