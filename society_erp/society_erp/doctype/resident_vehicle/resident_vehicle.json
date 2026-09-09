@@ -10,6 +10,8 @@
  "field_order": [
   "vehicle_type",
   "registration_number",
+  "registered_owner_name",
+  "relationship_to_resident",
   "make",
   "model",
   "color",
@@ -18,14 +20,20 @@
   "remarks",
   "flat",
   "owner_reference",
-  "tenant_reference"
+  "tenant_reference",
+  "is_electric",
+  "rfid_number",
+  "approval_status",
+  "rc_copy",
+  "noc"
  ],
  "fields": [
   {
    "fieldname": "vehicle_type",
    "fieldtype": "Select",
    "label": "Vehicle Type",
-   "options": "Car\nBike\nBicycle\nOther"
+   "options": "Car\nBike\nOther",
+   "reqd": 1
   },
   {
    "fieldname": "registration_number",
@@ -70,7 +78,8 @@
    "fieldname": "flat",
    "fieldtype": "Link",
    "label": "Flat",
-   "options": "Customer"
+   "options": "Customer",
+   "reqd": 1
   },
   {
    "fieldname": "owner_reference",
@@ -83,12 +92,52 @@
    "fieldtype": "Link",
    "label": "Tenant Reference",
    "options": "Tenants"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_electric",
+   "fieldtype": "Check",
+   "label": "Is Electric"
+  },
+  {
+   "fieldname": "rc_copy",
+   "fieldtype": "Attach Image",
+   "label": "RC Copy"
+  },
+  {
+   "fieldname": "registered_owner_name",
+   "fieldtype": "Data",
+   "label": "Registered Owner Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "relationship_to_resident",
+   "fieldtype": "Select",
+   "label": "Relationship to Resident",
+   "options": "Self\nSpouse / Immediate Family\nExtended Family\nCompany / Employer Lease\nRented / Subscription",
+   "reqd": 1
+  },
+  {
+   "fieldname": "noc",
+   "fieldtype": "Attach Image",
+   "label": "NOC"
+  },
+  {
+   "fieldname": "rfid_number",
+   "fieldtype": "Data",
+   "label": "RFID Number"
+  },
+  {
+   "fieldname": "approval_status",
+   "fieldtype": "Select",
+   "label": "Approval Status",
+   "options": "Pending\nApproved\nRejected"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-12 09:20:12.770031",
+ "modified": "2026-09-09 05:36:47.960858",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Resident Vehicle",
