@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_bulk_edit": 1,
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "field:slot_number",
  "creation": "2026-09-09 05:49:36.727624",
@@ -66,7 +67,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-09 06:16:49.479126",
+ "modified": "2026-09-15 04:18:58.369813",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Parking Slot",
@@ -78,10 +79,12 @@
    "delete": 1,
    "email": 1,
    "export": 1,
+   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "select": 1,
    "share": 1,
    "write": 1
   }
