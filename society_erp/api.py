@@ -7,10 +7,7 @@ def generate_qr(passcode):
     if not passcode:
         frappe.throw("Passcode is required")
         
-    try:
-        import qrcode
-    except ImportError:
-        frappe.throw("qrcode library is not installed on the Frappe server.")
+    import qrcode
         
     # Generate the QR Code data
     qr_data = f"verify_{passcode}"
@@ -23,7 +20,8 @@ def generate_qr(passcode):
     bio = io.BytesIO()
     img.save(bio, 'PNG')
     
-    # Instruct Frappe to return a direct image instead of a JSON response
+    # Correctly instruct Frappe to serve the file directly to the browser
     frappe.response['filename'] = f"gatepass_{passcode}.png"
     frappe.response['filecontent'] = bio.getvalue()
-    frappe.response['type'] = 'image/png'
+    frappe.response['type'] = 'download'
+    frappe.response['display_content_as'] = 'inline'
