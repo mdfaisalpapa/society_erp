@@ -11,7 +11,8 @@
   "amended_from",
   "title",
   "content",
-  "date"
+  "date",
+  "is_active"
  ],
  "fields": [
   {
@@ -42,13 +43,19 @@
    "fieldname": "date",
    "fieldtype": "Date",
    "label": "Date"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "is_submittable": 1,
  "links": [],
- "modified": "2026-08-12 09:20:02.689356",
+ "modified": "2026-10-04 06:18:00.423429",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Society Notice",
@@ -65,7 +72,6 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
-   "submit": 1,
    "write": 1
   }
  ],

@@ -29,15 +29,12 @@ def generate_qr(passcode):
 from frappe.utils.pdf import get_pdf
 from frappe.utils import nowdate
 
-from frappe.utils.pdf import get_pdf
-from frappe.utils import nowdate
-
 @frappe.whitelist()
 def download_open_tickets_pdf():
-    # 1. Fetch all open tickets
+    # 1. Fetch tickets with the new resolution_remarks field included
     tickets = frappe.get_all("Maintenance Ticket", 
         filters={"status": "Open"}, 
-        fields=["name", "resident", "category", "description", "creation"],
+        fields=["name", "resident", "category", "description", "creation", "resolution_remarks"],
         order_by="resident asc"
     )
     
@@ -72,19 +69,33 @@ def download_open_tickets_pdf():
                 html += """
                 <table>
                     <tr>
-                        <th width="15%">Ticket ID</th>
-                        <th width="15%">Flat</th>
-                        <th width="70%">Description</th>
+                        <th width="15%">ID & Date</th>
+                        <th width="10%">Flat</th>
+                        <th width="40%">Issue Description</th>
+                        <th width="35%">Resolution Remarks</th>
                     </tr>
                 """
                 for t in data_dict[tower][cat]:
-                    desc = (t.get("description") or "").replace("\n", " ")
-                    if len(desc) > 80: desc = desc[:80] + "..."
-                    html += f"<tr><td>{t.get('name')}</td><td>{t.get('resident')}</td><td>{desc}</td></tr>"
+                    # Format creation date nicely
+                    creation_val = t.get("creation")
+                    date_str = str(creation_val)[:10] if creation_val else ""
+                    
+                    # Convert raw text to HTML with proper line breaks
+                    desc = str(t.get("description") or "No description provided.").replace("\n", "<br>")
+                    remarks = str(t.get("resolution_remarks") or "").replace("\n", "<br>")
+                    
+                    html += f"""
+                    <tr>
+                        <td><b>{t.get('name')}</b><br><span style='font-size:10px; color:#555;'>{date_str}</span></td>
+                        <td>{t.get('resident')}</td>
+                        <td>{desc}</td>
+                        <td>{remarks}</td>
+                    </tr>
+                    """
                 html += "</table>"
         return html
 
-    # 3. Build the full HTML Template with a CSS Page Break
+    # 3. Build the full HTML Template
     html = f"""
     <html>
     <head>
@@ -94,8 +105,9 @@ def download_open_tickets_pdf():
             .date {{ text-align: center; color: #7f8c8d; font-size: 12px; margin-bottom: 20px; }}
             .tower-header {{ background-color: #2980b9; color: white; padding: 8px; font-size: 16px; margin-top: 20px; }}
             .cat-header {{ background-color: #ecf0f1; color: #2c3e50; padding: 6px; font-size: 14px; font-weight: bold; margin-top: 10px; }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 5px; }}
-            th, td {{ border: 1px solid #bdc3c7; padding: 6px; text-align: left; font-size: 12px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 5px; page-break-inside: auto; }}
+            tr {{ page-break-inside: avoid; page-break-after: auto; }}
+            th, td {{ border: 1px solid #bdc3c7; padding: 6px; text-align: left; font-size: 11px; vertical-align: top; }}
             th {{ background-color: #bdc3c7; }}
             .page-break {{ page-break-before: always; }}
         </style>
@@ -104,18 +116,13 @@ def download_open_tickets_pdf():
         <div class="date">Generated on: {nowdate()}</div>
     """
     
-    # Add Standard Maintenance Tickets
     html += generate_html_section("Open Maintenance Tickets", maint_data)
-    
-    # Add the hard page break
     html += "<div class='page-break'></div>"
-    
-    # Add Project Manager Tickets
     html += generate_html_section("Open Project Manager Tickets (Defects & Handover)", pm_data)
                 
     html += "</body></html>"
     
-    # 4. Convert HTML to PDF and serve it as a standard download
+    # 4. Convert HTML to PDF and serve it
     frappe.response['filename'] = f"Open_Tickets_{nowdate()}.pdf"
     frappe.response['filecontent'] = get_pdf(html)
     frappe.response['type'] = 'download'
