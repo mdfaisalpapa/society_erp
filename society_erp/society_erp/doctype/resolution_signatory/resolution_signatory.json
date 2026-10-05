@@ -12,7 +12,7 @@
   "designation_name",
   "role",
   "signature_status",
-  "timestamp",
+  "signed_on",
   "rejection_reason"
  ],
  "fields": [
@@ -39,13 +39,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "timestamp",
-   "fieldtype": "Datetime",
-   "in_list_view": 1,
-   "label": "Timestamp",
-   "read_only": 1
-  },
-  {
    "fieldname": "signatory_name",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -63,13 +56,19 @@
    "fieldname": "rejection_reason",
    "fieldtype": "Small Text",
    "label": "Rejection Reason"
+  },
+  {
+   "fieldname": "signed_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Signed On"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-27 13:48:37.354758",
+ "modified": "2026-10-05 05:30:17.598580",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Resolution Signatory",

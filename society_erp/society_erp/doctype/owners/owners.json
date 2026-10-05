@@ -24,8 +24,8 @@
   "id_proof",
   "photo",
   "disable_tenant_notifications",
-  "ntfy_topic",
-  "is_aoa_member"
+  "is_aoa_member",
+  "linked_user"
  ],
  "fields": [
   {
@@ -115,21 +115,22 @@
    "label": "Disable Tenant Notifications"
   },
   {
-   "fieldname": "ntfy_topic",
-   "fieldtype": "Data",
-   "label": "ntfy Topic"
-  },
-  {
    "default": "0",
    "fieldname": "is_aoa_member",
    "fieldtype": "Check",
    "label": "Is AoA Member"
+  },
+  {
+   "fieldname": "linked_user",
+   "fieldtype": "Link",
+   "label": "Linked User",
+   "options": "User"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-17 10:33:09.138781",
+ "modified": "2026-10-05 04:26:42.576637",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Owners",

@@ -11,7 +11,8 @@
   "resolution_text",
   "signatories",
   "status",
-  "amended_from"
+  "amended_from",
+  "created_by_member"
  ],
  "fields": [
   {
@@ -49,13 +50,19 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "created_by_member",
+   "fieldtype": "Link",
+   "label": "Created by Member",
+   "options": "Committee Member"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-27 13:42:23.745714",
+ "modified": "2026-10-05 04:45:10.390404",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Board Resolution",

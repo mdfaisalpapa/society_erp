@@ -31,7 +31,8 @@ frappe.ui.form.on('Board Resolution', {
         frm.set_df_property('signatories', 'cannot_add_rows', true);
         frm.set_df_property('signatories', 'cannot_delete_rows', true);
         frm.set_df_property('signatories', 'cannot_delete_all_rows', true);
-
+        frm.fields_dict['signatories'].grid.update_docfield_property('signed_on', 'read_only', 1);
+        frm.fields_dict['signatories'].grid.update_docfield_property('rejection_reason', 'read_only', 1);
         // 3. CHECK SIGNATURE COUNTS
         let has_at_least_one_signature = false;
         let all_signed = true;
