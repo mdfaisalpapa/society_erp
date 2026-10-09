@@ -12,7 +12,8 @@
   "title",
   "content",
   "date",
-  "is_active"
+  "is_active",
+  "posted_by"
  ],
  "fields": [
   {
@@ -50,12 +51,18 @@
    "fieldname": "is_active",
    "fieldtype": "Check",
    "label": "Is Active"
+  },
+  {
+   "fieldname": "posted_by",
+   "fieldtype": "Link",
+   "label": "Posted By",
+   "options": "Owners"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-04 06:18:00.423429",
+ "modified": "2026-10-09 05:22:39.086330",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Society Notice",
