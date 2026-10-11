@@ -39,11 +39,11 @@ fixtures = [
         ]
     },
     {
-        "dt": "Role",
-        "filters": [
-            ["name","in",["Society Committee Member"]]
-        ]
-    }
+    "dt": "Role",
+    "filters": [
+        ["name", "in", ["Society Committee Member", "Society Bot"]]
+    ]
+}
 ]
 doc_events = {
     "GL Entry": {
