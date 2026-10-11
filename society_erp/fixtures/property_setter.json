@@ -55,7 +55,7 @@
   "doctype_or_field": "DocField",
   "field_name": "customer_name",
   "is_system_generated": 1,
-  "modified": "2026-08-22 07:43:36.913048",
+  "modified": "2026-10-11 04:46:19.333385",
   "module": "Society Erp",
   "name": "Customer-customer_name-in_list_view",
   "property": "in_list_view",
@@ -71,7 +71,7 @@
   "doctype_or_field": "DocField",
   "field_name": "custom_cgewho_reg_no",
   "is_system_generated": 1,
-  "modified": "2026-08-22 04:39:17.177059",
+  "modified": "2026-10-11 04:46:19.344382",
   "module": "Society Erp",
   "name": "Customer-custom_cgewho_reg_no-in_list_view",
   "property": "in_list_view",
@@ -103,13 +103,13 @@
   "doctype_or_field": "DocField",
   "field_name": "territory",
   "is_system_generated": 0,
-  "modified": "2026-08-22 07:43:19.094098",
+  "modified": "2026-10-11 04:46:19.304024",
   "module": "Society Erp",
   "name": "Customer-territory-in_list_view",
   "property": "in_list_view",
   "property_type": "Check",
   "row_name": null,
-  "value": "1"
+  "value": "0"
  },
  {
   "default_value": null,
@@ -119,13 +119,13 @@
   "doctype_or_field": "DocField",
   "field_name": "default_currency",
   "is_system_generated": 0,
-  "modified": "2026-08-22 07:42:57.851185",
+  "modified": "2026-10-11 04:46:19.319647",
   "module": "Society Erp",
   "name": "Customer-default_currency-in_list_view",
   "property": "in_list_view",
   "property_type": "Check",
   "row_name": null,
-  "value": "1"
+  "value": "0"
  },
  {
   "default_value": null,
@@ -167,7 +167,7 @@
   "doctype_or_field": "DocField",
   "field_name": "custom_parking_slot",
   "is_system_generated": 1,
-  "modified": "2026-08-22 04:39:38.097129",
+  "modified": "2026-10-11 04:46:19.355601",
   "module": "Society Erp",
   "name": "Customer-custom_parking_slot-in_list_view",
   "property": "in_list_view",

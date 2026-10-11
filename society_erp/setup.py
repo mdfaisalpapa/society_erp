@@ -19,6 +19,7 @@ def after_install():
     
     # 4. Map it to the Global Society ERP Settings
     map_to_settings(template_name)
+    create_bot_user_and_role()
 
 def get_or_create_account(base_name, company, abbr):
     """Dynamically finds the Liability group and creates the account if missing."""
@@ -99,3 +100,51 @@ def map_to_settings(template_name):
         
     settings.infrastructure_asset_depreciation_template = template_name
     settings.save(ignore_permissions=True)
+
+
+def create_bot_user_and_role():
+    role_name = "Society Bot"
+    bot_email = "botuser@society.local" # Change to your preferred default bot email
+    
+    # 1. Create the Role if it doesn't exist
+    if not frappe.db.exists("Role", role_name):
+        role = frappe.get_doc({
+            "doctype": "Role",
+            "role_name": role_name,
+            # Bots generally do not need Desk access unless strictly required by your API structure
+            "desk_access": 0 
+        })
+        role.insert(ignore_permissions=True)
+        
+    # 2. Create the User if it doesn't exist
+    if not frappe.db.exists("User", bot_email):
+        bot_user = frappe.get_doc({
+            "doctype": "User",
+            "email": bot_email,
+            "first_name": "Telegram",
+            "last_name": "Bot",
+            "send_welcome_email": 0,
+            "user_type": "System User" 
+        })
+        bot_user.insert(ignore_permissions=True)
+        
+        # 3. Assign the new Role to the User
+        bot_user.add_roles(role_name)
+        
+        # 4. Generate API Keys automatically
+        bot_user.generate_keys()
+        
+        # We must commit the transaction to read the unhashed secret key
+        frappe.db.commit() 
+        
+        api_key = bot_user.api_key
+        api_secret = bot_user.get_password('api_secret')
+        
+        # 5. Print the credentials to the console during installation
+        print("\n" + "="*40)
+        print("🤖 SOCIETY BOT ACCOUNT CREATED")
+        print(f"User: {bot_email}")
+        print(f"API Key: {api_key}")
+        print(f"API Secret: {api_secret}")
+        print("SAVE THESE CREDENTIALS FOR YOUR TELEGRAM BOT!")
+        print("="*40 + "\n")

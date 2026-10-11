@@ -33,7 +33,7 @@
    "fieldname": "vehicle_type",
    "fieldtype": "Select",
    "label": "Vehicle Type",
-   "options": "Car\nBike\nOther",
+   "options": "Car\nBike",
    "reqd": 1
   },
   {
@@ -41,22 +41,26 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Registration Number",
-   "reqd": 1
+   "reqd": 1,
+   "unique": 1
   },
   {
    "fieldname": "make",
-   "fieldtype": "Data",
-   "label": "Make"
+   "fieldtype": "Link",
+   "label": "Make",
+   "options": "Resident Vehicle Make"
   },
   {
    "fieldname": "model",
-   "fieldtype": "Data",
-   "label": "Model"
+   "fieldtype": "Link",
+   "label": "Model",
+   "options": "Resident Vehicle Model"
   },
   {
    "fieldname": "color",
-   "fieldtype": "Data",
-   "label": "Color"
+   "fieldtype": "Select",
+   "label": "Color",
+   "options": "White\nSilver\nGrey\nBlack\nRed\nBlue\nBrown\nBeige\nMaroon\nGreen\nYellow\nOrange\nOther"
   },
   {
    "fieldname": "belongs_to",
@@ -115,7 +119,7 @@
    "fieldname": "relationship_to_resident",
    "fieldtype": "Select",
    "label": "Relationship to Resident",
-   "options": "Self\nSpouse / Immediate Family\nExtended Family\nCompany / Employer Lease\nRented / Subscription",
+   "options": "Self\nFamily(Residing)\nExtended Family\nCompany / Employer Lease\nRented / Subscription",
    "reqd": 1
   },
   {
@@ -144,7 +148,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-09 05:54:25.291966",
+ "modified": "2026-10-11 12:10:58.462137",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Resident Vehicle",
@@ -160,6 +164,18 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Bot",
    "share": 1,
    "write": 1
   }

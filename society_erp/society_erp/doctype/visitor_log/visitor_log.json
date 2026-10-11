@@ -103,7 +103,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-12 09:19:30.052491",
+ "modified": "2026-10-11 12:07:12.800384",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Visitor Log",
@@ -119,6 +119,18 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Bot",
    "share": 1,
    "write": 1
   }
