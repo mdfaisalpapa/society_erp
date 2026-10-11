@@ -116,7 +116,7 @@ def create_bot_user_and_role():
         })
         role.insert(ignore_permissions=True)
         
-    # 2. Create the User if it doesn't exist
+    # 2. Get or Create the User
     if not frappe.db.exists("User", bot_email):
         bot_user = frappe.get_doc({
             "doctype": "User",
@@ -127,24 +127,28 @@ def create_bot_user_and_role():
             "user_type": "System User" 
         })
         bot_user.insert(ignore_permissions=True)
+    else:
+        bot_user = frappe.get_doc("User", bot_email)
         
-        # 3. Assign the new Role to the User
+    # 3. Assign Role if not already present
+    if role_name not in [r.role for r in bot_user.roles]:
         bot_user.add_roles(role_name)
         
-        # 4. Generate API Keys automatically
-        bot_user.generate_keys()
-        
-        # We must commit the transaction to read the unhashed secret key
-        frappe.db.commit() 
-        
-        api_key = bot_user.api_key
-        api_secret = bot_user.get_password('api_secret')
-        
-        # 5. Print the credentials to the console during installation
-        print("\n" + "="*40)
-        print("🤖 SOCIETY BOT ACCOUNT CREATED")
-        print(f"User: {bot_email}")
-        print(f"API Key: {api_key}")
-        print(f"API Secret: {api_secret}")
-        print("SAVE THESE CREDENTIALS FOR YOUR TELEGRAM BOT!")
-        print("="*40 + "\n")
+    # 4. Generate API Keys using Frappe's hash generator
+    api_secret = frappe.generate_hash(length=15)
+    api_key = frappe.generate_hash(length=15)
+    
+    bot_user.api_key = api_key
+    bot_user.api_secret = api_secret
+    bot_user.save(ignore_permissions=True)
+    
+    frappe.db.commit() 
+    
+    # 5. Print the credentials
+    print("\n" + "="*40)
+    print("🤖 SOCIETY BOT ACCOUNT CONFIGURED")
+    print(f"User: {bot_email}")
+    print(f"API Key: {api_key}")
+    print(f"API Secret: {api_secret}")
+    print("SAVE THESE CREDENTIALS FOR YOUR TELEGRAM BOT!")
+    print("="*40 + "\n")
