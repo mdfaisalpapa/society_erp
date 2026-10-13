@@ -13,6 +13,7 @@
   "category",
   "description",
   "status",
+  "assigned_to",
   "photo",
   "amended_from",
   "priority_level",
@@ -92,12 +93,18 @@
    "fieldname": "resident_feedbackrating",
    "fieldtype": "Rating",
    "label": "Resident Feedback/Rating"
+  },
+  {
+   "fieldname": "assigned_to",
+   "fieldtype": "Link",
+   "label": "Assigned To",
+   "options": "Authorized Bot Device"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-11 12:07:02.264852",
+ "modified": "2026-10-13 05:26:31.462450",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Maintenance Ticket",

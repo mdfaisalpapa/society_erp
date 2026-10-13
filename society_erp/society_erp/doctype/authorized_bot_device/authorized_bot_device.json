@@ -43,7 +43,7 @@
    "fieldname": "device_role",
    "fieldtype": "Select",
    "label": "Device Role",
-   "options": "Security Guard\nOffice Admin\nEstate Manager\nMaintenance- Plumbing\nMaintenance- Civil\nMaintenance- Electrical\nMaintenance- Carpentry\nHanding Over - CGEWHO\nDefects Rectification - CGEWHO"
+   "options": "Security Guard\nOffice Admin\nEstate Manager\nMaintenance Team\nHanding Over - CGEWHO\nDefects Rectification - CGEWHO"
   },
   {
    "fieldname": "assigned_staff_name",
@@ -64,7 +64,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-12 09:18:05.094916",
+ "modified": "2026-10-12 04:38:22.521886",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Authorized Bot Device",

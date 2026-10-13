@@ -1,8 +1,12 @@
-// Copyright (c) 2026, Mohammed Faisal and contributors
-// For license information, please see license.txt
-
-// frappe.ui.form.on("Maintenance Ticket", {
-// 	refresh(frm) {
-
-// 	},
-// });
+frappe.ui.form.on('Maintenance Ticket', {
+    setup: function(frm) {
+        frm.set_query("assigned_to", function() {
+            return {
+                filters: [
+                    ["Authorized Bot Device", "device_role", "like", "Maintenance%"],
+                    ["Authorized Bot Device", "is_active", "=", 1]
+                ]
+            };
+        });
+    }
+});
