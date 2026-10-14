@@ -2,6 +2,7 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
+ "autoname": "{billing_month}-.###",
  "creation": "2026-08-30 06:09:08.115901",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -61,10 +62,11 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-01 04:33:43.728356",
+ "modified": "2026-10-14 07:12:45.997156",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Maintenance Billing Run",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

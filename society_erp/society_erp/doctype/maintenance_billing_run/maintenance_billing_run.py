@@ -1,6 +1,6 @@
 import frappe
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import flt, get_last_day
 
 class MaintenanceBillingRun(Document):
     def before_submit(self):
@@ -23,14 +23,23 @@ class MaintenanceBillingRun(Document):
             frappe.msgprint("Billing Run Locked. Invoices are generating in the background.")
 
 # ... [Keep your existing fetch_and_calculate_blocks, trigger_invoice_generation, and process_bulk_invoices functions unchanged below this point] ...
+import frappe
+from frappe.model.document import Document
+from frappe.utils import flt, get_last_day
+
+# ... [Keep class MaintenanceBillingRun unchanged] ...
+
 @frappe.whitelist()
 def fetch_and_calculate_blocks(doc_name):
     """
-    Fetches net expenses for each block's cost center in strict ascending order,
-    and calculates the universal rate per unit of UDS.
+    Fetches unbilled net expenses for each block's cost center up to the end 
+    of the billing month, and calculates the universal rate per unit of UDS.
     """
     doc = frappe.get_doc("Maintenance Billing Run", doc_name)
     doc.set("block_details", []) 
+    
+    # Calculate only the end date to cap the fetch limit
+    end_date = get_last_day(doc.posting_date)
     
     # Fetch blocks sorted alphabetically (A1 to D3) to ensure clean reporting
     all_blocks = frappe.get_all(
@@ -46,14 +55,17 @@ def fetch_and_calculate_blocks(doc_name):
         if not block.cost_center or not block.total_block_uds:
             continue 
             
-        # Fetch the net expense for this block's cost center (Debits - Credits)
+        # Fetch cumulative unbilled expenses (Debits - Credits) up to the billing month end
         balance = frappe.db.sql("""
             SELECT (SUM(debit) - SUM(credit)) as net_balance
             FROM `tabGL Entry` 
-            WHERE cost_center = %s AND company = %s AND is_cancelled = 0
-        """, (block.cost_center, doc.company))[0][0] or 0
+            WHERE cost_center = %s 
+            AND company = %s 
+            AND is_cancelled = 0
+            AND posting_date <= %s
+        """, (block.cost_center, doc.company, end_date))[0][0] or 0
         
-        # Only process if there are actual expenses to apportion
+        # Only process if there are actual unbilled expenses to apportion
         if balance > 0:
             # Calculate the universal rate per unit of UDS (6 decimal places for precision)
             rate_per_uds = flt(balance / block.total_block_uds, 6)
@@ -68,6 +80,7 @@ def fetch_and_calculate_blocks(doc_name):
             
     doc.save()
     return "Success"
+
 
 def process_bulk_invoices(doc_name):
     try:
