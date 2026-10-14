@@ -36,5 +36,24 @@
   "reference_doctype": null,
   "script": "# Scheduled Job: Expire Parking Allocations\ntoday = frappe.utils.today()\nexpired_allocations = frappe.db.sql(\"\"\"\n    UPDATE `tabParking Allocation`\n    SET status = 'Expired'\n    WHERE status = 'Active' \n    AND end_date IS NOT NULL \n    AND end_date < %s\n\"\"\", (today,))\nfrappe.db.commit()",
   "script_type": "Scheduler Event"
+ },
+ {
+  "allow_guest": 0,
+  "api_method": "split_qpms_manpower",
+  "cron_format": null,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Server Script",
+  "doctype_event": "Before Submit",
+  "enable_rate_limit": 0,
+  "event_frequency": "All",
+  "modified": "2026-10-14 05:12:40.932081",
+  "module": "Society Erp",
+  "name": "Auto-Split QPMS Manpower",
+  "rate_limit_count": 5,
+  "rate_limit_seconds": 86400,
+  "reference_doctype": "Purchase Invoice",
+  "script": "# Fetch the specific Draft invoice from the button click\ndoc = frappe.get_doc(\"Purchase Invoice\", frappe.form_dict.get(\"docname\"))\n\ncompany_abbr = frappe.db.get_value(\"Company\", doc.company, \"abbr\")\nsuffix = f\"- {company_abbr}\"\n\nblocks = [\n    f\"A1 Block {suffix}\", f\"A2 Block {suffix}\", \n    f\"B1 Block {suffix}\", f\"B2 Block {suffix}\", \n    f\"C1 Block {suffix}\", f\"C2 Block {suffix}\", f\"C3 Block {suffix}\", \n    f\"D1 Block {suffix}\", f\"D2 Block {suffix}\", f\"D3 Block {suffix}\"\n]\ncommon_cost_center = f\"General Common {suffix}\"\n\nhk_item_code = \"QPMS-01\" \nsg_item_code = \"QPMS-05\"\n\nitems_to_remove = []\nsplit_count = 0\n\nfor item in doc.items:\n    # Safety Check: Only split if it's the consolidated row (Qty >= 10)\n    if item.item_code in [hk_item_code, sg_item_code] and item.qty >= 10.0:\n        items_to_remove.append(item)\n        remaining_qty = item.qty - 10.0\n        \n        row_data = item.as_dict().copy()\n        for key in ['name', 'creation', 'modified', 'modified_by', 'owner', 'parent', 'parentfield', 'parenttype', 'idx']:\n            row_data.pop(key, None)\n            \n        # Create 10 block rows\n        for block in blocks:\n            new_row = doc.append(\"items\", {})\n            new_row.update(row_data)\n            new_row.qty = 1.0\n            new_row.cost_center = block\n            new_row.amount = new_row.qty * new_row.rate\n            \n        # Create common remainder row\n        if remaining_qty > 0:\n            remainder_row = doc.append(\"items\", {})\n            remainder_row.update(row_data)\n            remainder_row.qty = remaining_qty\n            remainder_row.cost_center = common_cost_center\n            remainder_row.amount = remainder_row.qty * remainder_row.rate\n            \n        split_count += 1\n\nif split_count > 0:\n    for item in items_to_remove:\n        doc.remove(item)\n        \n    doc.set_missing_values()\n    doc.calculate_taxes_and_totals()\n    doc.save() # Saves the split into the Draft\n    frappe.msgprint(\"Success! The rows have been split. Please review the table below.\")\nelse:\n    frappe.msgprint(\"No consolidated rows found to split. (Ensure Qty is 10 or greater).\")",
+  "script_type": "API"
  }
 ]

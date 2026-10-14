@@ -98,6 +98,10 @@ def generate_apportionment_je(template_name):
             is_expense = bal.net_balance > 0
             absolute_balance = abs(flt(bal.net_balance, 2))
             
+            # SAFETY CHECK 1: Skip if the raw balance rounds to exactly 0.00
+            if absolute_balance <= 0:
+                continue
+            
             credit_remark_idx = len(row_remarks_map)
             
             # 1. CLEARING ENTRY for the Common Amenity
@@ -120,22 +124,23 @@ def generate_apportionment_je(template_name):
                     
                 allocated_total += apportioned_amount
                 
-                clean_block_name = str(rule.target_cost_center).split(" - ")[0]
-                breakdown_list.append(f"{clean_block_name} {apportioned_amount}")
-
-                # 2. DISTRIBUTION ENTRY for the Blocks
-                je.append("accounts", {
-                    "account": bal.account, 
-                    "cost_center": rule.target_cost_center,
-                    "debit_in_account_currency": apportioned_amount if is_expense else 0.0,
-                    "credit_in_account_currency": apportioned_amount if not is_expense else 0.0
-                })
-                row_remarks_map.append(f"Apportioned share from {cc}")
+                # SAFETY CHECK 2: Only append the row if the apportioned amount is greater than 0
+                if apportioned_amount > 0:
+                    clean_block_name = str(rule.target_cost_center).split(" - ")[0]
+                    breakdown_list.append(f"{clean_block_name} {apportioned_amount}")
+    
+                    # 2. DISTRIBUTION ENTRY for the Blocks
+                    je.append("accounts", {
+                        "account": bal.account, 
+                        "cost_center": rule.target_cost_center,
+                        "debit_in_account_currency": apportioned_amount if is_expense else 0.0,
+                        "credit_in_account_currency": apportioned_amount if not is_expense else 0.0
+                    })
+                    row_remarks_map.append(f"Apportioned share from {cc}")
                 
             # Customize the remark based on whether money is going out or coming in
             action_word = "Expense apportioned to: " if is_expense else "Income distributed to: "
             row_remarks_map[credit_remark_idx] = action_word + ", ".join(breakdown_list)
-
         je.insert()
         
         for i, d in enumerate(je.accounts):

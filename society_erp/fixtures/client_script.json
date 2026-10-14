@@ -53,5 +53,16 @@
   "name": "Prompt for Active Owner",
   "script": "frappe.ui.form.on('Owners', {\r\n    validate: function(frm) {\r\n        // Only run this check if the user is trying to save an ACTIVE owner\r\n        if (frm.doc.active) {\r\n            \r\n            // If the user already clicked \"Yes\" on the prompt, let the save continue\r\n            if (frm.doc.__deactivate_confirmed) return;\r\n\r\n            // Pause the save process to do an asynchronous database check\r\n            frappe.validated = false;\r\n            \r\n            frappe.db.get_list('Owners', {\r\n                filters: {\r\n                    'flat': frm.doc.flat,\r\n                    'active': 1,\r\n                    'name': ['!=', frm.doc.name] // Exclude the current document\r\n                },\r\n                fields: ['name']\r\n            }).then(records => {\r\n                if (records && records.length > 0) {\r\n                    let old_owner = records[0].name;\r\n                    \r\n                    // Show the interactive prompt\r\n                    frappe.confirm(\r\n                        `An active owner (<b>${old_owner}</b>) already exists for Flat ${frm.doc.flat}. <br><br>Do you want to deactivate them and make this new owner active?`,\r\n                        () => {\r\n                            // User clicked YES: Set the bypass flag and trigger save again\r\n                            frm.doc.__deactivate_confirmed = true;\r\n                            frm.save();\r\n                        },\r\n                        () => {\r\n                            // User clicked NO: Cancel the save\r\n                            frappe.msgprint(\"Save cancelled. You can uncheck 'Active' if you want to save this owner as inactive.\");\r\n                        }\r\n                    );\r\n                } else {\r\n                    // No existing active owner found, proceed with save normally\r\n                    frm.doc.__deactivate_confirmed = true;\r\n                    frm.save();\r\n                }\r\n            });\r\n        }\r\n    }\r\n});",
   "view": "Form"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Purchase Invoice",
+  "enabled": 1,
+  "modified": "2026-10-14 05:14:34.466208",
+  "module": "Society Erp",
+  "name": "QPMS Apportionment Button",
+  "script": "frappe.ui.form.on('Purchase Invoice', {\n    refresh: function(frm) {\n        // Only show the button if the document is saved as a Draft\n        if (frm.doc.docstatus === 0 && !frm.is_new()) {\n            frm.add_custom_button(__('Test Apportionment Split'), function() {\n                frappe.call({\n                    method: 'split_qpms_manpower', // Calls your API Server Script\n                    args: { \n                        docname: frm.doc.name \n                    },\n                    freeze: true,\n                    freeze_message: \"Splitting rows...\",\n                    callback: function(r) {\n                        if (!r.exc) {\n                            // Reload the page to show the 22 new rows instantly\n                            frm.reload_doc(); \n                        }\n                    }\n                });\n            }).addClass('btn-primary');\n        }\n    }\n});",
+  "view": "Form"
  }
 ]
