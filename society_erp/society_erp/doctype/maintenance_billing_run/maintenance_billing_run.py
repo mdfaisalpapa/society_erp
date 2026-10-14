@@ -1,8 +1,20 @@
 import frappe
 from frappe.model.document import Document
-from frappe.utils import flt, get_last_day
+from frappe.utils import flt, get_first_day, get_last_day
+from frappe.model.naming import make_autoname
+from datetime import datetime
 
 class MaintenanceBillingRun(Document):
+    def autoname(self):
+        # 1. Force calculate the Billing Month on the backend
+        if self.posting_date:
+            d = datetime.strptime(str(self.posting_date), "%Y-%m-%d")
+            self.billing_month = d.strftime("%B %Y")
+        
+        # 2. Generate the precise ID format (e.g., January 2026-0001)
+        if self.billing_month:
+            self.name = make_autoname(f"{self.billing_month}-.####")
+            
     def before_submit(self):
         # Safely assign the status right before the document is locked
         auto_generate = frappe.db.get_single_value("Society ERP Settings", "auto_generate_invoices")
@@ -27,47 +39,41 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import flt, get_last_day
 
-# ... [Keep class MaintenanceBillingRun unchanged] ...
-
 @frappe.whitelist()
 def fetch_and_calculate_blocks(doc_name):
-    """
-    Fetches unbilled net expenses for each block's cost center up to the end 
-    of the billing month, and calculates the universal rate per unit of UDS.
-    """
     doc = frappe.get_doc("Maintenance Billing Run", doc_name)
     doc.set("block_details", []) 
     
-    # Calculate only the end date to cap the fetch limit
-    end_date = get_last_day(doc.posting_date)
-    
-    # Fetch blocks sorted alphabetically (A1 to D3) to ensure clean reporting
-    all_blocks = frappe.get_all(
-        "Block", 
-        fields=["name", "cost_center", "total_block_uds"],
-        order_by="name asc"
-    )
+    # Fetch blocks including total block UDS
+    all_blocks = frappe.get_all("Block", fields=["name", "cost_center", "total_block_uds"])
     
     if not all_blocks:
         frappe.throw("No Blocks found in the system.")
+        
+    grand_total = 0.0
+    
+    # NEW: Establish the exact start and end dates for the billing month
+    start_date = get_first_day(doc.posting_date)
+    end_date = get_last_day(doc.posting_date)
         
     for block in all_blocks:
         if not block.cost_center or not block.total_block_uds:
             continue 
             
-        # Fetch cumulative unbilled expenses (Debits - Credits) up to the billing month end
+        # FIXED: Joined tabAccount to isolate 'Expense' root types and filtered by the specific month
         balance = frappe.db.sql("""
-            SELECT (SUM(debit) - SUM(credit)) as net_balance
-            FROM `tabGL Entry` 
-            WHERE cost_center = %s 
-            AND company = %s 
-            AND is_cancelled = 0
-            AND posting_date <= %s
-        """, (block.cost_center, doc.company, end_date))[0][0] or 0
+            SELECT (SUM(ge.debit) - SUM(ge.credit)) as net_balance
+            FROM `tabGL Entry` ge
+            JOIN `tabAccount` acc ON ge.account = acc.name
+            WHERE ge.cost_center = %s 
+            AND ge.company = %s 
+            AND ge.is_cancelled = 0
+            AND acc.root_type = 'Expense'
+            AND ge.posting_date BETWEEN %s AND %s
+        """, (block.cost_center, doc.company, start_date, end_date))[0][0] or 0
         
-        # Only process if there are actual unbilled expenses to apportion
         if balance > 0:
-            # Calculate the universal rate per unit of UDS (6 decimal places for precision)
+            grand_total += balance
             rate_per_uds = flt(balance / block.total_block_uds, 6)
             
             doc.append("block_details", {
@@ -78,9 +84,9 @@ def fetch_and_calculate_blocks(doc_name):
                 "rate_per_uds": rate_per_uds
             })
             
+    doc.total_billed_amount = flt(grand_total, 2)
     doc.save()
     return "Success"
-
 
 def process_bulk_invoices(doc_name):
     try:

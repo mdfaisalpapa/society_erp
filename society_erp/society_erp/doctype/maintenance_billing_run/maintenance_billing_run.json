@@ -12,7 +12,8 @@
   "billing_month",
   "block_details",
   "amended_from",
-  "generation_status"
+  "generation_status",
+  "total_billed_amount"
  ],
  "fields": [
   {
@@ -56,13 +57,19 @@
    "label": "Generation Status",
    "options": "Pending\nQueued\nCompleted",
    "read_only": 1
+  },
+  {
+   "fieldname": "total_billed_amount",
+   "fieldtype": "Currency",
+   "label": "Total Billed Amount",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-14 07:12:45.997156",
+ "modified": "2026-10-14 10:02:27.890076",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Maintenance Billing Run",

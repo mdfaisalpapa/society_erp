@@ -1,14 +1,19 @@
 frappe.ui.form.on("Maintenance Billing Run", {
-    // Add this new block to calculate the month automatically
-    posting_date: function(frm) {
-        if (frm.doc.posting_date) {
-            // Converts "2026-07-31" to "July 2026"
-            let formatted_month = frappe.datetime.moment(frm.doc.posting_date).format("MMMM YYYY");
+    // 1. Fires the instant a "New" document is opened
+    onload: function(frm) {
+        if (frm.is_new() && frm.doc.posting_date) {
+            let formatted_month = moment(frm.doc.posting_date).format("MMMM YYYY");
             frm.set_value('billing_month', formatted_month);
         }
     },
 
-    // ... [Keep your existing refresh(frm) function below] ...
+    // 2. Fires only if the accountant manually changes the date
+    posting_date: function(frm) {
+        if (frm.doc.posting_date) {
+            let formatted_month = moment(frm.doc.posting_date).format("MMMM YYYY");
+            frm.set_value('billing_month', formatted_month);
+        }
+    },
     refresh(frm) {
         // ...    refresh(frm) {
         // 1. Fetch Balances Button (Only in Draft State)
