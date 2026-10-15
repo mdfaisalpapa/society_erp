@@ -33,10 +33,12 @@ def check_unallocated_balance(template_name, parent_cost_center, company):
     for cc in child_cost_centers:
         # UPDATED: We now check every account individually to get the absolute total of uncleared items
         account_balances = frappe.db.sql("""
-            SELECT (SUM(debit) - SUM(credit)) as net_balance
-            FROM `tabGL Entry` 
-            WHERE cost_center = %s AND company = %s AND is_cancelled = 0 
-            GROUP BY account
+            SELECT (SUM(gle.debit) - SUM(gle.credit)) as net_balance
+            FROM `tabGL Entry` gle
+            JOIN `tabAccount` acc ON gle.account = acc.name
+            WHERE gle.cost_center = %s AND gle.company = %s AND gle.is_cancelled = 0 
+            AND acc.report_type = 'Profit and Loss'
+            GROUP BY gle.account
             HAVING net_balance != 0 
         """, (cc, company), as_dict=True)
         
@@ -75,10 +77,12 @@ def generate_apportionment_je(template_name):
     for cc in child_cost_centers:
         # UPDATED: HAVING net_balance != 0 captures both Expenses (Positive) and Income (Negative)
         account_balances = frappe.db.sql("""
-            SELECT account, (SUM(debit) - SUM(credit)) as net_balance
-            FROM `tabGL Entry` 
-            WHERE cost_center = %s AND company = %s AND is_cancelled = 0 
-            GROUP BY account
+            SELECT gle.account, (SUM(gle.debit) - SUM(gle.credit)) as net_balance
+            FROM `tabGL Entry` gle
+            JOIN `tabAccount` acc ON gle.account = acc.name
+            WHERE gle.cost_center = %s AND gle.company = %s AND gle.is_cancelled = 0 
+            AND acc.report_type = 'Profit and Loss'
+            GROUP BY gle.account
             HAVING net_balance != 0
         """, (cc, doc.company), as_dict=True)
         
