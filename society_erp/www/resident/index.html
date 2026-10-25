@@ -1,0 +1,197 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-4">
+    {% if not_a_resident %}
+        <div class="alert alert-danger">
+            Your account is not linked to an active flat. Please contact the Estate Office.
+        </div>
+    {% else %}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Welcome, {{ resident_name }}</h2>
+            <span class="badge badge-primary" style="font-size: 1.1em; padding: 10px;">Flat: {{ flat_number }}</span>
+        </div>
+
+        <!-- Latest Notice Highlight -->
+        {% if notices %}
+        <div class="alert alert-info">
+            <strong>📢 Latest Notice:</strong> {{ notices[0].title }} - <small>{{ notices[0].date }}</small>
+        </div>
+        {% endif %}
+
+        <!-- Modules Grid -->
+        <div class="row mt-4">
+            
+            <!-- 1. Flat & Profile Details (Common) -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 text-center shadow-sm transition-hover">
+                    <div class="card-body">
+                        <h1 class="card-title mt-2">👤</h1>
+                        <h5 class="card-title mt-3">Flat Details</h5>
+                        <p class="text-muted small">Profile & Property Info</p>
+                        <a href="/resident/profile" class="btn btn-outline-primary btn-sm stretched-link">View</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Owner Details (RESTRICTED TO OWNERS) -->
+            {% if is_owner %}
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 text-center shadow-sm transition-hover border-warning">
+                    <div class="card-body">
+                        <h1 class="card-title mt-2">📜</h1>
+                        <h5 class="card-title mt-3">Owner Details</h5>
+                        <p class="text-muted small">Current & Past Owners</p>
+                        <a href="/resident/owners" class="btn btn-outline-warning btn-sm stretched-link">View History</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 3. Society Dues (Common) -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 text-center shadow-sm transition-hover">
+                    <div class="card-body">
+                        <h1 class="card-title mt-2">📊</h1>
+                        <h5 class="card-title mt-3">Check Dues</h5>
+                        <p class="text-muted small">Maintenance & Ledger</p>
+                        <a href="/resident/dues" class="btn btn-outline-primary btn-sm stretched-link">Pay / View</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Tenant Management (RESTRICTED TO OWNERS) -->
+            {% if is_owner %}
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 text-center shadow-sm transition-hover border-warning">
+                    <div class="card-body">
+                        <h1 class="card-title mt-2">🏠</h1>
+                        <h5 class="card-title mt-3">Tenant Mgmt</h5>
+                        <p class="text-muted small">Manage Leases & Tenants</p>
+                        <a href="/resident/tenants" class="btn btn-outline-warning btn-sm stretched-link">Manage</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 5. Book Facility (Common) -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 text-center shadow-sm transition-hover">
+                    <div class="card-body">
+                        <h1 class="card-title mt-2">🏛️</h1>
+                        <h5 class="card-title mt-3">Book Facility</h5>
+                        <p class="text-muted small">Community Hall & Amenities</p>
+                        <a href="/resident/book_facility" class="btn btn-outline-primary btn-sm stretched-link">Book</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. Visitor Management (Common) -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 text-center shadow-sm transition-hover">
+                    <div class="card-body">
+                        <h1 class="card-title mt-2">🎫</h1>
+                        <h5 class="card-title mt-3">Gate Pass</h5>
+                        <p class="text-muted small">Pre-Approve Visitors</p>
+                        <a href="/resident/visitors" class="btn btn-outline-primary btn-sm stretched-link">Manage</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. Maintenance Tickets (Common) -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 text-center shadow-sm transition-hover">
+                    <div class="card-body">
+                        <h1 class="card-title mt-2">🛠️</h1>
+                        <h5 class="card-title mt-3">Maintenance</h5>
+                        <p class="text-muted small">Raise & Track Tickets</p>
+                        <a href="/resident/maintenance" class="btn btn-outline-primary btn-sm stretched-link">Manage</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 8. Vehicles & Parking (Common) -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 text-center shadow-sm transition-hover">
+                    <div class="card-body">
+                        <h1 class="card-title mt-2">🚗</h1>
+                        <h5 class="card-title mt-3">Vehicles & Parking</h5>
+                        <p class="text-muted small">Manage Cars, Bikes & Slots</p>
+                        <a href="/resident/vehicles" class="btn btn-outline-primary btn-sm stretched-link">Manage</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 9. Family Members (Common) -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 text-center shadow-sm transition-hover">
+                    <div class="card-body">
+                        <h1 class="card-title mt-2">👨‍👩‍👧‍👦</h1>
+                        <h5 class="card-title mt-3">Family</h5>
+                        <p class="text-muted small">Manage Family Members</p>
+                        <a href="/resident/family" class="btn btn-outline-primary btn-sm stretched-link">Manage</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 10. Domestic Staff (Common) -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 text-center shadow-sm transition-hover">
+                    <div class="card-body">
+                        <h1 class="card-title mt-2">🧹</h1>
+                        <h5 class="card-title mt-3">Domestic Staff</h5>
+                        <p class="text-muted small">Maids, Drivers & Cooks</p>
+                        <a href="/resident/staff" class="btn btn-outline-primary btn-sm stretched-link">Manage</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 11. Notice Board (Common) -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 text-center shadow-sm transition-hover">
+                    <div class="card-body">
+                        <h1 class="card-title mt-2">📋</h1>
+                        <h5 class="card-title mt-3">Notice Board</h5>
+                        <p class="text-muted small">Society Announcements</p>
+                        <a href="/resident/notices" class="btn btn-outline-primary btn-sm stretched-link">View</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 12. Work Permit Management (RESTRICTED TO OWNERS) -->
+            {% if is_owner %}
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 text-center shadow-sm transition-hover border-warning">
+                    <div class="card-body">
+                        <h1 class="card-title mt-2">👷</h1>
+                        <h5 class="card-title mt-3">Work Permits</h5>
+                        <p class="text-muted small">Contractors & Approvals</p>
+                        <a href="/resident/work_permits" class="btn btn-outline-warning btn-sm stretched-link">Manage</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="row mt-4 mb-5">
+            <div class="col-12 text-center">
+                <button class="btn btn-outline-danger px-4 py-2 btn-logout">🚪 Logout</button>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .transition-hover {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .transition-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    }
+    h1.card-title {
+        font-size: 3rem; 
+    }
+</style>
+{% endblock %}

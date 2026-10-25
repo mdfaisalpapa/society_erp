@@ -1,0 +1,87 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>🅿️ My Parking Slots</h2>
+    </div>
+
+    {% if not_a_resident %}
+        <div class="alert alert-danger">Your account is not linked to an active flat ownership.</div>
+    {% elif not slots %}
+        <div class="alert alert-info">You do not own any parking slots in this society.</div>
+    {% else %}
+        <div class="row">
+            {% for slot in slots %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title text-primary">🚗 Slot: {{ slot.name }}</h4>
+                        <p class="mb-1"><strong>Type:</strong> {{ slot.slot_type }}</p>
+                        <p class="mb-1"><strong>Status:</strong> <span class="badge badge-info">{{ slot.allocation_type }}</span></p>
+                        
+                        {% if slot.allocation_type == 'Private Neighbor Rental' %}
+                            <p class="mb-3"><strong>Occupied By:</strong> Flat {{ slot.occupied_by }}</p>
+                        {% else %}
+                            <p class="mb-3 text-muted">Self-Occupied (Flat {{ flat_number }})</p>
+                        {% endif %}
+
+                        <hr>
+                        
+                        <div class="btn-group w-100" role="group">
+                            {% if slot.allocation_type != 'Self-Occupied' %}
+                                <button class="btn btn-warning btn-sm btn-reclaim" data-slot="{{ slot.name }}" data-alloc="{{ slot.allocation_name }}">
+                                    👤 Reclaim
+                                </button>
+                            {% endif %}
+                            
+                            {% if slot.allocation_type != 'Private Neighbor Rental' %}
+                                <button class="btn btn-success btn-sm btn-rent" data-slot="{{ slot.name }}" data-alloc="{{ slot.allocation_name }}" data-toggle="modal" data-target="#rentModal">
+                                    🤝 Rent to Neighbor
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Rent to Neighbor Modal -->
+<div class="modal fade" id="rentModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">🤝 Rent Slot to Neighbor</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="rent-form">
+                    <input type="hidden" id="modal_slot_id">
+                    <input type="hidden" id="modal_old_alloc">
+                    <input type="hidden" id="owner_flat" value="{{ flat_number }}">
+                    
+                    <div class="form-group">
+                        <label>Neighbor's Flat Number</label>
+                        <input type="text" class="form-control" id="neighbor_flat" placeholder="e.g. TA1-102" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Start Date</label>
+                        <input type="date" class="form-control" id="start_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>End Date (Optional)</label>
+                        <input type="date" class="form-control" id="end_date">
+                        <small class="text-muted">Leave blank if the rental period is indefinite.</small>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-block" id="btn-submit-rent">Confirm Rental</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

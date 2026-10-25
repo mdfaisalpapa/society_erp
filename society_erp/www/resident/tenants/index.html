@@ -1,0 +1,241 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>🏠 Tenant Management</h2>
+        <div>
+            <a href="/resident" class="btn btn-outline-secondary mr-2">🔙 Back to Portal</a>
+            {% if not is_rented %}
+                <button class="btn btn-primary" data-toggle="modal" data-target="#addTenantModal">➕ Register New Tenant</button>
+            {% else %}
+                <button class="btn btn-secondary" disabled title="Deactivate current tenant first">➕ Register New Tenant</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        {% for t in tenants %}
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm {{ 'border-success' if t.active else 'border-secondary opacity-75' }}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <h5 class="card-title">{{ t.tenant_name }}</h5>
+                        <span class="badge badge-{{ 'success' if t.active else 'secondary' }}">{{ 'Active' if t.active else 'Past Tenant' }}</span>
+                    </div>
+                    <p class="mb-1">📞 {{ t.mobile_no }} | 📧 {{ t.email or 'N/A' }}</p>
+                    <p class="mb-1"><small>Status: {{ t.registration_status }}</small></p>
+                    <p class="mb-2"><small>Lease: {{ t.start_date }} to {{ t.end_date or 'Ongoing' }}</small></p>
+                    
+                    {% if t.active %}
+                        <button class="btn btn-danger btn-sm btn-deactivate mb-2" data-id="{{ t.name }}">🛑 Vacate Tenant</button>
+                    {% endif %}
+                    
+                    <!-- Document Links -->
+                    <div class="mt-2">
+                        {% if t.rental_agreement %}
+                            <a href="{{ t.rental_agreement }}" target="_blank" class="btn btn-outline-info btn-sm mb-1">📄 Agreement</a>
+                        {% endif %}
+                        {% if t.id_proof %}
+                            <a href="{{ t.id_proof }}" target="_blank" class="btn btn-outline-info btn-sm mb-1">🪪 ID Proof</a>
+                        {% endif %}
+                        {% if t.police_verification %}
+                            <a href="{{ t.police_verification }}" target="_blank" class="btn btn-outline-info btn-sm mb-1">👮 Police Verif.</a>
+                        {% endif %}
+                        {% if t.photo %}
+                            <a href="{{ t.photo }}" target="_blank" class="btn btn-outline-info btn-sm mb-1">👤 Photo</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center text-muted">
+            <p>No tenants registered for your flat.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+<!-- Register Tenant Modal -->
+<div class="modal fade" id="addTenantModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Register New Tenant</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="registerTenantForm">
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Tenant Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="tenant_name" required>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Relationship <span class="text-danger">*</span></label>
+                            <select class="form-control" id="relationship" required>
+                                <option value="Tenant">Tenant</option>
+                                <option value="Caretaker">Caretaker</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Mobile No <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control" id="mobile_no" required>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Email</label>
+                            <input type="email" class="form-control" id="email">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Lease Start Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="start_date" required>
+                    </div>
+
+                    <hr>
+                    <h6 class="mb-3">📄 Required Documents</h6>
+                    
+                    <div class="form-group">
+                        <label>Tenant Photo <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control-file" id="photo" accept="image/*" required>
+                    </div>
+                    <div class="form-group">
+                        <label>ID Proof (Aadhar/PAN) <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control-file" id="id_proof" accept="image/*,.pdf" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Rental Agreement <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control-file" id="rental_agreement" accept="image/*,.pdf" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Police Verification</label>
+                        <input type="file" class="form-control-file" id="police_verification" accept="image/*,.pdf">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block mt-4" id="btn-submit-tenant">Register Tenant</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+frappe.ready(function() {
+    
+    // 1. Resilient AJAX Upload (Replaces flaky fetch API)
+    function upload_file(file) {
+        return new Promise((resolve, reject) => {
+            let formData = new FormData();
+            formData.append("file", file, file.name);
+            formData.append("is_private", 1); 
+
+            $.ajax({
+                url: '/api/method/upload_file',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token },
+                success: function(r) {
+                    if (r.message && r.message.file_url) resolve(r.message.file_url);
+                    else reject(r);
+                },
+                error: function(err) { reject(err); }
+            });
+        });
+    }
+
+    // 2. Handle Vacate Tenant Button
+    $('.btn-deactivate').on('click', function() {
+        let tenant_id = $(this).data('id');
+        
+        frappe.confirm('Are you sure you want to mark this tenant as vacated?', function() {
+            frappe.call({
+                method: 'society_erp.tenant_portal.deactivate_tenant', // <-- Updated Path
+                args: { tenant_id: tenant_id },
+                callback: function(r) {
+                    if (!r.exc) {
+                        frappe.show_alert({ message: 'Tenant vacated successfully.', indicator: 'green' });
+                        setTimeout(() => location.reload(), 1500);
+                    }
+                }
+            });
+        });
+    });
+
+    // 3. Handle Register Tenant Form (with Strict Validation)
+    $('#registerTenantForm').on('submit', async function(e) {
+        e.preventDefault();
+        
+        // --- PRE-FLIGHT VALIDATIONS ---
+        let mobile = $('#mobile_no').val().trim();
+        let clean_mobile = mobile.replace(/\D/g, ''); 
+        
+        if (clean_mobile.length !== 10) {
+            frappe.show_alert({ message: 'Mobile number must be exactly 10 digits.', indicator: 'red' });
+            return;
+        }
+
+        let email = $('#email').val().trim();
+        let emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (email && !emailRegex.test(email)) {
+            frappe.show_alert({ message: 'Please enter a valid email address.', indicator: 'red' });
+            return;
+        }
+
+        let rentalFile = $('#rental_agreement')[0].files[0];
+        if (!rentalFile) {
+            frappe.show_alert({ message: 'Rental Agreement is mandatory.', indicator: 'red' });
+            return;
+        }
+        // ------------------------------
+        
+        let submitBtn = $('#btn-submit-tenant');
+        submitBtn.prop('disabled', true).text('Uploading Documents...');
+
+        try {
+            let data = {
+                flat: '{{ flat_number }}',
+                tenant_name: $('#tenant_name').val(),
+                relationship: $('#relationship').val(),
+                mobile_no: clean_mobile,
+                email: email,
+                start_date: $('#start_date').val()
+            };
+
+            // Safely upload files one by one
+            const fileFields = ['rental_agreement', 'police_verification', 'id_proof', 'photo'];
+            for (let field of fileFields) {
+                let fileInput = $(`#${field}`)[0].files[0];
+                if (fileInput) {
+                    data[field] = await upload_file(fileInput);
+                }
+            }
+
+            submitBtn.text('Registering Tenant...');
+            
+            // Final submission to the newly refactored API path
+            frappe.call({
+                method: 'society_erp.tenant_portal.register_tenant', // <-- Updated Path
+                args: data,
+                callback: function(r) {
+                    if (!r.exc) {
+                        $('#addTenantModal').modal('hide');
+                        frappe.show_alert({ message: 'New tenant registered successfully.', indicator: 'green' });
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        submitBtn.prop('disabled', false).text('Register Tenant');
+                    }
+                }
+            });
+        } catch (error) {
+            frappe.show_alert({ message: 'Failed to upload documents. Please check file sizes.', indicator: 'red' });
+            submitBtn.prop('disabled', false).text('Register Tenant');
+        }
+    });
+});
+</script>
+{% endblock %}

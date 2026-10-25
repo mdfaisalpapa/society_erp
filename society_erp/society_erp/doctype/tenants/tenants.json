@@ -23,8 +23,7 @@
   "rental_agreement",
   "police_verification",
   "id_proof",
-  "photo",
-  "ntfy_topic"
+  "photo"
  ],
  "fields": [
   {
@@ -112,17 +111,12 @@
    "fieldname": "photo",
    "fieldtype": "Attach Image",
    "label": "Photo"
-  },
-  {
-   "fieldname": "ntfy_topic",
-   "fieldtype": "Data",
-   "label": "ntfy Topic"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-11 12:07:25.283334",
+ "modified": "2026-10-25 05:49:20.259753",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Tenants",

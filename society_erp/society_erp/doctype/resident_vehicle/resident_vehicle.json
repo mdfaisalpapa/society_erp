@@ -17,12 +17,10 @@
   "color",
   "belongs_to",
   "parking_slot",
-  "active",
   "remarks",
   "flat",
   "owner_reference",
   "tenant_reference",
-  "is_electric",
   "rfid_number",
   "approval_status",
   "rc_copy",
@@ -69,12 +67,6 @@
    "options": "Owner\nTenant"
   },
   {
-   "default": "0",
-   "fieldname": "active",
-   "fieldtype": "Check",
-   "label": "Active"
-  },
-  {
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
@@ -97,12 +89,6 @@
    "fieldtype": "Link",
    "label": "Tenant Reference",
    "options": "Tenants"
-  },
-  {
-   "default": "0",
-   "fieldname": "is_electric",
-   "fieldtype": "Check",
-   "label": "Is Electric"
   },
   {
    "fieldname": "rc_copy",
@@ -136,7 +122,7 @@
    "fieldname": "approval_status",
    "fieldtype": "Select",
    "label": "Approval Status",
-   "options": "Pending\nApproved\nRejected"
+   "options": "Pending\nApproved\nRejected\nInactive\nSticker Returned"
   },
   {
    "fieldname": "parking_slot",
@@ -148,7 +134,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-11 12:10:58.462137",
+ "modified": "2026-10-25 04:23:07.544341",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Resident Vehicle",

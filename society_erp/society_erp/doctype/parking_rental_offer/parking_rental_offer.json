@@ -1,0 +1,120 @@
+{
+  "doctype": "DocType",
+  "name": "Parking Rental Offer",
+  "module": "Society Erp",
+  "engine": "InnoDB",
+  "autoname": "PRO-.YYYY.-.#####.",
+  "naming_rule": "Expression",
+  "field_order": [
+    "parking_slot",
+    "slot_number",
+    "offered_by_flat",
+    "owner_reference",
+    "asking_monthly_rent",
+    "available_from",
+    "available_until",
+    "description",
+    "status",
+    "selected_bid"
+  ],
+  "fields": [
+    {
+      "fieldname": "parking_slot",
+      "label": "Parking Slot",
+      "fieldtype": "Link",
+      "options": "Parking Slot",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "slot_number",
+      "label": "Slot Number",
+      "fieldtype": "Data",
+      "reqd": 1,
+      "in_list_view": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "offered_by_flat",
+      "label": "Offered By Flat",
+      "fieldtype": "Link",
+      "options": "Customer",
+      "reqd": 1,
+      "in_list_view": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "owner_reference",
+      "label": "Owner Reference",
+      "fieldtype": "Link",
+      "options": "Owners",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "asking_monthly_rent",
+      "label": "Asking Monthly Rent",
+      "fieldtype": "Currency",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "available_from",
+      "label": "Available From",
+      "fieldtype": "Date",
+      "reqd": 1
+    },
+    {
+      "fieldname": "available_until",
+      "label": "Available Until",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "description",
+      "label": "Description",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Open\nUnder Selection\nClosed\nCancelled\nExpired",
+      "default": "Open",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "selected_bid",
+      "label": "Selected Bid",
+      "fieldtype": "Link",
+      "options": "Parking Rental Bid",
+      "read_only": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    },
+    {
+      "role": "Society Bot",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "allow_rename": 0,
+  "allow_import": 0,
+  "allow_export": 0,
+  "allow_bulk_edit": 0,
+  "track_changes": 1,
+  "description": "Resident-to-resident rental offer for a numbered stilt car parking slot."
+}

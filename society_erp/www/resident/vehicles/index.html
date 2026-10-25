@@ -1,0 +1,313 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-4">
+    {% if not_a_resident %}
+        <div class="alert alert-danger">Your account is not linked to an active flat.</div>
+    {% else %}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>🚗 My Vehicles</h2>
+            <div>
+                <a href="/resident" class="btn btn-outline-secondary mr-2">🔙 Back to Portal</a>
+                
+                {% if car_eligible > 0 or bike_eligible > 0 %}
+                    <!-- Disable button if they owe a sticker -->
+                    {% if unreturned_stickers %}
+                        <button class="btn btn-secondary" disabled title="Return pending stickers to unlock">➕ Add New Vehicle (Blocked)</button>
+                    {% else %}
+                        <button class="btn btn-primary" data-toggle="modal" data-target="#addVehicleModal">➕ Add New Vehicle</button>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 👇 NEW: Urgent Warning Banner for Unreturned Stickers -->
+        {% if unreturned_stickers %}
+        <div class="alert alert-danger shadow-sm border-danger">
+            <h5 class="alert-heading">⚠️ Physical Sticker Return Required</h5>
+            <hr>
+            <p class="mb-0">You have deactivated the following vehicle(s): <strong>{{ unreturned_stickers | join(', ') }}</strong>.</p>
+            <p class="mb-0 mt-2">To prevent misuse, you <strong>cannot</strong> register new vehicles or rent out your parking slots until you return the physical parking sticker(s) to the Estate Office.</p>
+        </div>
+        {% endif %}
+        <!-- Hidden values for JS validation -->
+        <input type="hidden" id="car_eligible" value="{{ car_eligible }}">
+        <input type="hidden" id="bike_eligible" value="{{ bike_eligible }}">
+
+        <!-- Eligibility Banner -->
+        <div class="alert alert-info">
+            <h5 class="alert-heading">🅿️ Parking Slots</h5>
+            <hr class="mt-2 mb-2">
+            <p class="mb-1">
+                <strong>🚗 Cars:</strong> 
+                {% if car_eligible > 0 %}
+                    {{ car_eligible }} Allowed (Slot: {{ auto_parking_slot }})
+                {% else %}
+                    <span class="text-danger">Already Car parking consumed ({{ car_count }}/1)</span>
+                {% endif %}
+            </p>
+            <p class="mb-0">
+                <strong>🛵 Bikes:</strong> 
+                {% if bike_eligible > 0 %}
+                    {{ bike_eligible }} Allowed (Unreserved Open Parking)
+                {% else %}
+                    <span class="text-danger">Already Bike parking consumed ({{ bike_count }}/2)</span>
+                {% endif %}
+            </p>
+        </div>
+
+<!-- ================= MY REGISTERED VEHICLES GRID ================= -->
+        <h4 class="mb-3 text-secondary">My Registered Vehicles</h4>
+        <div class="row mb-5">
+            {% for v in vehicles %}
+            <div class="col-md-6 mb-4">
+                <!-- Dynamic Card Border Color based solely on Status -->
+                <div class="card h-100 shadow-sm border-{{ 'success' if v.approval_status == 'Approved' else 'warning' if v.approval_status == 'Pending' else 'secondary' if v.approval_status == 'Inactive' else 'danger' }}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title text-primary mb-1">{{ v.registration_number }}</h5>
+                                <p class="mb-1 text-muted small"><strong>Type:</strong> {{ v.vehicle_type }} ({{ v.make }} {{ v.model }})</p>
+                                <p class="mb-2 text-muted small"><strong>Owner:</strong> {{ v.registered_owner_name }}</p>
+                                
+                               <!-- Status Badge -->
+                                <span class="badge badge-{{ 'success' if v.approval_status == 'Approved' else 'warning' if v.approval_status == 'Pending' else 'secondary' if v.approval_status in ['Inactive', 'Sticker Returned'] else 'danger' }}">
+                                    Status: {{ v.approval_status }}
+                                </span>
+                            </div>
+                            
+                            <!-- Dynamic Action Buttons -->
+                            {% if v.approval_status == 'Pending' %}
+                            <div>
+                                <button class="btn btn-outline-danger btn-sm btn-delete-vehicle" data-id="{{ v.name }}" data-reg="{{ v.registration_number }}" title="Delete Pending Vehicle">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                            {% elif v.approval_status == 'Approved' %}
+                            <div>
+                                <button class="btn btn-outline-secondary btn-sm btn-disable-vehicle" data-id="{{ v.name }}" data-reg="{{ v.registration_number }}" title="Deactivate to free up limits">
+                                    🛑 Disable
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>        {% else %}
+        <div class="col-12"><div class="alert alert-warning">No vehicles registered yet.</div></div>
+        {% endfor %}
+    </div>
+
+    <!-- ================= MY OWNED PARKING SLOTS GRID (RESTORED) ================= -->
+    <h4 class="mb-3 mt-5 text-secondary">My Owned Parking Slots</h4>
+    <div class="row mb-5">
+        {% for slot in owned_slots %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 border-info shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title text-info">🅿️ {{ slot.name }}</h4>
+                    <p class="mb-1"><strong>Type:</strong> {{ slot.slot_type }}</p>
+                    <p class="mb-1"><strong>Status:</strong> <span class="badge badge-primary">{{ slot.allocation_type }}</span></p>
+                    
+                    {% if slot.allocation_type == 'Private Neighbor Rental' %}
+                        <p class="mb-3"><strong>Occupied By:</strong> Flat {{ slot.occupied_by }}</p>
+                    {% else %}
+                        <p class="mb-3 text-muted">Self-Occupied (Flat {{ flat_number }})</p>
+                    {% endif %}
+                    
+                    <hr>
+                    <div class="btn-group w-100" role="group">
+                            {% if slot.allocation_type != 'Self-Occupied' %}
+                                <button class="btn btn-warning btn-sm btn-reclaim" data-slot="{{ slot.name }}" data-alloc="{{ slot.allocation_name }}">👤 Reclaim</button>
+                            {% endif %}
+                            
+                            {% if slot.allocation_type != 'Private Neighbor Rental' %}
+                                <!-- Disable Renting if a vehicle is parked OR a sticker is missing -->
+                                {% if slot.has_active_vehicle %}
+                                    <button class="btn btn-secondary btn-sm" disabled title="Remove active vehicle first to rent slot">🤝 Rent (In Use)</button>
+                                {% elif unreturned_stickers %}
+                                    <button class="btn btn-secondary btn-sm" disabled title="Return physical vehicle stickers first to unlock renting">🤝 Rent (Blocked)</button>
+                                {% else %}
+                                    <button class="btn btn-success btn-sm btn-rent" data-slot="{{ slot.name }}" data-alloc="{{ slot.allocation_name }}" data-toggle="modal" data-target="#rentModal">🤝 Rent</button>
+                                {% endif %}
+                            {% endif %}
+                            
+                            <button class="btn btn-outline-secondary btn-sm btn-history" data-slot="{{ slot.name }}" data-toggle="modal" data-target="#historyModal">📜 History</button>
+                        </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12"><div class="alert alert-info">You do not own any parking slots in this society.</div></div>
+        {% endfor %}
+    </div>
+
+{% endif %}
+</div>
+<!-- ... [Modals start here] ... -->
+<!-- Add Vehicle Modal -->
+<div class="modal fade" id="addVehicleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title">Register New Vehicle</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="vehicle-form">
+                    
+                    <div class="row mb-3 pb-3 border-bottom bg-light pt-2 rounded mx-1">
+                        <div class="col-md-3 form-group mb-1">
+                            <label class="text-muted small">Flat</label>
+                            <input type="text" class="form-control form-control-sm" id="flat_number" value="{{ flat_number }}" readonly>
+                        </div>
+                        <div class="col-md-3 form-group mb-1">
+                            <label class="text-muted small">Belongs To</label>
+                            <input type="text" class="form-control form-control-sm" id="belongs_to" value="{{ belongs_to }}" readonly>
+                        </div>
+                        <div class="col-md-3 form-group mb-1">
+                            <label class="text-muted small">Reference ID</label>
+                            <input type="text" class="form-control form-control-sm" id="reference_id" value="{{ reference_id }}" readonly>
+                        </div>
+                        <div class="col-md-3 form-group mb-1">
+                            <label class="text-muted small">Assigned Parking</label>
+                            <input type="text" class="form-control form-control-sm" id="parking_slot" value="{{ auto_parking_slot }}" readonly>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Vehicle Type <span class="text-danger">*</span></label>
+                            <select class="form-control" id="v_type" required>
+                                <option value="">Select...</option>
+                                {% for vt in form_options.vehicle_types %}
+                                    <option value="{{ vt }}">{{ vt }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Registration Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control text-uppercase" id="reg_no" placeholder="TN01AB1234" required>
+                        </div>
+                        
+                        <div class="col-md-6 form-group">
+                            <label>Registered Owner (As per RC) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="owner_name" required>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Relationship to Resident <span class="text-danger">*</span></label>
+                            <select class="form-control" id="relationship" required>
+                                <option value="">Select...</option>
+                                {% for rel in form_options.relationships %}
+                                    <option value="{{ rel }}">{{ rel }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4 form-group">
+                            <label>Make <span class="text-danger">*</span></label>
+                            <select class="form-control" id="make" required disabled><option value="">Select Type First</option></select>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Model <span class="text-danger">*</span></label>
+                            <select class="form-control" id="model" required disabled><option value="">Select Make First</option></select>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Color <span class="text-danger">*</span></label>
+                            <select class="form-control" id="color" required>
+                                <option value="">Select...</option>
+                                {% for c in form_options.colors %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 form-group">
+                            <label>RC Copy Image/PDF <span class="text-danger">*</span></label>
+                            <input type="file" class="form-control-file" id="rc_file" accept="image/*,.pdf" required>
+                        </div>
+                        <div class="col-md-6 form-group" id="noc-group" style="display: none;">
+                            <label>NOC Copy Image/PDF <span class="text-danger">*</span></label>
+                            <input type="file" class="form-control-file" id="noc_file" accept="image/*,.pdf">
+                            <small class="text-muted">Required because vehicle is not in your name.</small>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block mt-3" id="btn-submit">Submit Registration</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ================= PARKING MODALS ================= -->
+
+<!-- Rent to Neighbor Modal -->
+<div class="modal fade" id="rentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">🤝 Rent Slot to Neighbor</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="rent-form">
+                    <input type="hidden" id="modal_slot_id">
+                    <input type="hidden" id="modal_old_alloc">
+                    <input type="hidden" id="owner_flat" value="{{ flat_number }}">
+                    
+                    <div class="form-group">
+                        <label>Neighbor's Flat Number <span class="text-danger">*</span></label>
+                        <!-- Searchable Datalist for Flats -->
+                        <input type="text" class="form-control text-uppercase" id="neighbor_flat" list="flat_list" placeholder="Search flat... (e.g. TA1-102)" required autocomplete="off">
+                        <datalist id="flat_list">
+                            {% for flat in all_flats %}
+                                <option value="{{ flat }}"></option>
+                            {% endfor %}
+                        </datalist>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Start Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="start_date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>End Date (Optional)</label>
+                        <input type="date" class="form-control" id="end_date">
+                        <small class="text-muted">Leave blank if the rental period is indefinite.</small>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success btn-block" id="btn-submit-rent">Confirm Rental</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Parking History Modal -->
+<div class="modal fade" id="historyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">📜 Allocation History: <span id="history_slot_title"></span></h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Allocation Type</th>
+                                <th>Occupied By</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                            <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

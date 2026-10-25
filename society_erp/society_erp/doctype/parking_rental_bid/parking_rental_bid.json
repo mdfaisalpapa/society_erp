@@ -1,0 +1,103 @@
+{
+  "doctype": "DocType",
+  "name": "Parking Rental Bid",
+  "module": "Society Erp",
+  "engine": "InnoDB",
+  "autoname": "PRB-.YYYY.-.#####.",
+  "naming_rule": "Expression",
+  "field_order": [
+    "offer",
+    "bidder_flat",
+    "bidder_reference",
+    "bid_monthly_rent",
+    "proposed_start_date",
+    "proposed_end_date",
+    "remarks",
+    "status"
+  ],
+  "fields": [
+    {
+      "fieldname": "offer",
+      "label": "Offer",
+      "fieldtype": "Link",
+      "options": "Parking Rental Offer",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "bidder_flat",
+      "label": "Bidder Flat",
+      "fieldtype": "Link",
+      "options": "Customer",
+      "reqd": 1,
+      "in_list_view": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "bidder_reference",
+      "label": "Bidder Reference",
+      "fieldtype": "Link",
+      "options": "Owners",
+      "reqd": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "bid_monthly_rent",
+      "label": "Bid Monthly Rent",
+      "fieldtype": "Currency",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "proposed_start_date",
+      "label": "Proposed Start Date",
+      "fieldtype": "Date",
+      "reqd": 1
+    },
+    {
+      "fieldname": "proposed_end_date",
+      "label": "Proposed End Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "remarks",
+      "label": "Remarks",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Submitted\nSelected - Awaiting Confirmation\nConfirmed\nNot Selected\nWithdrawn",
+      "default": "Submitted",
+      "reqd": 1,
+      "in_list_view": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    },
+    {
+      "role": "Society Bot",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ],
+  "allow_rename": 0,
+  "allow_import": 0,
+  "allow_export": 0,
+  "allow_bulk_edit": 0,
+  "track_changes": 1,
+  "description": "Confidential individual bid for a parking rental offer. Access is through validated portal APIs."
+}

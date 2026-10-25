@@ -19,7 +19,8 @@
   "priority_level",
   "preferred_visit_time",
   "resolution_remarks",
-  "resident_feedbackrating"
+  "resident_feedbackrating",
+  "raised_by_user"
  ],
  "fields": [
   {
@@ -99,12 +100,18 @@
    "fieldtype": "Link",
    "label": "Assigned To",
    "options": "Authorized Bot Device"
+  },
+  {
+   "fieldname": "raised_by_user",
+   "fieldtype": "Link",
+   "label": "Raised by User",
+   "options": "User"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-13 05:26:31.462450",
+ "modified": "2026-10-24 16:02:30.764056",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Maintenance Ticket",
