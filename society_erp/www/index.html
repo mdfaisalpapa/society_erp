@@ -1,0 +1,65 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<div class="kvc3-home">
+  <section class="kvc3-hero">
+    <p class="kvc3-eyebrow">APARTMENT OWNERS’ ASSOCIATION</p>
+    <h1>Kendriya Vihar Chennai Phase III</h1>
+    <p class="kvc3-location">Avadi, Chennai, Tamil Nadu</p>
+    <p class="kvc3-intro">Welcome to the official website of Kendriya Vihar Chennai Phase III Apartment Owners’ Association. This site provides basic information about our residential community and the Association.</p>
+    <a class="btn btn-primary kvc3-login" href="/login">Resident Login <span aria-hidden="true">→</span></a>
+  </section>
+
+  <section class="kvc3-info-grid" aria-label="Association information">
+    <article class="kvc3-info-card">
+      <div class="kvc3-card-icon" aria-hidden="true">⌂</div>
+      <h2>About the Association</h2>
+      <p>The Association works for residents’ welfare, upkeep of common facilities, and coordination of community matters.</p>
+    </article>
+    <article class="kvc3-info-card">
+      <div class="kvc3-card-icon" aria-hidden="true">♧</div>
+      <h2>Our Community</h2>
+      <p>Kendriya Vihar Chennai Phase III is a residential community in Avadi, Chennai. Residents can sign in to access Association services.</p>
+    </article>
+    <article class="kvc3-info-card">
+      <div class="kvc3-card-icon" aria-hidden="true">↗</div>
+      <h2>Resident Services</h2>
+      <p>Notices, resident information, maintenance-related services and other internal resources are available through the authenticated Resident Portal.</p>
+      <a href="/login" class="kvc3-text-link">Sign in to continue →</a>
+    </article>
+  </section>
+
+  <section class="kvc3-contact-note">
+    <h2>For Residents</h2>
+    <p>Sign in to access information and services intended for registered residents.</p>
+    <a href="/login" class="btn btn-default">Open Resident Portal</a>
+  </section>
+
+  <footer class="kvc3-footer">
+    <span>Kendriya Vihar Chennai Phase III Apartment Owners’ Association</span>
+    <a href="/login">Resident Login</a>
+  </footer>
+</div>
+
+<style>
+.kvc3-home{--kvc3-ink:var(--text-color,#243247);--kvc3-muted:var(--text-muted,#657386);--kvc3-line:var(--border-color,#e5e9ef);color:var(--kvc3-ink);max-width:1180px;margin:0 auto;padding:24px 18px 36px}
+.kvc3-hero{overflow:hidden;border-radius:18px;padding:clamp(30px,6vw,68px);background:radial-gradient(circle at 90% 10%,rgba(255,255,255,.18),transparent 28%),linear-gradient(125deg,#173d5b 0%,#245f76 58%,#41877f 100%);color:#fff}
+.kvc3-eyebrow{font-size:12px;font-weight:700;letter-spacing:.13em;margin:0 0 14px;opacity:.85}
+.kvc3-hero h1{color:#fff;font-size:clamp(30px,4.5vw,48px);line-height:1.13;margin:0 0 12px;font-weight:750}
+.kvc3-location{font-size:16px;margin:0 0 20px;opacity:.88}
+.kvc3-intro{max-width:650px;font-size:16px;line-height:1.75;margin:0 0 26px;opacity:.94}
+.kvc3-login{background:#fff!important;color:#173d5b!important;border-color:#fff!important;font-weight:700;padding:11px 18px;border-radius:8px}
+.kvc3-login span{margin-left:8px}
+.kvc3-info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:22px 0}
+.kvc3-info-card{border:1px solid var(--kvc3-line);border-radius:14px;padding:24px;background:var(--card-bg,var(--fg-color,#fff));min-width:0}
+.kvc3-card-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:11px;background:var(--subtle-fg,#edf3f6);color:#245f76;font-size:25px;margin-bottom:17px}
+.kvc3-info-card h2,.kvc3-contact-note h2{font-size:18px;font-weight:700;margin:0 0 10px}
+.kvc3-info-card p,.kvc3-contact-note p{color:var(--kvc3-muted);line-height:1.7;margin:0}
+.kvc3-text-link{display:inline-block;margin-top:14px;font-weight:600}
+.kvc3-contact-note{padding:26px;border-radius:14px;background:var(--subtle-fg,#f5f7f9)}
+.kvc3-contact-note p{margin-bottom:16px}
+.kvc3-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid var(--kvc3-line);margin-top:28px;padding-top:20px;color:var(--kvc3-muted);font-size:12px}
+.kvc3-footer a{white-space:nowrap}
+@media(max-width:800px){.kvc3-info-grid{grid-template-columns:1fr}}
+@media(max-width:520px){.kvc3-home{padding:12px 8px 24px}.kvc3-hero{border-radius:13px;padding:28px 22px}.kvc3-footer{align-items:flex-start;flex-direction:column}}
+</style>
+{% endblock %}

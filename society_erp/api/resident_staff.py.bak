@@ -1,0 +1,111 @@
+import frappe
+from frappe import _
+from frappe.utils import cint
+
+from society_erp.api.resident_family import _current_resident
+
+
+def _get_resident():
+    """Resolve the flat from the authenticated resident account."""
+    return _current_resident()
+
+
+def _get_staff_doc(staff_id):
+    if not staff_id:
+        frappe.throw(_("Please select a staff member."))
+
+    doc = frappe.get_doc("Domestic Staff", staff_id)
+
+    if doc.status != "Active":
+        frappe.throw(_("Only active staff can be linked to a flat."))
+
+    return doc
+
+
+def _find_link(doc, flat):
+    return next(
+        (row for row in doc.linked_flats if row.flat == flat),
+        None,
+    )
+
+
+@frappe.whitelist()
+def get_linkable_staff():
+    """Return active staff not already actively linked to this resident's flat."""
+    resident = _get_resident()
+    flat = resident["flat"]
+
+    staff_records = frappe.get_all(
+        "Domestic Staff",
+        filters={"status": "Active"},
+        fields=["name", "staff_name", "role", "phone"],
+        order_by="staff_name asc",
+        limit_page_length=1000,
+    )
+
+    result = []
+    for staff in staff_records:
+        link = frappe.db.get_value(
+            "Staff Flat Link",
+            {
+                "parent": staff.name,
+                "parenttype": "Domestic Staff",
+                "parentfield": "linked_flats",
+                "flat": flat,
+                "is_active": 1,
+            },
+            "name",
+        )
+        if not link:
+            result.append(staff)
+
+    return result
+
+
+@frappe.whitelist(methods=["POST"])
+def link_existing_staff(staff_id):
+    """Link an existing staff record to the authenticated resident's flat."""
+    resident = _get_resident()
+    flat = resident["flat"]
+    doc = _get_staff_doc(staff_id)
+
+    existing = _find_link(doc, flat)
+    if existing:
+        if cint(existing.is_active):
+            frappe.throw(_("This staff member is already linked to your flat."))
+        existing.is_active = 1
+    else:
+        doc.append("linked_flats", {
+            "flat": flat,
+            "is_active": 1,
+        })
+
+    # The resident's flat was resolved server-side above.
+    # Ignore DocType permissions only after this authorisation check.
+    doc.save(ignore_permissions=True)
+
+    return {"message": _("Staff linked to your flat successfully.")}
+
+
+@frappe.whitelist(methods=["POST"])
+def unlink_staff(staff_id):
+    """Deactivate only the link between a staff member and this resident's flat."""
+    resident = _get_resident()
+    flat = resident["flat"]
+
+    if not staff_id:
+        frappe.throw(_("Please select a staff member."))
+
+    doc = frappe.get_doc("Domestic Staff", staff_id)
+    link = _find_link(doc, flat)
+
+    if not link or not cint(link.is_active):
+        frappe.throw(
+            _("This staff member does not have an active link to your flat."),
+            frappe.PermissionError,
+        )
+
+    link.is_active = 0
+    doc.save(ignore_permissions=True)
+
+    return {"message": _("Staff unlinked from your flat successfully.")}

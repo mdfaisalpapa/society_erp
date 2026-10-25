@@ -9,13 +9,16 @@
  "field_order": [
   "parent_flat",
   "member_name",
-  "relationship",
-  "telegram_chat_id",
-  "status",
   "mobile_no",
+  "relationship",
+  "id_proof_type",
+  "id_proof_document",
+  "registration_status",
+  "verified_by",
+  "verification_date",
+  "telegram_chat_id",
   "telegram_user_id",
-  "ntfy_topic",
-  "registration_status"
+  "status"
  ],
  "fields": [
   {
@@ -57,21 +60,38 @@
    "label": "Telegram User ID"
   },
   {
-   "fieldname": "ntfy_topic",
-   "fieldtype": "Data",
-   "label": "ntfy Topic"
-  },
-  {
    "fieldname": "registration_status",
    "fieldtype": "Select",
    "label": "Registration Status",
-   "options": "Pending\nVerified by Bot\nVerified Physically\nRejected"
+   "options": "Pending\nVerified\nRejected"
+  },
+  {
+   "fieldname": "id_proof_type",
+   "fieldtype": "Select",
+   "label": "ID Proof Type",
+   "options": "Aadhaar\nPassport\nVoter ID\nDriving Licence\nOther"
+  },
+  {
+   "fieldname": "id_proof_document",
+   "fieldtype": "Attach",
+   "label": "ID Proof Document"
+  },
+  {
+   "fieldname": "verified_by",
+   "fieldtype": "Link",
+   "label": "Verified By",
+   "options": "User"
+  },
+  {
+   "fieldname": "verification_date",
+   "fieldtype": "Date",
+   "label": "Verification Date"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-11 12:09:00.288307",
+ "modified": "2026-10-25 14:24:37.166269",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Family Members",

@@ -12,7 +12,11 @@
   "phone",
   "photo",
   "linked_flats",
-  "status"
+  "status",
+  "approval_status",
+  "approved_by",
+  "approval_date",
+  "approval_remarks"
  ],
  "fields": [
   {
@@ -47,12 +51,35 @@
    "fieldtype": "Select",
    "label": "Status",
    "options": "Active\nInactive\nBlacklisted"
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "Approved By",
+   "options": "User"
+  },
+  {
+   "fieldname": "approval_date",
+   "fieldtype": "Datetime",
+   "label": "Approval Date"
+  },
+  {
+   "fieldname": "approval_remarks",
+   "fieldtype": "Small Text",
+   "label": "Approval Remarks"
+  },
+  {
+   "default": "Pending Approval",
+   "fieldname": "approval_status",
+   "fieldtype": "Select",
+   "label": "Approval Status",
+   "options": "Pending Approval\nApproved\nRejected"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-11 12:08:45.894751",
+ "modified": "2026-10-25 15:12:09.078743",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Domestic Staff",

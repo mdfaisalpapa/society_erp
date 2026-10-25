@@ -2,97 +2,100 @@
 
 {% block page_content %}
 <div class="maintenance-portal container my-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Maintenance Tickets — Flat {{ flat_number }}</h2>
-        <div>
-            <select id="status-filter" class="form-control d-inline-block w-auto mr-2">
-                <option value="All">All Statuses</option>
-                <option value="Open">Open</option>
-                <option value="Assigned">Assigned</option>
-                <option value="Resolved">Resolved</option>
-            </select>
-            <button class="btn btn-primary" data-toggle="modal" data-target="#createTicketModal">
-                + Raise New Ticket
-            </button>
-        </div>
+  <div class="mb-3">
+    <a href="/resident" class="btn btn-outline-secondary" aria-label="Back to Resident Portal">&larr; Back to Resident Portal</a>
+  </div>
+  {% if error_message %}
+    <div class="alert alert-danger">{{ error_message }}</div>
+  {% else %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="mb-1">Maintenance Tickets — Flat {{ flat_number }}</h2>
+        <div class="text-muted">Signed in as {{ resident_name }} ({{ resident_type }})</div>
+      </div>
+      <button class="btn btn-primary mt-2" data-toggle="modal" data-target="#createTicketModal">+ Raise New Ticket</button>
     </div>
-    
-    {% if error_message %}
-        <div class="alert alert-danger">{{ error_message }}</div>
-    {% else %}
-        <table class="table table-bordered bg-white shadow-sm">
-            <thead class="bg-light">
-                <tr>
-                    <th>Ticket ID</th>
-                    <th>Category</th>
-                    <th>Description</th>
-                    <th>Status</th>
-                    <th>Remarks</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for t in tickets %}
-                <tr class="ticket-row" data-status="{{ t.status }}">
-                    <td><strong>{{ t.name }}</strong><br><small class="text-muted">{{ t.formatted_date }}</small></td>
-                    <td>{{ t.category }}</td>
-                    <td>
-                        {{ t.description }}
-                        {% if t.photo %}
-                        <br><a href="{{ t.photo }}" target="_blank" class="badge badge-light border mt-2">📎 View Photo</a>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% set indicator_color = 'orange' if t.status in ['Open', 'Pending'] else ('blue' if t.status == 'Assigned' else 'green') %}
-                        <span class="indicator {{ indicator_color }}">{{ t.status }}</span>
-                    </td>
-                    <td>{{ t.resolution_remarks or '-' }}</td>
-                </tr>
-                {% else %}
-                <tr><td colspan="5" class="text-center text-muted py-4">No maintenance tickets found.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
 
-        <!-- Raise Ticket Modal -->
-        <div class="modal fade" id="createTicketModal" tabindex="-1" role="dialog">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <form id="create-ticket-form">
-                        <input type="hidden" id="resident_flat" value="{{ flat_number }}">
-                        
-                        <div class="modal-header bg-light">
-                            <h5 class="modal-title">Raise Maintenance Ticket</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="form-group">
-                                <label class="font-weight-bold">Category <span class="text-danger">*</span></label>
-                                <select class="form-control" id="ticket_category" required>
-                                    <option value="">Select Category</option>
-                                    {% for cat in categories %}
-                                    <option value="{{ cat }}">{{ cat }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="font-weight-bold">Description <span class="text-danger">*</span></label>
-                                <textarea class="form-control" id="ticket_description" rows="4" placeholder="Describe the issue in detail..." required></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label class="font-weight-bold">Attach Photo (Optional)</label>
-                                <input type="file" class="form-control-file" id="ticket_photo" accept="image/*">
-                            </div>
-                        </div>
-                        <div class="modal-footer bg-light">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary" id="ticket-submit-btn">Submit Ticket</button>
-                        </div>
-                    </form>
-                </div>
+    <div id="maintenance-alert" aria-live="polite"></div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+      <div class="btn-group mb-2" role="group" aria-label="Ticket status">
+        <button type="button" class="btn btn-outline-primary active ticket-tab" data-status="Active">Active</button>
+        <button type="button" class="btn btn-outline-primary ticket-tab" data-status="Resolved">Resolved / Closed</button>
+        <button type="button" class="btn btn-outline-primary ticket-tab" data-status="All">All Tickets</button>
+      </div>
+      <div class="text-muted small" id="ticket-count"></div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-bordered bg-white shadow-sm">
+        <thead class="thead-light">
+          <tr><th>Ticket ID / Date</th><th>Category</th><th>Description</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="ticket-list">
+          {% for t in tickets %}
+          <tr>
+            <td><strong>{{ t.name }}</strong><br><small class="text-muted">{{ t.creation }}</small></td>
+            <td>{{ t.category }}</td>
+            <td>{{ t.description }}{% if t.photo %}<br><a href="{{ t.photo }}" target="_blank" rel="noopener">View photo</a>{% endif %}</td>
+            <td>{{ t.status }}</td>
+            <td><button class="btn btn-sm btn-outline-primary" data-ticket-view="{{ t.name }}">Details</button></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted py-4">No maintenance tickets found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <button class="btn btn-outline-secondary" id="tickets-prev" disabled>← Previous</button>
+      <span class="small text-muted" id="ticket-page-label">Page 1</span>
+      <button class="btn btn-outline-secondary" id="tickets-next">Next →</button>
+    </div>
+
+    <div class="modal fade" id="createTicketModal" tabindex="-1" role="dialog" aria-labelledby="createTicketTitle">
+      <div class="modal-dialog" role="document"><div class="modal-content">
+        <form id="create-ticket-form">
+          <div class="modal-header bg-light">
+            <h5 class="modal-title" id="createTicketTitle">Raise Maintenance Ticket</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="ticket_category">Category <span class="text-danger">*</span></label>
+              <select class="form-control" id="ticket_category" required>
+                <option value="">Select Category</option>
+                {% for cat in categories %}<option value="{{ cat }}">{{ cat }}</option>{% endfor %}
+              </select>
             </div>
+            <div class="form-group">
+              <label for="ticket_description">Description <span class="text-danger">*</span></label>
+              <textarea class="form-control" id="ticket_description" rows="4" maxlength="5000" required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="ticket_photo">Attach photo (optional, max 5 MB)</label>
+              <input type="file" class="form-control-file" id="ticket_photo" accept="image/jpeg,image/png,image/gif,image/webp">
+            </div>
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="ticket-submit-btn">Submit Ticket</button>
+          </div>
+        </form>
+      </div></div>
+    </div>
+
+    <div class="modal fade" id="ticketDetailsModal" tabindex="-1" role="dialog" aria-labelledby="ticketDetailsTitle">
+      <div class="modal-dialog modal-lg" role="document"><div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title" id="ticketDetailsTitle">Ticket Details</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         </div>
-    {% endif %}
+        <div class="modal-body" id="ticket-details-body"><div class="text-muted">Loading…</div></div>
+        <div class="modal-footer flex-wrap">
+          <button class="btn btn-outline-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div></div>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}

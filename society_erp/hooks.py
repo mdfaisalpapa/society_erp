@@ -46,12 +46,19 @@ fixtures = [
             ["module", "=", "Society Erp"]
         ]
     },
-    {
+    
+{
     "dt": "Role",
     "filters": [
-        ["name", "in", ["Society Committee Member", "Society Bot"]]
+        ["name", "in", [
+            "Society Committee Member",
+            "Society Bot",
+            "Maintenance Staff",
+            "Estate Office Maintenance"
+        ]]
     ]
 }
+
 ]
 doc_events = {
     "GL Entry": {

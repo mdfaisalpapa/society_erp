@@ -1,0 +1,21 @@
+frappe.ready(function () {
+ const api='society_erp.api.resident_family', $card=$('#family-form-card');
+ function resetForm(){ $('#family-form')[0].reset(); $('#family-member-id').val(''); $('#family-form-title').text('Add a family member'); $('#family-form-submit').text('Save member'); $('#family-proof-current').empty(); }
+ function uploadProof(memberId, done){
+   const file=$('#family-id-proof-file')[0].files[0];
+   if(!file){ done(); return; }
+   const ext=(file.name.split('.').pop()||'').toLowerCase();
+   if(!['pdf','jpg','jpeg','png'].includes(ext)){ frappe.msgprint(__('Choose a PDF, JPG or PNG file.')); done('invalid'); return; }
+   if(file.size>5*1024*1024){ frappe.msgprint(__('The ID proof file must be 5 MB or smaller.')); done('invalid'); return; }
+   const fd=new FormData(); fd.append('file',file); fd.append('member_id',memberId);
+   fetch('/api/method/'+api+'.upload_id_proof',{method:'POST',body:fd,headers:{'X-Frappe-CSRF-Token':frappe.csrf_token},credentials:'same-origin'})
+    .then(async r=>{const data=await r.json(); if(!r.ok||data.exc||!data.message||!data.message.file_url) throw new Error((data._server_messages||[]).join(' ')||'Upload failed'); return data;})
+    .then(()=>done()).catch(err=>{frappe.msgprint(__('ID proof upload failed: {0}',[err.message||'Please try again.']));done('error');});
+ }
+ $('#family-add-open').on('click',function(){resetForm();$card.prop('hidden',false);$('#family-member-name').trigger('focus');});
+ $('#family-form-cancel').on('click',function(){resetForm();$card.prop('hidden',true);});
+ $(document).on('click','.family-edit',function(){const b=$(this);$('#family-member-id').val(b.data('id'));$('#family-member-name').val(b.attr('data-name'));$('#family-member-relationship').val(b.attr('data-relationship'));$('#family-member-mobile').val(b.attr('data-mobile')||'');$('#family-id-proof-type').val(b.attr('data-proof-type')||'');$('#family-id-proof-file').val('');$('#family-proof-current').html(b.attr('data-proof-url')?('<small>Existing proof is attached. Upload a new file to replace it.</small>'):'');$('#family-form-title').text('Edit family member');$('#family-form-submit').text('Update member');$card.prop('hidden',false);$('#family-member-name').trigger('focus');window.scrollTo({top:$card.offset().top-100,behavior:'smooth'});});
+ $('#family-form').on('submit',function(e){e.preventDefault();const id=$('#family-member-id').val(),$btn=$('#family-form-submit'); if(!$('#family-member-mobile').val().trim() || !$('#family-id-proof-type').val()){frappe.msgprint(__('Mobile number and ID proof type are mandatory.'));return;} if(!id && !$('#family-id-proof-file')[0].files[0]){frappe.msgprint(__('Please select an ID proof document to register a new family member.'));return;} $btn.prop('disabled',true).text('Saving…');frappe.call({method:api+(id?'.update_family_member':'.add_family_member'),args:{member_id:id,member_name:$('#family-member-name').val().trim(),relationship:$('#family-member-relationship').val(),mobile_no:$('#family-member-mobile').val().trim(),id_proof_type:$('#family-id-proof-type').val()},callback:function(r){if(r.exc||!r.message){$btn.prop('disabled',false).text(id?'Update member':'Save member');return;}const memberId=id||r.message.name;uploadProof(memberId,function(err){$btn.prop('disabled',false);if(!err){frappe.show_alert({message:__('Family member saved.'),indicator:'green'});window.location.reload();}});},error:function(){$btn.prop('disabled',false).text(id?'Update member':'Save member');}});});
+ $(document).on('click','.family-status',function(){const b=$(this),act=b.data('action');frappe.confirm(act==='deactivate'?__('Disable this family member?'):__('Enable this family member?'),function(){frappe.call({method:api+(act==='deactivate'?'.deactivate_family_member':'.reactivate_family_member'),args:{member_id:b.data('id')},callback:function(r){if(!r.exc&&r.message)window.location.reload();}});});});
+ $(document).on('click','.family-delete',function(){const id=$(this).data('id');frappe.confirm(__('Permanently delete this family member? This cannot be undone.'),function(){frappe.call({method:api+'.delete_family_member',args:{member_id:id},callback:function(r){if(!r.exc&&r.message){frappe.show_alert({message:__('Family member deleted.'),indicator:'green'});window.location.reload();}}});});});
+});

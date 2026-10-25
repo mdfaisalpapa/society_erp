@@ -1,42 +1,42 @@
 import frappe
+from frappe import _
+
 
 def get_context(context):
     if frappe.session.user == "Guest":
         frappe.local.flags.redirect_location = "/login"
         raise frappe.Redirect
-        
-    user_email = frappe.session.user
-    
-    # Identify active resident profile
-    owner = frappe.db.get_value("Owners", {"email": user_email, "active": 1}, ["name", "flat", "owner_name"], as_dict=True)
-    tenant = frappe.db.get_value("Tenants", {"email": user_email, "active": 1}, ["name", "flat", "tenant_name"], as_dict=True)
-    
-    if not owner and not tenant:
-        context.error_message = "Your account is not linked to an active registered flat."
+
+    from society_erp.api.maintenance_portal import _resident
+
+    try:
+        resident = _resident()
+    except frappe.PermissionError:
+        context.error_message = _("Your account is not linked to an active registered flat.")
+        context.tickets = []
+        context.categories = []
         return context
 
-    active_flat = tenant.flat if tenant else owner.flat
-    context.flat_number = active_flat
-    context.resident_name = tenant.tenant_name if tenant else owner.owner_name
-    
-    # Fetch maintenance tickets for this flat
-    tickets = frappe.get_all(
+    context.flat_number = resident["flat"]
+    context.resident_name = resident["name"]
+    context.resident_type = resident["type"]
+    context.error_message = None
+
+    meta = frappe.get_meta("Maintenance Ticket")
+    category_field = meta.get_field("category")
+    context.categories = [
+        value.strip()
+        for value in (category_field.options or "").splitlines()
+        if value.strip()
+    ]
+
+    # Initial server-rendered list; further pages and actions use secure whitelisted methods.
+    statuses = ["Open", "Assigned", "Pending", "In Progress"]
+    context.tickets = frappe.get_all(
         "Maintenance Ticket",
-        filters={"resident": active_flat},
+        filters={"resident": resident["flat"], "status": ["in", statuses]},
         fields=["name", "category", "description", "photo", "status", "creation", "resolution_remarks"],
         order_by="creation desc",
-        limit=50
+        limit_page_length=10,
     )
-    
-    # Format the creation datetime object safely into a string (YYYY-MM-DD)
-    for t in tickets:
-        if t.get("creation"):
-            t["formatted_date"] = str(t.creation)[:10]
-        else:
-            t["formatted_date"] = ""
-            
-    context.tickets = tickets
-    
-    # Fetch category options dynamically from DocType meta
-    meta = frappe.get_meta("Maintenance Ticket")
-    context.categories = [opt for opt in (meta.get_field("category").options or "").split("\n") if opt]
+    return context
