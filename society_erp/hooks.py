@@ -80,4 +80,8 @@ scheduler_events = {
 web_include_js = "/assets/society_erp/js/login_redirect.js"
 
 # Inject routing flag during authentication
-on_login = "society_erp.hooks_override.flag_desk_users"
+on_login = "society_erp.hooks_override.redirect_after_login"
+override_whitelisted_methods = {
+    "frappe.core.doctype.user.user.update_password":
+        "society_erp.password_reset.update_password",
+}
