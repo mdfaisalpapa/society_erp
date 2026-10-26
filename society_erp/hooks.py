@@ -77,7 +77,10 @@ scheduler_events = {
 # Include custom frontend script on public/login pages
 #app_include_js = "/assets/society_erp/js/login_redirect.js"
 # Inject script into the public frontend (including the /login page)
-web_include_js = "/assets/society_erp/js/login_redirect.js"
+web_include_js = [
+    "/assets/society_erp/js/login_redirect.js",
+    "/assets/society_erp/js/push_registration.js",
+]
 
 # Inject routing flag during authentication
 on_login = "society_erp.hooks_override.redirect_after_login"

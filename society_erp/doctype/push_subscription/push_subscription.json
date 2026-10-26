@@ -1,0 +1,59 @@
+{
+  "doctype": "DocType",
+  "name": "Push Subscription",
+  "module": "Society Erp",
+  "autoname": "field:name",
+  "engine": "InnoDB",
+  "track_changes": 1,
+  "fields": [
+    {
+      "fieldname": "user",
+      "label": "User",
+      "fieldtype": "Link",
+      "options": "User",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "endpoint",
+      "label": "Endpoint",
+      "fieldtype": "Long Text",
+      "reqd": 1
+    },
+    {
+      "fieldname": "p256dh",
+      "label": "P256DH Key",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "auth",
+      "label": "Auth Key",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "enabled",
+      "label": "Enabled",
+      "fieldtype": "Check",
+      "default": "1",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "last_updated",
+      "label": "Last Updated",
+      "fieldtype": "Datetime"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC"
+}
