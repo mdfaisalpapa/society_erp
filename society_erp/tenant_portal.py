@@ -88,31 +88,6 @@ def register_tenant(flat, tenant_name, relationship, mobile_no, email=None, star
                 {"attached_to_doctype": "Tenants", "attached_to_name": doc.name, "attached_to_field": fieldname}
             )
 
-    # --- NEW: Create User Account for the Tenant ---
-    if email:
-        clean_email = email.strip().lower()
-        role = "Flat Tenant"
-        
-        try:
-            # 1. Create User if account does not exist
-            if not frappe.db.exists("User", clean_email):
-                user = frappe.new_doc("User")
-                user.email = clean_email
-                user.first_name = tenant_name
-                user.enabled = 1
-                user.send_welcome_email = 1  # Sends the password setup link automatically
-                user.append("roles", {"role": role})
-                user.insert(ignore_permissions=True)
-            else:
-                # 2. If user exists (e.g. they were a tenant elsewhere previously), just ensure they have the role
-                user_doc = frappe.get_doc("User", clean_email)
-                if not any(r.role == role for r in user_doc.roles):
-                    user_doc.add_roles(role)
-                    
-        except Exception as e:
-            # We catch exceptions here so that a failure in user creation doesn't roll back the tenant registration
-            frappe.log_error(message=str(e), title="Tenant User Creation Failed")
-
     return doc.name
 @frappe.whitelist()
 def deactivate_tenant(tenant_id):
