@@ -1,0 +1,110 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-11-01 05:29:48.720629",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "poll",
+  "flat",
+  "voter_user",
+  "voter_type",
+  "block",
+  "voting_weight",
+  "eligibility_status",
+  "voted_on",
+  "poll_flat_key"
+ ],
+ "fields": [
+  {
+   "fieldname": "poll",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Voting Poll",
+   "options": "Voting Poll",
+   "reqd": 1
+  },
+  {
+   "fieldname": "flat",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Flat",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "voter_user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Eligible User",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "voter_type",
+   "fieldtype": "Select",
+   "label": "Voter Type",
+   "options": "Owner\nTenant",
+   "reqd": 1
+  },
+  {
+   "fieldname": "block",
+   "fieldtype": "Link",
+   "label": "Block Snapshot",
+   "options": "Block"
+  },
+  {
+   "default": "0",
+   "fieldname": "voting_weight",
+   "fieldtype": "Float",
+   "label": "Voting Weight",
+   "precision": "3"
+  },
+  {
+   "default": "Eligible",
+   "fieldname": "eligibility_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Eligible\nVoted\nRevoked",
+   "reqd": 1
+  },
+  {
+   "fieldname": "voted_on",
+   "fieldtype": "Datetime",
+   "label": "Voted On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "poll_flat_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "poll_flat_key",
+   "read_only": 1,
+   "unique": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-01 05:33:23.166614",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Voting Eligibility",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

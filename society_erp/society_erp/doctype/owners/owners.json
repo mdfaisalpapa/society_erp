@@ -39,7 +39,8 @@
   {
    "fieldname": "owner_name",
    "fieldtype": "Data",
-   "label": "Owner Name"
+   "label": "Owner Name",
+   "reqd": 1
   },
   {
    "fieldname": "owner_address",
@@ -49,12 +50,14 @@
   {
    "fieldname": "mobile_no",
    "fieldtype": "Data",
-   "label": "Mobile No"
+   "label": "Mobile No",
+   "reqd": 1
   },
   {
    "fieldname": "email",
    "fieldtype": "Data",
-   "label": "Email"
+   "label": "Email",
+   "reqd": 1
   },
   {
    "fieldname": "telegram_chat_id",
@@ -69,7 +72,8 @@
   {
    "fieldname": "start_date",
    "fieldtype": "Date",
-   "label": "Start Date"
+   "label": "Start Date",
+   "reqd": 1
   },
   {
    "fieldname": "end_date",
@@ -124,13 +128,14 @@
    "fieldname": "linked_user",
    "fieldtype": "Link",
    "label": "Linked User",
-   "options": "User"
+   "options": "User",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-11 12:08:15.561803",
+ "modified": "2026-11-01 05:53:41.307351",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Owners",

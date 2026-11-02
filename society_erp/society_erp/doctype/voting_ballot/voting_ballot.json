@@ -1,0 +1,95 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-11-02 06:59:26.835738",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "poll",
+  "receipt_code",
+  "ballot_hash",
+  "selected_option",
+  "voting_weight",
+  "cast_on",
+  "idempotency_key_hash"
+ ],
+ "fields": [
+  {
+   "fieldname": "poll",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Voting Poll",
+   "options": "Voting Poll",
+   "reqd": 1
+  },
+  {
+   "fieldname": "receipt_code",
+   "fieldtype": "Data",
+   "label": "Receipt Code",
+   "no_copy": 1,
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "ballot_hash",
+   "fieldtype": "Data",
+   "label": "SHA-256 Ballot Hash",
+   "no_copy": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "selected_option",
+   "fieldtype": "Link",
+   "label": "Selected Option",
+   "options": "Voting Option",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "voting_weight",
+   "fieldtype": "Float",
+   "label": "Voting Weight",
+   "precision": "3",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cast_on",
+   "fieldtype": "Datetime",
+   "label": "Cast On",
+   "reqd": 1
+  },
+  {
+   "fieldname": "idempotency_key_hash",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Idempotency Key Hash",
+   "no_copy": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-02 08:22:31.832519",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Voting Ballot",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

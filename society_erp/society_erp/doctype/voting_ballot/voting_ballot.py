@@ -1,5 +1,5 @@
 from frappe.model.document import Document
 
 
-class PushSubscription(Document):
+class VotingBallot(Document):
     pass

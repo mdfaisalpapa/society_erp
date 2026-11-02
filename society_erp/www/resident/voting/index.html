@@ -1,0 +1,91 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Resident Voting{% endblock %}
+
+{% block page_content %}
+<div class="container my-4" id="resident-voting-page">
+    <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+        <div>
+            <h2 class="mb-1">Resident Voting</h2>
+            <p class="text-muted mb-0">View polls and cast your vote for an eligible flat.</p>
+        </div>
+        <a href="/resident" class="btn btn-outline-secondary btn-sm">← Resident Home</a>
+    </div>
+
+    <div id="voting-alert" class="alert d-none" role="alert"></div>
+    <div id="voting-loading" class="text-muted py-4">Loading available polls…</div>
+    <div id="voting-empty" class="alert alert-info d-none">There are no open polls for which your account is currently eligible.</div>
+    <div id="voting-poll-list" class="row"></div>
+
+    <section id="published-register-section" class="mt-4">
+        <h3 class="h5">Published Ballot Registers</h3>
+        <p class="text-muted small">After an election is closed and its register is published, you can compare your receipt with the anonymous ballot list.</p>
+        <div id="published-register-list" class="row"></div>
+        <div id="published-register-detail" class="card mt-3 d-none">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <h4 id="published-register-title" class="h5 mb-2"></h4>
+                    <button type="button" id="published-register-back" class="btn btn-sm btn-outline-secondary">Back to registers</button>
+                </div>
+                <p id="published-register-meta" class="small text-muted"></p>
+                <p class="small">Register SHA-256: <code id="published-register-hash" class="voting-receipt-code"></code></p>
+                <div class="table-responsive"><table class="table table-sm table-bordered">
+                    <thead><tr><th>Receipt Code</th><th>Selected Option</th><th>Weight</th><th>Ballot Hash</th></tr></thead>
+                    <tbody id="published-register-rows"></tbody>
+                </table></div>
+                <a id="published-register-download" class="btn btn-outline-primary btn-sm" href="#">Download CSV</a>
+            </div>
+        </div>
+    </section>
+
+    <div id="voting-detail-panel" class="card shadow-sm mt-3 d-none">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start flex-wrap">
+                <div>
+                    <h3 id="voting-detail-title" class="h4 mb-1"></h3>
+                    <div id="voting-detail-meta" class="small text-muted mb-3"></div>
+                </div>
+                <button type="button" id="voting-back-button" class="btn btn-sm btn-outline-secondary">← Back to polls</button>
+            </div>
+            <div id="voting-detail-description" class="mb-3"></div>
+
+            <div class="form-group mb-3">
+                <label for="voting-flat-select"><strong>Vote on behalf of flat</strong></label>
+                <select id="voting-flat-select" class="form-control"></select>
+                <small class="form-text text-muted">Your eligibility and voting weight are determined by the association's approved voter records.</small>
+            </div>
+
+            <div id="voting-already-voted" class="alert alert-success d-none"></div>
+            <div id="voting-choice-area">
+                <h5 class="mb-2">Select your choice</h5>
+                <div id="voting-options" class="list-group mb-3"></div>
+                <button type="button" id="voting-submit" class="btn btn-primary" disabled>Review and Submit Vote</button>
+            </div>
+            <div id="voting-receipt" class="alert alert-success d-none mt-3"></div>
+            <div id="voting-confirm-area" class="border rounded p-3 mt-3 d-none">
+                <p class="mb-2"><strong>Confirm your vote</strong></p>
+                <p id="voting-confirm-text" class="mb-3"></p>
+                <button type="button" id="voting-confirm-submit" class="btn btn-success">Confirm Vote</button>
+                <button type="button" id="voting-cancel-submit" class="btn btn-outline-secondary ml-2">Cancel</button>
+                <small class="d-block text-muted mt-2">Once recorded, a vote cannot be changed.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #resident-voting-page .voting-poll-card { height: 100%; }
+    #resident-voting-page .voting-option { cursor: pointer; }
+    #resident-voting-page .voting-option input { margin-right: .5rem; }
+    #resident-voting-page .voting-option-description { display: block; margin-left: 1.5rem; }
+    #resident-voting-page #voting-detail-description > :first-child { margin-top: 0; }
+    #resident-voting-page #voting-detail-description > :last-child { margin-bottom: 0; }
+    #resident-voting-page .voting-receipt-code { overflow-wrap: anywhere; font-family: monospace; }
+    @media print {
+        body * { visibility: hidden !important; }
+        #voting-receipt, #voting-receipt * { visibility: visible !important; }
+        #voting-receipt { display: block !important; position: absolute; left: 0; top: 0; width: 100%; margin: 0; background: #fff !important; color: #000 !important; border: 0; }
+        #voting-receipt .no-print { display: none !important; }
+    }
+</style>
+{% endblock %}

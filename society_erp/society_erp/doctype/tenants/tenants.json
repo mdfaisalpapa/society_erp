@@ -23,7 +23,8 @@
   "rental_agreement",
   "police_verification",
   "id_proof",
-  "photo"
+  "photo",
+  "linked_user"
  ],
  "fields": [
   {
@@ -37,23 +38,27 @@
   {
    "fieldname": "tenant_name",
    "fieldtype": "Data",
-   "label": "Tenant Name"
+   "label": "Tenant Name",
+   "reqd": 1
   },
   {
    "fieldname": "relationship",
    "fieldtype": "Select",
    "label": "Relationship",
-   "options": "Tenant\nCaretaker\nCompany Lease\nGuest House"
+   "options": "Tenant\nCaretaker\nCompany Lease\nGuest House",
+   "reqd": 1
   },
   {
    "fieldname": "mobile_no",
    "fieldtype": "Data",
-   "label": "Mobile No"
+   "label": "Mobile No",
+   "reqd": 1
   },
   {
    "fieldname": "email",
    "fieldtype": "Data",
-   "label": "Email"
+   "label": "Email",
+   "reqd": 1
   },
   {
    "fieldname": "telegram_chat_id",
@@ -68,7 +73,8 @@
   {
    "fieldname": "start_date",
    "fieldtype": "Date",
-   "label": "Start Date"
+   "label": "Start Date",
+   "reqd": 1
   },
   {
    "fieldname": "end_date",
@@ -95,7 +101,8 @@
   {
    "fieldname": "rental_agreement",
    "fieldtype": "Attach",
-   "label": "Rental Agreement"
+   "label": "Rental Agreement",
+   "reqd": 1
   },
   {
    "fieldname": "police_verification",
@@ -105,18 +112,27 @@
   {
    "fieldname": "id_proof",
    "fieldtype": "Attach",
-   "label": "ID Proof"
+   "label": "ID Proof",
+   "reqd": 1
   },
   {
    "fieldname": "photo",
    "fieldtype": "Attach Image",
-   "label": "Photo"
+   "label": "Photo",
+   "reqd": 1
+  },
+  {
+   "fieldname": "linked_user",
+   "fieldtype": "Link",
+   "label": "linked_user",
+   "options": "User",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-25 05:49:20.259753",
+ "modified": "2026-11-01 05:53:03.650924",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Tenants",

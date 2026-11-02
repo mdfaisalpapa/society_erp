@@ -1,0 +1,70 @@
+{
+  "doctype": "DocType",
+  "name": "Voting Participation",
+  "module": "Society Erp",
+  "custom": 0,
+  "istable": 0,
+  "autoname": "hash",
+  "title_field": null,
+  "track_changes": 1,
+  "allow_rename": 0,
+  "engine": "InnoDB",
+  "fields": [
+    {
+      "fieldname": "poll",
+      "label": "Voting Poll",
+      "fieldtype": "Link",
+      "options": "Voting Poll",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "eligibility",
+      "label": "Voting Eligibility",
+      "fieldtype": "Link",
+      "options": "Voting Eligibility",
+      "reqd": 0,
+      "unique": 1
+    },
+    {
+      "fieldname": "flat",
+      "label": "Flat",
+      "fieldtype": "Link",
+      "options": "Customer",
+      "reqd": 1
+    },
+    {
+      "fieldname": "voter_user",
+      "label": "Voter User",
+      "fieldtype": "Link",
+      "options": "User",
+      "reqd": 1
+    },
+    {
+      "fieldname": "voter_type",
+      "label": "Voter Type",
+      "fieldtype": "Select",
+      "options": "Owner\nTenant",
+      "reqd": 1
+    },
+    {
+      "fieldname": "voted_on",
+      "label": "Voted On",
+      "fieldtype": "Datetime",
+      "reqd": 1,
+      "in_list_view": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1,
+      "print": 1
+    }
+  ]
+}

@@ -88,3 +88,9 @@ override_whitelisted_methods = {
     "frappe.core.doctype.user.user.update_password":
         "society_erp.password_reset.update_password",
 }
+doctype_js = {
+    "Voting Poll": "public/js/voting_poll.js",
+}
+after_migrate = [
+    "society_erp.migrations.ensure_voting_participation_unique_index"
+]
