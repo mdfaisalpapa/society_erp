@@ -70,3 +70,127 @@ frappe.ui.form.on("Voting Poll", {
         }
     }
 });
+
+
+frappe.ui.form.on("Voting Poll", {
+    refresh(frm) {
+        // Show only for Draft/Scheduled polls without an existing snapshot.
+        if (
+            !frm.is_new() &&
+            ["Draft", "Scheduled"].includes(frm.doc.status) &&
+            !frm.doc.eligibility_snapshot_created
+        ) {
+            frm.add_custom_button(
+                __("Generate Eligibility Snapshot"),
+                () => generate_eligibility_snapshot(frm),
+                __("Eligibility")
+            );
+        }
+    }
+});
+
+function generate_eligibility_snapshot(frm) {
+    frappe.call({
+        method: "society_erp.society_erp.doctype.voting_poll.voting_poll.generate_eligibility",
+        args: {
+            poll_name: frm.doc.name,
+            preview_only: 1
+        },
+        freeze: true,
+        freeze_message: __("Preparing eligibility preview..."),
+
+        callback(r) {
+            if (!r.message) return;
+
+            const d = r.message;
+
+            // Data-integrity issues must be resolved before snapshot creation.
+            if (d.data_issue_flats > 0) {
+                frappe.msgprint({
+                    title: __("Cannot Generate Snapshot"),
+                    indicator: "red",
+                    message: `
+                        <p>There are <b>${d.data_issue_flats}</b>
+                        data issues that must be resolved first.</p>
+                        <p>Please review the eligibility details before proceeding.</p>
+                    `
+                });
+                return;
+            }
+
+            let summary = `
+                <table class="table table-bordered">
+                    <tr>
+                        <td>Eligible voters/flats</td>
+                        <th>${d.eligible_flats}</th>
+                    </tr>
+                    <tr>
+                        <td>Pending account setup</td>
+                        <th>${d.pending_account_setup_flats}</th>
+                    </tr>
+                    <tr>
+                        <td>Excluded flats</td>
+                        <th>${d.excluded_flats}</th>
+                    </tr>
+                    <tr>
+                        <td>Data issues</td>
+                        <th>${d.data_issue_flats}</th>
+                    </tr>
+                    ${
+                        d.poll_type === "Association Voting"
+                            ? `<tr>
+                                <td>Total eligible UDS</td>
+                                <th>${flt(d.total_eligible_uds, 3)}</th>
+                               </tr>`
+                            : ""
+                    }
+                </table>
+            `;
+
+            if (d.pending_account_setup_flats > 0) {
+                summary += `
+                    <p class="text-warning">
+                        Pending account setup flats will not be included
+                        in the eligible voter snapshot.
+                    </p>
+                `;
+            }
+
+            summary += `
+                <p><b>Once generated, the eligibility snapshot is frozen.</b>
+                This action cannot be repeated for this poll.</p>
+            `;
+
+            frappe.confirm(
+                summary + "<p>Do you want to generate the snapshot?</p>",
+
+                () => {
+                    frappe.call({
+                        method: "society_erp.society_erp.doctype.voting_poll.voting_poll.generate_eligibility",
+                        args: {
+                            poll_name: frm.doc.name,
+                            preview_only: 0
+                        },
+                        freeze: true,
+                        freeze_message: __("Generating eligibility snapshot..."),
+
+                        callback(result) {
+                            if (!result.message) return;
+
+                            frappe.msgprint({
+                                title: __("Snapshot Generated"),
+                                indicator: "green",
+                                message: `
+                                    Eligibility snapshot successfully created
+                                    for <b>${result.message.created}</b> voters/flats.
+                                `
+                            });
+
+                            frm.reload_doc();
+                        }
+                    });
+                }
+            );
+        }
+    });
+}

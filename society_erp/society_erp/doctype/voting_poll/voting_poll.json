@@ -19,6 +19,7 @@
   "section_break_eligibility",
   "eligibility_notes",
   "enforce_eligibility",
+  "eligibility_cutoff_date",
   "eligibility_snapshot_created",
   "column_break_eligibility",
   "total_eligible_flats",
@@ -74,6 +75,12 @@
    "reqd": 1
   },
   {
+   "default": "0",
+   "fieldname": "require_email_otp",
+   "fieldtype": "Check",
+   "label": "Require Email OTP"
+  },
+  {
    "fieldname": "section_break_dates",
    "fieldtype": "Section Break",
    "label": "Voting Period"
@@ -114,17 +121,24 @@
   },
   {
    "default": "1",
-   "description": "When enabled, voter eligibility is checked and frozen before voting opens. When disabled, no dues check or eligibility snapshot is required.",
+   "description": "When enabled, flats with outstanding maintenance dues as of the Eligibility Cutoff Date are excluded. Applies only to Association Voting and Resident Poll. Committee Voting always uses the active AOA-member list and ignores dues.",
    "fieldname": "enforce_eligibility",
    "fieldtype": "Check",
    "label": "Enforce Eligibility"
+  },
+  {
+   "fieldname": "eligibility_cutoff_date",
+   "fieldtype": "Date",
+   "label": "Eligibility Cutoff Date",
+   "description": "Outstanding maintenance dues are assessed as of this date. Required only when Enforce Eligibility is enabled for Association Voting or Resident Poll."
   },
   {
    "default": "0",
    "fieldname": "eligibility_snapshot_created",
    "fieldtype": "Check",
    "label": "Eligibility Snapshot Created",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Read-only. A flat/member eligibility snapshot is required before opening. With dues enforcement OFF, current User-account mapping is resolved dynamically; with enforcement ON, dues eligibility is frozen."
   },
   {
    "fieldname": "column_break_eligibility",
@@ -133,7 +147,7 @@
   {
    "fieldname": "total_eligible_flats",
    "fieldtype": "Int",
-   "label": "Total Eligible Flats",
+   "label": "Total Eligible Voters",
    "read_only": 1
   },
   {
@@ -198,16 +212,10 @@
    "fieldtype": "Datetime",
    "label": "Published On",
    "read_only": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "require_email_otp",
-   "fieldtype": "Check",
-   "label": "Require Email OTP"
   }
  ],
  "links": [],
- "modified": "2026-11-02 08:27:48.937040",
+ "modified": "2026-11-02 04:18:37.758350",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Voting Poll",

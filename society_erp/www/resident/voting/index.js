@@ -19,6 +19,7 @@ frappe.ready(function () {
         panel: $('#voting-detail-panel'),
         title: $('#voting-detail-title'),
         meta: $('#voting-detail-meta'),
+        turnout: $('#voting-turnout'),
         description: $('#voting-detail-description'),
         flat: $('#voting-flat-select'),
         already: $('#voting-already-voted'),
@@ -41,6 +42,7 @@ frappe.ready(function () {
 
     function showAlert(message, type = 'danger') {
         el.alert.className = `alert alert-${type}`;
+        el.alert.classList.remove('d-none');
         el.alert.textContent = message;
     }
 
@@ -209,13 +211,19 @@ frappe.ready(function () {
                 )
             );
 
+            const turnout = poll.turnout;
             body.append(
                 make(
                     'p',
                     'small mb-3',
-                    `${poll.voted_flat_count || 0} of ${poll.eligible_flat_count || 0} eligible flat(s) have voted`
+                    turnout && turnout.available
+                        ? `Overall flat turnout: ${turnout.flat_turnout_percentage}% (${turnout.flats_voted} of ${turnout.eligible_flats})`
+                        : 'Overall turnout is unavailable because this poll has no frozen eligibility snapshot.'
                 )
             );
+            if (turnout && turnout.available && turnout.weight_turnout_percentage !== null) {
+                body.append(make('p', 'small text-muted mb-3', `UDS turnout: ${turnout.weight_turnout_percentage}%`));
+            }
 
             const button = make(
                 'button',
@@ -461,6 +469,22 @@ frappe.ready(function () {
         el.meta.textContent =
             `${poll.poll_type} · Closes ${formatDate(poll.end_datetime)}`;
 
+        if (el.turnout) {
+            el.turnout.replaceChildren();
+            const turnout = poll.turnout;
+            if (turnout && turnout.available) {
+                el.turnout.append(make('strong', '', `Overall flat turnout: ${turnout.flat_turnout_percentage}%`));
+                el.turnout.append(make('div', 'small text-muted', `${turnout.flats_voted} of ${turnout.eligible_flats} eligible flats have voted`));
+                if (turnout.weight_turnout_percentage !== null) {
+                    el.turnout.append(make('div', 'small text-muted', `UDS turnout: ${turnout.weight_turnout_percentage}%`));
+                }
+                el.turnout.classList.remove('d-none');
+            } else {
+                el.turnout.append(make('small', 'text-muted', 'Overall turnout is unavailable because this poll has no frozen eligibility snapshot.'));
+                el.turnout.classList.remove('d-none');
+            }
+        }
+
         renderSafeDescription(poll.description || '');
 
         el.flat.replaceChildren();
@@ -555,6 +579,7 @@ frappe.ready(function () {
         el.receipt.classList.add('d-none');
 
         state.selectedOption = null;
+        state.pendingKey = null;
 
         document.querySelectorAll(
             'input[name="voting-choice"]'
@@ -589,12 +614,22 @@ frappe.ready(function () {
     // --------------------------------------------------
 
     async function castSelectedVote() {
-        const result = await call('cast_vote', {
+        const payload = {
             poll_name: state.poll.name,
             flat: el.flat.value,
             selected_option: state.selectedOption,
-            idempotency_key: getIdempotencyKey()
-        });
+            idempotency_key: state.pendingKey || getIdempotencyKey()
+        };
+        state.pendingKey = payload.idempotency_key;
+
+        let result;
+        try {
+            result = await call('cast_vote', payload);
+        } catch (firstError) {
+            // The first request may have committed even if its response was lost.
+            // Repeating the identical payload lets the server recover the receipt safely.
+            result = await call('cast_vote', payload);
+        }
 
         if (!result || !result.success) {
             throw new Error(
@@ -603,6 +638,7 @@ frappe.ready(function () {
         }
 
         sessionStorage.removeItem(idempotencyStorageKey());
+        state.pendingKey = null;
 
         el.confirmArea.classList.add('d-none');
         el.choiceArea.classList.add('d-none');
@@ -700,13 +736,29 @@ frappe.ready(function () {
             'Six-digit email OTP'
         );
 
+        const controls = make('div', 'd-flex flex-wrap align-items-center');
         const verify = make(
             'button',
-            'btn btn-primary btn-sm',
+            'btn btn-primary btn-sm mr-2 mb-2',
             'Verify OTP and Cast Vote'
         );
-
         verify.type = 'button';
+        const resend = make('button', 'btn btn-outline-secondary btn-sm mb-2', 'Resend OTP');
+        resend.type = 'button';
+        resend.addEventListener('click', async () => {
+            if (state.submitting) return;
+            resend.disabled = true;
+            resend.textContent = 'Sending…';
+            try {
+                await call('send_voting_otp', { poll_name: state.poll.name, flat: el.flat.value });
+                showAlert('A new OTP has been sent. Please check your registered email.', 'success');
+            } catch (error) {
+                showAlert(error.message);
+            } finally {
+                resend.disabled = false;
+                resend.textContent = 'Resend OTP';
+            }
+        });
 
         verify.addEventListener('click', async () => {
             const otp = input.value.trim();
@@ -720,7 +772,10 @@ frappe.ready(function () {
                 return;
             }
 
+            if (state.submitting) return;
+            state.submitting = true;
             verify.disabled = true;
+            resend.disabled = true;
             verify.textContent = 'Verifying…';
 
             clearAlert();
@@ -741,12 +796,15 @@ frappe.ready(function () {
 
                 verify.disabled = false;
                 verify.textContent = 'Verify OTP and Cast Vote';
-
                 input.focus();
+            } finally {
+                state.submitting = false;
+                resend.disabled = false;
             }
         });
 
-        wrap.append(input, verify);
+        controls.append(verify, resend);
+        wrap.append(input, controls);
 
         el.confirmText.after(wrap);
 
@@ -774,6 +832,7 @@ frappe.ready(function () {
         clearAlert();
 
         try {
+            state.pendingKey = getIdempotencyKey();
             if (state.poll.require_email_otp) {
                 await call('send_voting_otp', {
                     poll_name: state.poll.name,

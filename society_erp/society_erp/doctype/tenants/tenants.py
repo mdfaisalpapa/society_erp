@@ -34,9 +34,32 @@ class Tenants(Document):
 
     def after_insert(self):
         self.sync_tenant_user_account()
+        self.sync_flat_let_out_flag()
 
     def on_update(self):
         self.sync_tenant_user_account()
+        self.sync_flat_let_out_flag()
+
+    def sync_flat_let_out_flag(self):
+        """
+        Keep the Customer let-out flag aligned with active Tenants records.
+        Any active Tenants record counts as let-out, matching the resident
+        portal's current active-tenant check.
+        """
+        if not self.flat:
+            return
+
+        has_active_tenant = frappe.db.exists(
+            "Tenants",
+            {"flat": self.flat, "active": 1},
+        )
+
+        frappe.db.set_value(
+            "Customer",
+            self.flat,
+            "custom_let_out_for_rent",
+            1 if has_active_tenant else 0,
+        )
 
     def sync_tenant_user_account(self):
         """

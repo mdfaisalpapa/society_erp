@@ -3,6 +3,7 @@ import hashlib
 import json
 import re
 import secrets
+import time
 
 import frappe
 from frappe import _
@@ -69,12 +70,14 @@ def _assert_otp_voting_access(poll_name, flat, user):
     return poll
 
 
-def _consume_voting_otp_authorization(user, poll_name, flat):
-    cache = frappe.cache()
+def _assert_voting_otp_authorization(user, poll_name, flat):
     key = _otp_cache_key("verified", user, poll_name, flat)
-    if not cache.get_value(key):
+    if not frappe.cache().get_value(key):
         frappe.throw(_("Please complete email OTP verification before casting your vote."), frappe.PermissionError)
-    cache.delete_value(key)
+
+
+def _consume_voting_otp_authorization(user, poll_name, flat):
+    frappe.cache().delete_value(_otp_cache_key("verified", user, poll_name, flat))
 
 
 @frappe.whitelist(methods=["POST"])
@@ -104,7 +107,7 @@ def send_voting_otp(poll_name, flat):
         frappe.throw(_("OTP request limit reached. Please try again later."))
 
     otp = f"{secrets.randbelow(1_000_000):06d}"
-    challenge = {"digest": _otp_digest(user, poll_name, flat, otp), "attempts": 0}
+    challenge = {"digest": _otp_digest(user, poll_name, flat, otp), "attempts": 0, "expires_at": time.time() + _OTP_TTL_SECONDS}
     cache.set_value(_otp_cache_key("challenge", user, poll_name, flat), frappe.as_json(challenge), expires_in_sec=_OTP_TTL_SECONDS)
     cache.set_value(cooldown_key, "1", expires_in_sec=_OTP_RESEND_SECONDS)
     cache.set_value(count_key, send_count + 1, expires_in_sec=_OTP_SEND_WINDOW_SECONDS)
@@ -142,6 +145,10 @@ def verify_voting_otp(poll_name, flat, otp):
     if not raw:
         frappe.throw(_("The OTP has expired or was not requested. Please request a new OTP."))
     challenge = json.loads(raw)
+    remaining_ttl = int(challenge.get("expires_at", 0) - time.time())
+    if remaining_ttl <= 0:
+        cache.delete_value(challenge_key)
+        frappe.throw(_("The OTP has expired. Please request a new OTP."))
     if int(challenge.get("attempts", 0)) >= _OTP_MAX_ATTEMPTS:
         cache.delete_value(challenge_key)
         frappe.throw(_("Maximum OTP attempts exceeded. Please request a new OTP."))
@@ -154,7 +161,12 @@ def verify_voting_otp(poll_name, flat, otp):
         if challenge["attempts"] >= _OTP_MAX_ATTEMPTS:
             cache.delete_value(challenge_key)
         else:
-            cache.set_value(challenge_key, frappe.as_json(challenge), expires_in_sec=_OTP_TTL_SECONDS)
+            # Preserve the original five-minute expiry across failed attempts.
+            cache.set_value(
+                challenge_key,
+                frappe.as_json(challenge),
+                expires_in_sec=max(1, remaining_ttl),
+            )
         frappe.throw(_("Incorrect OTP. Please try again."))
 
     cache.delete_value(challenge_key)
@@ -314,56 +326,33 @@ def cast_vote(poll_name, flat, selected_option, idempotency_key):
         )
 
     eligibility_name = None
+    if not poll.eligibility_snapshot_created:
+        frappe.throw(_("The flat eligibility snapshot has not been generated."))
 
-    if poll.enforce_eligibility:
-        if not poll.eligibility_snapshot_created:
-            frappe.throw(
-                _("The eligibility snapshot has not been generated.")
-            )
+    eligibility = frappe.db.get_value(
+        "Voting Eligibility",
+        {"poll": poll.name, "flat": flat, "eligibility_status": "Eligible"},
+        ["name", "voter_user", "voter_type", "voting_weight"],
+        as_dict=True,
+    )
+    if not eligibility:
+        frappe.throw(_("This flat is not eligible to vote in this poll."))
 
-        eligibility = frappe.db.get_value(
-            "Voting Eligibility",
-            {
-                "poll": poll.name,
-                "flat": flat,
-                "voter_user": user,
-                "eligibility_status": "Eligible",
-            },
-            ["name", "voter_type", "voting_weight"],
-            as_dict=True,
-        )
-
-        if not eligibility:
-            frappe.throw(
-                _("You are not eligible to vote for this flat in this poll.")
-            )
-
-        eligibility_name = eligibility.name
+    if poll.poll_type == "Committee Voting" or (
+        poll.poll_type in ("Association Voting", "Resident Poll") and int(poll.enforce_eligibility or 0)
+    ):
+        if eligibility.voter_user != user:
+            frappe.throw(_("You are not allocated to vote for this flat in this poll."), frappe.PermissionError)
         voter_type = eligibility.voter_type
-        weight = eligibility.voting_weight
-
     else:
-        from society_erp.society_erp.doctype.voting_poll.voting_poll import (
-            _build_eligibility_list,
-        )
+        live_entries = _get_resident_eligible_entries(poll, user)
+        live_entry = next((row for row in live_entries if row.get("flat") == flat), None)
+        if not live_entry:
+            frappe.throw(_("Your current account is not allocated to vote for this flat."), frappe.PermissionError)
+        voter_type = live_entry["voter_type"]
 
-        entries, pending, excluded, data_issues = (
-            _build_eligibility_list(poll, only_flat=flat)
-        )
-
-        matching = [
-            row for row in entries
-            if row["flat"] == flat and row["voter_user"] == user
-        ]
-
-        if len(matching) != 1:
-            frappe.throw(
-                _("You are not currently eligible to vote for this flat.")
-            )
-
-        entry = matching[0]
-        voter_type = entry["voter_type"]
-        weight = entry["voting_weight"]
+    eligibility_name = eligibility.name
+    weight = eligibility.voting_weight
 
     receipt_code = secrets.token_urlsafe(24)
     cast_time = now_datetime()
@@ -373,7 +362,7 @@ def cast_vote(poll_name, flat, selected_option, idempotency_key):
     )
 
     if poll.require_email_otp:
-        _consume_voting_otp_authorization(user, poll.name, flat)
+        _assert_voting_otp_authorization(user, poll.name, flat)
 
     participation = frappe.get_doc({
         "doctype": "Voting Participation",
@@ -397,6 +386,9 @@ def cast_vote(poll_name, flat, selected_option, idempotency_key):
         "ballot_hash": ballot_hash,
     })
     ballot.insert(ignore_permissions=True)
+
+    if poll.require_email_otp:
+        _consume_voting_otp_authorization(user, poll.name, flat)
 
     if eligibility_name:
         frappe.db.set_value(
@@ -509,43 +501,129 @@ def close_expired_polls():
 # Resident portal read APIs
 # -----------------------------------------------------------------------------
 
+def _natural_flat_key(flat):
+    return tuple(int(part) if part.isdigit() else part.lower()
+                 for part in re.split(r"(\d+)", str(flat)))
+
+
 def _get_resident_eligible_entries(poll, user):
-    """Return only the current user's eligible flats for this poll."""
-    if poll.enforce_eligibility:
-        if not poll.eligibility_snapshot_created:
-            return []
+    """Return this user's eligible flats, using live mapping when dues are not frozen."""
+    if not poll.eligibility_snapshot_created:
+        return []
 
-        return frappe.get_all(
-            "Voting Eligibility",
-            filters={
-                "poll": poll.name,
-                "voter_user": user,
-                "eligibility_status": ["in", ["Eligible", "Voted"]],
-            },
-            fields=[
-                "flat",
-                "voter_type",
-                "voting_weight",
-                "eligibility_status",
-            ],
-            order_by="flat asc",
-        )
-
-    from society_erp.society_erp.doctype.voting_poll.voting_poll import (
-        _build_eligibility_list,
+    snapshot = frappe.get_all(
+        "Voting Eligibility",
+        filters={"poll": poll.name, "eligibility_status": ["in", ["Eligible", "Voted"]]},
+        fields=["name", "flat", "voter_user", "voter_type", "voting_weight", "eligibility_status"],
     )
 
-    entries, pending, excluded, data_issues = _build_eligibility_list(poll)
-    return [
-        {
-            "flat": row["flat"],
-            "voter_type": row["voter_type"],
-            "voting_weight": row["voting_weight"],
-            "eligibility_status": "Eligible",
-        }
-        for row in entries
-        if row["voter_user"] == user
-    ]
+    # Committee membership is always a poll-time snapshot. For Association and
+    # Resident polls with dues enforcement, both flat eligibility and account
+    # mapping are frozen (mapping can be corrected by the audited admin API).
+    if poll.poll_type == "Committee Voting" or (
+        poll.poll_type in ("Association Voting", "Resident Poll") and int(poll.enforce_eligibility or 0)
+    ):
+        return [
+            row for row in snapshot
+            if row.voter_user == user and row.eligibility_status in ("Eligible", "Voted")
+        ]
+
+    # With dues enforcement OFF, keep the flat/weight denominator snapshot but
+    # resolve the authentication mapping from current active Owner/Tenant data.
+    candidates = []
+    for row in snapshot:
+        flat = row.flat
+        if poll.poll_type == "Association Voting":
+            records = frappe.get_all(
+                "Owners", filters={"flat": flat, "active": 1},
+                fields=["linked_user"], limit_page_length=2,
+            )
+            if len(records) != 1:
+                continue
+            current_user, voter_type = records[0].linked_user, "Owner"
+        elif poll.poll_type == "Resident Poll":
+            let_out = frappe.db.get_value("Customer", flat, "custom_let_out_for_rent")
+            if let_out:
+                records = frappe.get_all(
+                    "Tenants", filters={"flat": flat, "active": 1},
+                    fields=["linked_user"], limit_page_length=2,
+                )
+                if len(records) != 1:
+                    continue
+                current_user, voter_type = records[0].linked_user, "Tenant"
+            else:
+                records = frappe.get_all(
+                    "Owners", filters={"flat": flat, "active": 1},
+                    fields=["linked_user"], limit_page_length=2,
+                )
+                if len(records) != 1:
+                    continue
+                current_user, voter_type = records[0].linked_user, "Owner"
+        else:
+            continue
+        if not current_user or not frappe.db.exists("User", current_user):
+            continue
+        if not frappe.db.get_value("User", current_user, "enabled"):
+            continue
+        candidates.append({
+            "name": row.name, "flat": flat, "voter_user": current_user,
+            "voter_type": voter_type, "voting_weight": row.voting_weight,
+            "eligibility_status": row.eligibility_status,
+        })
+
+    by_user = {}
+    for row in candidates:
+        by_user.setdefault(row["voter_user"], []).append(row)
+    allocated = []
+    for mapped_user, rows in by_user.items():
+        if poll.poll_type == "Association Voting":
+            winner = sorted(rows, key=lambda r: (-float(r["voting_weight"] or 0), _natural_flat_key(r["flat"])))[0]
+        else:
+            winner = sorted(rows, key=lambda r: _natural_flat_key(r["flat"]))[0]
+        if mapped_user == user:
+            allocated.append(winner)
+    return allocated
+
+
+def _get_public_turnout(poll):
+    """Return aggregate turnout only; never return option-wise or voter-level data."""
+    if not poll.eligibility_snapshot_created:
+        return {"available": False, "reason": "Eligibility snapshot is not available for this poll."}
+
+    eligible_voters = int(poll.total_eligible_flats or 0)
+    eligible_weight = (
+        float(poll.total_eligible_uds or 0)
+        if poll.poll_type == "Association Voting"
+        else float(eligible_voters)
+    )
+    totals = frappe.db.sql(
+        """
+        SELECT
+            (SELECT COUNT(DISTINCT flat) FROM `tabVoting Participation` WHERE poll = %s) AS voters_voted,
+            (SELECT COALESCE(SUM(voting_weight), 0) FROM `tabVoting Ballot` WHERE poll = %s) AS weight_voted
+        """,
+        (poll.name, poll.name), as_dict=True,
+    )[0]
+    voters_voted = int(totals.voters_voted or 0)
+    weight_voted = float(totals.weight_voted or 0)
+    result = {
+        "available": eligible_voters > 0,
+        "voters_voted": voters_voted,
+        "eligible_voters": eligible_voters,
+        # Compatibility keys retained for the existing resident UI.
+        "flats_voted": voters_voted,
+        "eligible_flats": eligible_voters,
+        "flat_turnout_percentage": round(voters_voted / eligible_voters * 100, 1) if eligible_voters else 0.0,
+        "weight_voted": round(weight_voted, 3),
+        "eligible_weight": round(eligible_weight, 3),
+    }
+    if poll.poll_type == "Association Voting":
+        result["weight_turnout_percentage"] = round(weight_voted / eligible_weight * 100, 1) if eligible_weight > 0 else 0.0
+        result["weight_label"] = "UDS"
+    else:
+        result["weight_turnout_percentage"] = None
+        result["weight_label"] = None
+    return result
 
 
 def _resident_poll_response(poll, user, entries):
@@ -555,7 +633,6 @@ def _resident_poll_response(poll, user, entries):
         filters={
             "poll": poll.name,
             "flat": ["in", flats],
-            "voter_user": user,
         },
         fields=["flat"],
     )
@@ -574,6 +651,7 @@ def _resident_poll_response(poll, user, entries):
         "end_datetime": poll.end_datetime,
         "status": poll.status,
         "require_email_otp": bool(poll.get("require_email_otp")),
+        "turnout": _get_public_turnout(poll),
         "options": [
             {
                 "name": option.name,
@@ -632,10 +710,9 @@ def get_resident_polls():
             "poll_type": response["poll_type"],
             "start_datetime": response["start_datetime"],
             "end_datetime": response["end_datetime"],
-            "eligible_flat_count": len(entries),
-            "voted_flat_count": sum(
-                1 for item in response["eligible_flats"] if item["has_voted"]
-            ),
+            "eligible_flat_count": (response["turnout"].get("eligible_flats") if response["turnout"].get("available") else None),
+            "voted_flat_count": (response["turnout"].get("flats_voted") if response["turnout"].get("available") else None),
+            "turnout": response["turnout"],
         })
 
     return results

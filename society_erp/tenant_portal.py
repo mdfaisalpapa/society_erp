@@ -5,6 +5,20 @@ from frappe.utils import validate_email_address
 # Import your core authentication function from the main file
 from society_erp.resident_portal import get_verified_owner_records
 
+
+def _sync_flat_let_out_flag(flat):
+    """Keep the Customer let-out flag aligned with active tenant records."""
+    has_active_tenant = frappe.db.exists(
+        "Tenants",
+        {"flat": flat, "active": 1},
+    )
+    frappe.db.set_value(
+        "Customer",
+        flat,
+        "custom_let_out_for_rent",
+        1 if has_active_tenant else 0,
+    )
+
 @frappe.whitelist()
 def get_tenants():
     """Fetch active and past tenants for the owner's flats."""
@@ -74,6 +88,9 @@ def register_tenant(flat, tenant_name, relationship, mobile_no, email=None, star
     })
     doc.insert(ignore_permissions=True)
 
+    # A newly registered active tenant means the flat is let out.
+    _sync_flat_let_out_flag(flat)
+
     # Attach any provided files securely
     for file_url, fieldname in [
         (rental_agreement, "rental_agreement"), 
@@ -104,6 +121,9 @@ def deactivate_tenant(tenant_id):
     # 1. Deactivate the tenant record
     frappe.db.set_value("Tenants", tenant_id, "active", 0)
     frappe.db.set_value("Tenants", tenant_id, "end_date", frappe.utils.today())
+
+    # Clear the let-out flag only when no other active tenant remains.
+    _sync_flat_let_out_flag(tenant.flat)
     
     # 2. Disable the associated User account (if an email was provided)
     if tenant.email:
@@ -115,7 +135,6 @@ def deactivate_tenant(tenant_id):
                 other_active = frappe.db.count("Tenants", filters={"email": clean_email, "active": 1})
                 if other_active == 0:
                     frappe.db.set_value("User", clean_email, "enabled", 0)
-                    frappe.db.commit() # Ensure the user update commits
         except Exception as e:
             frappe.log_error(message=str(e), title="Tenant User Deactivation Failed")
         

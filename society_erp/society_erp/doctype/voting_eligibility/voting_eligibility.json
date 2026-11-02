@@ -38,7 +38,8 @@
    "in_list_view": 1,
    "label": "Eligible User",
    "options": "User",
-   "reqd": 1
+   "reqd": 0,
+   "description": "Current User account allocation. May be blank while a flat remains eligible pending account setup or duplicate-account correction."
   },
   {
    "fieldname": "voter_type",
