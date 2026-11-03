@@ -73,7 +73,64 @@ frappe.ready(function () {
             });
         });
     }
+    async function downloadVotingReceipt(receipt, idempotencyKey) {
+        const endpoint =
+            '/api/method/society_erp.society_erp.doctype.voting_poll.voting_receipt_pdf.download_voting_receipt_pdf';
 
+        const body = new URLSearchParams({
+            poll_name: receipt.poll_name,
+            flat: receipt.flat,
+            receipt_code: receipt.receipt_code,
+            ballot_hash: receipt.ballot_hash,
+            idempotency_key: idempotencyKey
+        });
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Frappe-CSRF-Token': frappe.csrf_token
+            },
+            body
+        });
+
+        if (!response.ok) {
+            let message = 'Unable to generate the signed receipt.';
+
+            try {
+                const data = await response.json();
+                message = data.exception || data.message || message;
+            } catch (_) {}
+
+            throw new Error(message);
+        }
+
+        const blob = await response.blob();
+
+        if (!blob.size || blob.type.includes('application/json')) {
+            throw new Error('The server did not return a valid PDF.');
+        }
+
+        const pdfHeader = await blob.slice(0, 5).text();
+        if (pdfHeader !== '%PDF-') {
+            throw new Error(
+                'The server response is not a valid PDF. Your receipt key has been retained; please retry.'
+            );
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+
+        link.href = url;
+        link.download = `Voting-Receipt-${receipt.receipt_code}.pdf`;
+
+        document.body.appendChild(link);
+                link.click();
+        link.remove();
+
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
     function formatDate(value) {
         if (!value) return 'Not specified';
 
@@ -637,8 +694,6 @@ frappe.ready(function () {
             );
         }
 
-        sessionStorage.removeItem(idempotencyStorageKey());
-        state.pendingKey = null;
 
         el.confirmArea.classList.add('d-none');
         el.choiceArea.classList.add('d-none');
@@ -689,10 +744,44 @@ frappe.ready(function () {
             'Your vote has been recorded. Retain this receipt code. After the Association publishes the anonymous ballot register, you can use the code to locate your ballot.'
         );
 
+        const downloadButton = make(
+            'button',
+            'btn btn-primary mt-3',
+            'Download digitally signed receipt'
+        );
+
+        const receiptStorageKey = idempotencyStorageKey();
+        downloadButton.type = 'button';
+
+        downloadButton.addEventListener('click', async () => {
+            downloadButton.disabled = true;
+            downloadButton.textContent = 'Generating signed receipt...';
+
+            try {
+                await downloadVotingReceipt(
+                    result,
+                    payload.idempotency_key
+                );
+
+                // Clear the secret only after successful PDF generation.
+                sessionStorage.removeItem(receiptStorageKey);
+                state.pendingKey = null;
+
+                downloadButton.textContent = 'Receipt downloaded';
+            } catch (error) {
+                downloadButton.disabled = false;
+                downloadButton.textContent =
+                    'Retry download of signed receipt';
+
+                frappe.msgprint(error.message);
+            }
+        });
+
         el.receipt.replaceChildren(
             receiptHeading,
             receiptDetails,
-            note
+            note,
+            downloadButton
         );
 
         const row = (state.poll.eligible_flats || []).find(

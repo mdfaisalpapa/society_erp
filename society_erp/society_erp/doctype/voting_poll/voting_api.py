@@ -801,11 +801,9 @@ def publish_ballot_register(poll_name):
     return {"success": True, "poll": poll_name, "published_ballots": len(rows), "register_hash": digest}
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_published_ballot_register(poll_name):
     'Return the published anonymous register only if its hash still matches.'
-    if frappe.session.user == "Guest":
-        frappe.throw(_("Please log in to view the published ballot register."), frappe.PermissionError)
     if not frappe.db.exists("Voting Poll", poll_name):
         frappe.throw(_("Voting Poll does not exist."))
     poll = frappe.get_doc("Voting Poll", poll_name)
@@ -827,7 +825,7 @@ def get_published_ballot_register(poll_name):
     }
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def download_published_ballot_register(poll_name):
     """Download the integrity-checked anonymous ballot register as CSV."""
     data = get_published_ballot_register(poll_name)
@@ -843,11 +841,9 @@ def download_published_ballot_register(poll_name):
     frappe.response["type"] = "download"
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_published_ballot_registers():
     """List published registers for residents without exposing voter identity."""
-    if frappe.session.user == "Guest":
-        frappe.throw(_("Please log in to view published ballot registers."), frappe.PermissionError)
     polls = frappe.get_all(
         "Voting Poll",
         filters={"status": "Closed", "ballot_register_published": 1},
@@ -899,7 +895,7 @@ def get_poll_audit_summary(poll_name):
     }
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def download_published_ballot_register_pdf(poll_name):
     """Download the verified anonymous ballot register as a PDF."""
     data = get_published_ballot_register(poll_name)

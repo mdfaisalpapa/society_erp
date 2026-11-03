@@ -1,0 +1,66 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Public Ballot Register{% endblock %}
+
+{% block page_content %}
+<div class="container my-4" id="public-voting-register">
+    <h2>Public Anonymous Ballot Register</h2>
+    <p class="text-muted">
+        This register contains anonymous ballot details only.
+        Voter names and flat numbers are not published.
+    </p>
+
+    <div id="register-error" class="alert alert-danger d-none" role="alert"></div>
+    <div id="register-loading" class="text-muted py-3">Loading published registers…</div>
+
+    <div id="register-list" class="mb-4"></div>
+
+    <section id="register-detail" class="d-none">
+        <h3 id="register-title" class="h4"></h3>
+        <p id="register-meta" class="small text-muted"></p>
+        <p class="small">
+            Register SHA-256:
+            <code id="register-hash" style="overflow-wrap:anywhere"></code>
+        </p>
+
+        <div class="form-group">
+            <label for="receipt-search">Find a receipt code</label>
+            <input id="receipt-search" class="form-control"
+                   placeholder="Enter receipt code">
+        </div>
+
+        <div class="d-flex flex-wrap mb-3" style="gap:.5rem">
+            <button id="register-csv" class="btn btn-outline-primary btn-sm">
+                Download CSV
+            </button>
+            <button id="register-back" class="btn btn-outline-secondary btn-sm">
+                All registers
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+                <thead>
+                    <tr>
+                        <th>Receipt Code</th>
+                        <th>Selected Option</th>
+                        <th>Voting Weight</th>
+                        <th>Ballot SHA-256</th>
+                    </tr>
+                </thead>
+                <tbody id="register-rows"></tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<style>
+#public-voting-register .matched-ballot {
+    outline: 3px solid #198754;
+    background: #e8f5ec;
+}
+#public-voting-register code {
+    overflow-wrap: anywhere;
+}
+</style>
+{% endblock %}
