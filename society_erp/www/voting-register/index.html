@@ -11,6 +11,7 @@
     </p>
 
     <div id="register-error" class="alert alert-danger d-none" role="alert"></div>
+    <div id="register-verification" class="alert d-none" role="status" aria-live="polite"></div>
     <div id="register-loading" class="text-muted py-3">Loading published registers…</div>
 
     <div id="register-list" class="mb-4"></div>
@@ -22,6 +23,11 @@
             Register SHA-256:
             <code id="register-hash" style="overflow-wrap:anywhere"></code>
         </p>
+        <p class="small text-muted">
+            A verified result confirms that the receipt details match the published anonymous ballot and
+            that the register and ballot hashes are consistent. It does not prove that the original vote
+            was cast correctly or that the selection reflected the voter’s intent.
+        </p>
 
         <div class="form-group">
             <label for="receipt-search">Find a receipt code</label>
@@ -32,6 +38,9 @@
         <div class="d-flex flex-wrap mb-3" style="gap:.5rem">
             <button id="register-csv" class="btn btn-outline-primary btn-sm">
                 Download CSV
+            </button>
+            <button id="register-pdf" class="btn btn-outline-secondary btn-sm">
+                Download PDF
             </button>
             <button id="register-back" class="btn btn-outline-secondary btn-sm">
                 All registers

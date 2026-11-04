@@ -765,10 +765,17 @@ def _get_public_ballot_rows(poll_name):
     )
     rows = []
     for ballot in ballots:
+        option_label = frappe.db.get_value(
+            "Voting Option", ballot.selected_option, "option_label"
+        )
         rows.append({
             "receipt_code": ballot.receipt_code,
             "selected_option": ballot.selected_option,
-            "selected_option_label": frappe.db.get_value("Voting Option", ballot.selected_option, "option_label") or ballot.selected_option,
+            "selected_option_label": (
+                option_label
+                if isinstance(option_label, str) and option_label.strip()
+                else "Option unavailable"
+            ),
             "voting_weight": float(ballot.voting_weight or 0),
             "ballot_hash": ballot.ballot_hash,
         })
@@ -778,6 +785,55 @@ def _get_public_ballot_rows(poll_name):
 def _register_hash(rows):
     canonical = json.dumps(rows, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _published_ballot_register_state(poll_name):
+    """Load and integrity-check the existing canonical register rows."""
+    if not frappe.db.exists("Voting Poll", poll_name):
+        return "poll_not_found", None, []
+
+    poll = frappe.get_doc("Voting Poll", poll_name)
+    if poll.status != "Closed" or not poll.ballot_register_published:
+        return "not_published", poll, []
+
+    rows = _get_public_ballot_rows(poll_name)
+    current_hash = _register_hash(rows)
+    if not poll.ballot_register_hash or current_hash != poll.ballot_register_hash:
+        return "hash_mismatch", poll, rows
+
+    return "published", poll, rows
+
+
+def _public_ballot_projection(rows):
+    """Return anonymous public fields, omitting the internal option row name."""
+    public_fields = (
+        "receipt_code",
+        "selected_option_label",
+        "voting_weight",
+        "ballot_hash",
+    )
+    return [{field: row[field] for field in public_fields} for row in rows]
+
+
+def _decode_receipt_option(option_b64):
+    """Decode the receipt option claim carried as canonical base64url text."""
+    import base64
+
+    if not isinstance(option_b64, str) or not re.fullmatch(
+        r"[A-Za-z0-9_-]{1,512}", option_b64
+    ):
+        return None
+
+    padded = option_b64 + "=" * (-len(option_b64) % 4)
+    try:
+        option_label = base64.urlsafe_b64decode(padded).decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+    canonical = base64.urlsafe_b64encode(
+        option_label.encode("utf-8")
+    ).decode("ascii").rstrip("=")
+    return option_label if canonical == option_b64 and option_label else None
 
 
 @frappe.whitelist()
@@ -804,15 +860,12 @@ def publish_ballot_register(poll_name):
 @frappe.whitelist(allow_guest=True)
 def get_published_ballot_register(poll_name):
     'Return the published anonymous register only if its hash still matches.'
-    if not frappe.db.exists("Voting Poll", poll_name):
+    state, poll, rows = _published_ballot_register_state(poll_name)
+    if state == "poll_not_found":
         frappe.throw(_("Voting Poll does not exist."))
-    poll = frappe.get_doc("Voting Poll", poll_name)
-    if poll.status != "Closed" or not poll.ballot_register_published:
+    if state == "not_published":
         frappe.throw(_("The ballot register has not been published."))
-
-    rows = _get_public_ballot_rows(poll_name)
-    current_hash = _register_hash(rows)
-    if not poll.ballot_register_hash or current_hash != poll.ballot_register_hash:
+    if state == "hash_mismatch":
         frappe.throw(_("The published ballot register failed its integrity check. Please contact the election administrator."))
 
     return {
@@ -821,7 +874,141 @@ def get_published_ballot_register(poll_name):
         "published_on": poll.published_on,
         "ballot_count": len(rows),
         "register_hash": poll.ballot_register_hash,
-        "ballots": rows,
+        "ballots": _public_ballot_projection(rows),
+    }
+
+
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+def verify_published_ballot_receipt(
+    poll_name=None,
+    receipt_code=None,
+    ballot_hash=None,
+    option_b64=None,
+    voting_weight=None,
+):
+    """Compare untrusted receipt claims with a published anonymous ballot."""
+    if (
+        not isinstance(poll_name, str)
+        or not poll_name
+        or len(poll_name) > 140
+        or not isinstance(receipt_code, str)
+        or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", receipt_code)
+        or not isinstance(ballot_hash, str)
+        or not re.fullmatch(r"[0-9a-fA-F]{64}", ballot_hash)
+        or not isinstance(voting_weight, str)
+        or not re.fullmatch(r"[0-9]{1,12}\.[0-9]{3}", voting_weight)
+    ):
+        return {
+            "status": "invalid_request",
+            "message": _("The receipt verification link is incomplete or invalid."),
+        }
+
+    option_label_claim = _decode_receipt_option(option_b64)
+    if option_label_claim is None:
+        return {
+            "status": "invalid_request",
+            "message": _("The receipt verification link is incomplete or invalid."),
+        }
+
+    state, poll, rows = _published_ballot_register_state(poll_name)
+    if state in ("poll_not_found", "not_published"):
+        return {
+            "status": "register_not_published",
+            "message": _("Verification is available after this ballot register is published."),
+        }
+    if state == "hash_mismatch":
+        unresolved_row = next(
+            (row for row in rows if row["receipt_code"] == receipt_code),
+            None,
+        )
+        if unresolved_row and unresolved_row["selected_option_label"] == "Option unavailable":
+            unresolved_option_label = frappe.db.get_value(
+                "Voting Option", unresolved_row["selected_option"], "option_label"
+            )
+            if not isinstance(unresolved_option_label, str) or not unresolved_option_label.strip():
+                return {
+                    "status": "option_unavailable",
+                    "message": _("The selected option label is unavailable, so this receipt cannot be verified."),
+                    "checks": {"register_hash": False, "selected_option": False},
+                }
+        return {
+            "status": "hash_mismatch",
+            "message": _("The published register failed its integrity check."),
+            "checks": {"register_hash": False},
+        }
+
+    published_row = next(
+        (row for row in rows if row["receipt_code"] == receipt_code),
+        None,
+    )
+    if not published_row:
+        return {
+            "status": "not_found",
+            "message": _("This receipt code is not in the published register."),
+            "checks": {"register_hash": True, "receipt_code": False},
+        }
+
+    ballot = frappe.db.get_value(
+        "Voting Ballot",
+        {"poll": poll.name, "receipt_code": receipt_code},
+        ["receipt_code", "selected_option", "voting_weight", "cast_on", "ballot_hash"],
+        as_dict=True,
+    )
+    if not ballot:
+        return {
+            "status": "hash_mismatch",
+            "message": _("The ballot no longer matches the published register."),
+            "checks": {"register_hash": True, "receipt_code": True, "ballot_hash": False},
+        }
+
+    option_label = frappe.db.get_value(
+        "Voting Option", ballot.selected_option, "option_label"
+    )
+    if not isinstance(option_label, str) or not option_label.strip():
+        return {
+            "status": "option_unavailable",
+            "message": _("The selected option label is unavailable, so this receipt cannot be verified."),
+            "checks": {"register_hash": True, "receipt_code": True, "selected_option": False},
+        }
+
+    recalculated_hash = _ballot_hash(
+        poll.name,
+        receipt_code,
+        ballot.selected_option,
+        option_label,
+        ballot.voting_weight,
+        ballot.cast_on,
+    )
+    stored_weight = f"{float(ballot.voting_weight or 0):.3f}"
+    checks = {
+        "register_hash": True,
+        "receipt_code": (
+            ballot.receipt_code == receipt_code
+            and ballot.receipt_code == published_row["receipt_code"]
+        ),
+        "selected_option": (
+            ballot.selected_option == published_row["selected_option"]
+            and option_label == published_row["selected_option_label"]
+            and option_label_claim == published_row["selected_option_label"]
+        ),
+        "voting_weight": (
+            stored_weight == f"{published_row['voting_weight']:.3f}"
+            and voting_weight == stored_weight
+        ),
+        "stored_ballot_hash": ballot.ballot_hash == published_row["ballot_hash"],
+        "recalculated_ballot_hash": recalculated_hash == ballot.ballot_hash,
+        "receipt_ballot_hash": ballot_hash.lower() == recalculated_hash,
+    }
+
+    verified = all(checks.values())
+    return {
+        "status": "verified" if verified else "hash_mismatch",
+        "message": (
+            _("The receipt matches the published anonymous ballot.")
+            if verified
+            else _("The receipt details do not match the published ballot.")
+        ),
+        "checks": checks,
     }
 
 

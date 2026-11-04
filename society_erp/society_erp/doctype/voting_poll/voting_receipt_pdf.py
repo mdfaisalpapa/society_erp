@@ -1,3 +1,4 @@
+import base64
 import io
 from pathlib import Path
 from urllib.parse import urlencode
@@ -162,13 +163,19 @@ def _description_flowables(description, styles):
 def _make_unsigned_pdf(receipt):
     """Create the unsigned voting receipt with QR and readable hash."""
 
+    option_label = receipt.get("selected_option")
+    if not isinstance(option_label, str) or not option_label.strip():
+        frappe.throw(
+            _("The selected option label is unavailable. The receipt PDF cannot be generated.")
+        )
+
     from reportlab.platypus import Flowable
     from reportlab.graphics.barcode import qr
     from reportlab.graphics.shapes import Drawing
     from reportlab.graphics import renderPDF
 
     buffer = io.BytesIO()
-    page_width, _ = A4
+    page_width, _page_height = A4
 
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(
@@ -310,6 +317,11 @@ def _make_unsigned_pdf(receipt):
         + urlencode({
             "poll": receipt["poll_name"],
             "receipt": receipt["receipt_code"],
+            "hash": receipt["ballot_hash"],
+            "option": base64.urlsafe_b64encode(
+                option_label.encode("utf-8")
+            ).decode("ascii").rstrip("="),
+            "weight": f"{float(receipt['voting_weight']):.3f}",
         })
     )
 
@@ -407,6 +419,24 @@ def _sign_pdf(unsigned_pdf):
     return output.getvalue()
 
 
+def _resolve_poll_option_label(poll_name, selected_option):
+    """Resolve the selected label from this poll without exposing its row ID."""
+    poll = frappe.get_doc("Voting Poll", poll_name)
+    option_label = next(
+        (
+            option.option_label
+            for option in poll.options
+            if option.name == selected_option
+        ),
+        None,
+    )
+    if not isinstance(option_label, str) or not option_label.strip():
+        frappe.throw(
+            _("The selected option label is unavailable. The receipt PDF cannot be generated.")
+        )
+    return option_label
+
+
 @frappe.whitelist(methods=["POST"])
 def download_voting_receipt_pdf(
     poll_name,
@@ -501,10 +531,8 @@ def download_voting_receipt_pdf(
         "voter_name": voter_name or user,
         "flat": flat,
         "voter_type": participation.voter_type or "",
-        "selected_option": (
-            frappe.db.get_value(
-                "Voting Option", ballot.selected_option, "option_label"
-            ) or ballot.selected_option
+        "selected_option": _resolve_poll_option_label(
+            poll_name, ballot.selected_option
         ),
         "voting_weight": ballot.voting_weight,
         "receipt_code": ballot.receipt_code,
