@@ -2,6 +2,7 @@ import io
 from pathlib import Path
 from urllib.parse import urlencode
 from xml.sax.saxutils import escape
+from html.parser import HTMLParser
 
 import frappe
 from frappe import _
@@ -48,6 +49,116 @@ def _get_signer():
 
 
 
+
+class _ReceiptDescriptionParser(HTMLParser):
+    """Convert editor HTML into safe, page-splittable ReportLab paragraphs."""
+
+    INLINE_TAGS = {
+        "b": "b",
+        "strong": "b",
+        "i": "i",
+        "em": "i",
+        "u": "u",
+        "sup": "super",
+        "sub": "sub",
+    }
+
+    BLOCK_TAGS = {
+        "p", "div", "section", "article",
+        "h1", "h2", "h3", "h4", "h5", "h6",
+        "li",
+    }
+
+    def __init__(self, style):
+        super().__init__(convert_charrefs=True)
+        self.style = style
+        self.blocks = []
+        self.current = []
+        self.inline_stack = []
+        self.list_item = False
+        self.suppressed_tag = None
+
+    def _close_inline(self):
+        while self.inline_stack:
+            tag = self.inline_stack.pop()
+            self.current.append(f"</{tag}>")
+
+    def _flush(self):
+        self._close_inline()
+        content = "".join(self.current).strip()
+        self.current = []
+
+        if content:
+            if self.list_item:
+                content = "- " + content
+
+            self.blocks.append(Paragraph(content, self.style))
+
+        self.list_item = False
+
+    def handle_starttag(self, tag, attrs):
+        if self.suppressed_tag:
+            return
+
+        if tag in ("script", "style"):
+            self.suppressed_tag = tag
+            return
+
+        if tag in self.BLOCK_TAGS or tag in ("ul", "ol"):
+            self._flush()
+
+        if tag == "li":
+            self.list_item = True
+        elif tag == "br":
+            self.current.append("<br/>")
+        elif tag in self.INLINE_TAGS:
+            safe_tag = self.INLINE_TAGS[tag]
+            self.current.append(f"<{safe_tag}>")
+            self.inline_stack.append(safe_tag)
+
+    def handle_endtag(self, tag):
+        if self.suppressed_tag:
+            if tag == self.suppressed_tag:
+                self.suppressed_tag = None
+            return
+
+        if tag in self.INLINE_TAGS:
+            safe_tag = self.INLINE_TAGS[tag]
+
+            if safe_tag in self.inline_stack:
+                while self.inline_stack:
+                    opened = self.inline_stack.pop()
+                    self.current.append(f"</{opened}>")
+                    if opened == safe_tag:
+                        break
+
+        elif tag in self.BLOCK_TAGS or tag in ("ul", "ol"):
+            self._flush()
+
+    def handle_data(self, data):
+        if self.suppressed_tag:
+            return
+
+        self.current.append(escape(data))
+
+    def finish(self):
+        self._flush()
+        return self.blocks
+
+
+def _description_flowables(description, styles):
+    """Return safe, individually splittable description flowables."""
+
+    if not description:
+        return []
+
+    parser = _ReceiptDescriptionParser(styles["ReceiptDescription"])
+    parser.feed(description)
+    parser.close()
+
+    return parser.finish()
+
+
 def _make_unsigned_pdf(receipt):
     """Create the unsigned voting receipt with QR and readable hash."""
 
@@ -76,6 +187,18 @@ def _make_unsigned_pdf(receipt):
         textColor=colors.HexColor("#555555"),
     ))
     styles.add(ParagraphStyle(
+        name="ReceiptDescription",
+        parent=styles["Normal"],
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor("#333333"),
+        backColor=colors.HexColor("#F5F5F5"),
+        borderColor=colors.HexColor("#CCCCCC"),
+        borderWidth=0.4,
+        borderPadding=6,
+        spaceAfter=2 * mm,
+    ))
+    styles.add(ParagraphStyle(
         name="ReceiptHash",
         parent=styles["Normal"],
         fontName="Courier",
@@ -83,20 +206,6 @@ def _make_unsigned_pdf(receipt):
         leading=10,
         wordWrap="CJK",
     ))
-
-    class GreenTick(Flowable):
-        def __init__(self):
-            super().__init__()
-            self.width = 8 * mm
-            self.height = 8 * mm
-
-        def draw(self):
-            self.canv.setStrokeColor(colors.HexColor("#198754"))
-            self.canv.setLineWidth(2.5)
-            self.canv.setLineCap(1)
-            self.canv.line(1 * mm, 4 * mm, 3.2 * mm, 1.8 * mm)
-            self.canv.line(3.2 * mm, 1.8 * mm, 7 * mm, 7 * mm)
-
 
     class ReceiptQR(Flowable):
         def __init__(self, value, size=25 * mm):
@@ -135,8 +244,23 @@ def _make_unsigned_pdf(receipt):
             "Digitally signed acknowledgement of vote cast",
             styles["Normal"],
         ),
-        Spacer(1, 8 * mm),
+        Spacer(1, 3 * mm),
     ]
+
+    if receipt.get("poll_description"):
+        story.append(Paragraph(
+            "Poll Description",
+            styles["Heading4"],
+        ))
+        story.extend(
+            _description_flowables(
+                receipt["poll_description"],
+                styles,
+            )
+        )
+        story.append(Spacer(1, 5 * mm))
+    else:
+        story.append(Spacer(1, 5 * mm))
 
     rows = [
         ["Poll", receipt["poll_title"]],
@@ -190,12 +314,12 @@ def _make_unsigned_pdf(receipt):
     )
 
     verification = Paragraph(
-        "Scan the QR code to open the Association's public anonymous "
-        "ballot register. The register will locate this receipt. "
-        "Check that the selected option and voting weight match this PDF."
+        "After publication of the voting results, scan this QR code "
+        "to view the complete Public Ballot Register and locate your "
+        "ballot. You can verify your receipt against the published record."
         "<br/><br/>"
         f'<link href="{escape(register_url)}" color="#145DA0">'
-        "<b>View my ballot in the Public Ballot Register</b></link>",
+        "<b>View Public Ballot Register</b></link>",
         styles["Normal"],
     )
 
@@ -217,38 +341,43 @@ def _make_unsigned_pdf(receipt):
         styles["ReceiptNote"],
     ))
 
-    signature_text = Paragraph(
-        "<b>Digitally signed by Kendriya Vihar Chennai Phase III AOA</b><br/>"
-        "Association digital signature applied to this PDF.<br/>"
-        "Open the PDF signature panel to validate the signature and "
-        "document integrity.",
-        styles["ReceiptNote"],
-    )
-    signature_block = Table(
-        [[GreenTick(), signature_text]],
-        colWidths=[12 * mm, 145 * mm],
-    )
-    signature_block.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 2),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ("BOX", (0, 0), (-1, -1), 0.7, colors.HexColor("#198754")),
-    ]))
     story.append(Spacer(1, 2 * mm))
-    story.append(signature_block)
+    story.append(Paragraph(
+        "The Association's digital signature appears in the signature "
+        "panel below. Click the digital signature to inspect its "
+        "properties and validate the document and its integrity.",
+        styles["ReceiptNote"],
+    ))
 
     doc.build(story)
     return buffer.getvalue()
 
 
 def _sign_pdf(unsigned_pdf):
-    """Apply the Association's cryptographic PDF signature."""
+    """Apply the Association's visible cryptographic PDF signature."""
+
+    from pyhanko.stamp import TextStampStyle
+    from pyhanko.pdf_utils.text import TextBoxStyle
 
     signer = _get_signer()
     source = io.BytesIO(unsigned_pdf)
     output = io.BytesIO()
+
+    signature_style = TextStampStyle(
+        stamp_text=(
+            "Digitally signed by %(signer)s\n"
+            "Date: %(ts)s\n"
+            "Association voting receipt"
+        ),
+        border_width=1,
+        border_color=(0.10, 0.45, 0.25),
+        background_opacity=0,
+        text_box_style=TextBoxStyle(
+            font_size=11,
+            leading=14,
+            text_color=(0, 0, 0),
+        ),
+    )
 
     pdf_signer = signers.PdfSigner(
         PdfSignatureMetadata(
@@ -258,16 +387,21 @@ def _sign_pdf(unsigned_pdf):
             location="Chennai, India",
         ),
         signer=signer,
+        stamp_style=signature_style,
         new_field_spec=SigFieldSpec(
             sig_field_name="AssociationSignature",
-            on_page=0,
-            box=None,
+            on_page=-1,
+            box=(56, 32, 539, 100),
+            readable_field_name="Association Digital Signature",
         ),
     )
 
     pdf_signer.sign_pdf(
         IncrementalPdfFileWriter(source),
         output=output,
+        appearance_text_params={
+            "signer": "Kendriya Vihar Chennai Phase III AOA",
+        },
     )
 
     return output.getvalue()
@@ -348,9 +482,14 @@ def download_voting_receipt_pdf(
             _("The receipt details could not be verified.")
         )
 
-    poll_title = frappe.db.get_value(
-        "Voting Poll", poll_name, "poll_title"
+    poll_details = frappe.db.get_value(
+        "Voting Poll",
+        poll_name,
+        ["poll_title", "description"],
+        as_dict=True,
     )
+    poll_title = poll_details.poll_title if poll_details else None
+    poll_description = poll_details.description if poll_details else ""
     voter_name = frappe.db.get_value(
         "User", user, "full_name"
     )
@@ -358,6 +497,7 @@ def download_voting_receipt_pdf(
     receipt = {
         "poll_name": poll_name,
         "poll_title": poll_title or poll_name,
+        "poll_description": poll_description or "",
         "voter_name": voter_name or user,
         "flat": flat,
         "voter_type": participation.voter_type or "",
