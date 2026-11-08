@@ -65,6 +65,25 @@ doc_events = {
         "validate": [
             "society_erp.accounting.cost_center_validation.validate_required_cost_center"
         ]
+    },
+    "Purchase Invoice": {
+        "validate": [
+            "society_erp.accounting.ineligible_itc.validate_purchase_invoice"
+        ]
+    }
+}
+
+regional_overrides = {
+    "India": {
+        "erpnext.accounts.doctype.purchase_invoice.purchase_invoice.make_regional_gl_entries": (
+            "society_erp.accounting.ineligible_itc.make_regional_gl_entries"
+        ),
+        "erpnext.stock.doctype.purchase_receipt.purchase_receipt.update_regional_gl_entries": (
+            "society_erp.accounting.ineligible_itc.update_regional_gl_entries_pr"
+        ),
+        "erpnext.controllers.buying_controller.update_regional_item_valuation_rate": (
+            "society_erp.accounting.ineligible_itc.update_valuation_rate"
+        ),
     }
 }
 
