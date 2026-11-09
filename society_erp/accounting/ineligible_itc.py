@@ -108,7 +108,8 @@ def make_regional_gl_entries(gl_entries, doc):
     """
     Regional override for erpnext.accounts.doctype.purchase_invoice.purchase_invoice.make_regional_gl_entries.
     For registered companies: delegates to India Compliance.
-    For unregistered societies: processes Ineligible ITC reversing Input GST and allocating to item expense accounts.
+    For unregistered societies: processes Ineligible ITC reversing Input GST and allocating to item expense accounts,
+    and removes zero-net tax and clearing accounts from GL entries.
     """
     if not is_unregistered_society(doc):
         return ic_update_regional_gl_entries(gl_entries, doc)
@@ -124,7 +125,7 @@ def make_regional_gl_entries(gl_entries, doc):
         if doc.doctype in DOCTYPE_MAPPING:
             DOCTYPE_MAPPING[doc.doctype](doc).update_gl_entries(gl_entries)
 
-    return gl_entries
+    return filter_zero_balance_tax_entries(gl_entries, doc)
 
 
 def update_regional_gl_entries_pr(gl_entries, doc):
@@ -145,4 +146,38 @@ def update_regional_gl_entries_pr(gl_entries, doc):
         if doc.doctype in DOCTYPE_MAPPING:
             DOCTYPE_MAPPING[doc.doctype](doc).update_gl_entries(gl_entries)
 
-    return gl_entries
+    return filter_zero_balance_tax_entries(gl_entries, doc)
+
+
+def filter_zero_balance_tax_entries(gl_entries, doc):
+    """
+    For unregistered societies, eliminates zero-balance transit entries
+    (GST Expense clearing account and fully reversed Input Tax accounts)
+    from GL Entries so they do not clutter the General Ledger.
+    """
+    from frappe.utils import flt
+
+    gst_account_map = get_gst_account_gst_tax_type_map()
+    company_doc = frappe.get_cached_doc("Company", doc.company)
+    gst_expense_account = company_doc.default_gst_expense_account
+
+    target_accounts = set(gst_account_map.keys())
+    if gst_expense_account:
+        target_accounts.add(gst_expense_account)
+
+    account_totals = defaultdict(lambda: {"dr": 0.0, "cr": 0.0})
+    for entry in gl_entries:
+        acc = entry.get("account")
+        if acc in target_accounts:
+            account_totals[acc]["dr"] += flt(entry.get("debit", 0.0))
+            account_totals[acc]["cr"] += flt(entry.get("credit", 0.0))
+
+    zero_accounts = set()
+    for acc, totals in account_totals.items():
+        if abs(totals["dr"] - totals["cr"]) < 0.005:
+            zero_accounts.add(acc)
+
+    if not zero_accounts:
+        return gl_entries
+
+    return [e for e in gl_entries if e.get("account") not in zero_accounts]
