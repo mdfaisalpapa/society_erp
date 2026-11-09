@@ -9,7 +9,11 @@
   "infrastructure_asset_depreciation_template",
   "monthly_maintenance_item",
   "auto_generate_invoices",
-  "submit_invoices_automatically"
+  "submit_invoices_automatically",
+  "voting_section",
+  "voting_engine_active",
+  "default_dues_threshold",
+  "default_maintenance_accounts"
  ],
  "fields": [
   {
@@ -35,13 +39,38 @@
    "fieldname": "submit_invoices_automatically",
    "fieldtype": "Check",
    "label": "Submit Invoices Automatically"
+  },
+  {
+   "fieldname": "voting_section",
+   "fieldtype": "Section Break",
+   "label": "Voting & Consensus Engine"
+  },
+  {
+   "default": "Legacy Voting",
+   "fieldname": "voting_engine_active",
+   "fieldtype": "Select",
+   "label": "Active Voting Engine",
+   "options": "Legacy Voting\nConsensus",
+   "reqd": 1
+  },
+  {
+   "default": "0.00",
+   "fieldname": "default_dues_threshold",
+   "fieldtype": "Currency",
+   "label": "Default Dues Threshold"
+  },
+  {
+   "description": "Default JSON array or comma-separated list of receivable accounts",
+   "fieldname": "default_maintenance_accounts",
+   "fieldtype": "Small Text",
+   "label": "Default Maintenance Accounts"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-01 04:35:32.490722",
+ "modified": "2026-11-05 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Society ERP Settings",

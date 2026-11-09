@@ -1,0 +1,188 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-11-05 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "publication",
+  "flat_no",
+  "block",
+  "uds",
+  "column_break_main",
+  "owner_doc",
+  "owner_name",
+  "voter_user",
+  "section_break_contact",
+  "voter_email",
+  "voter_phone",
+  "column_break_contact",
+  "masked_voter_name",
+  "section_break_eligibility",
+  "eligibility_status",
+  "exclusion_reason",
+  "column_break_weight",
+  "voting_weight",
+  "outstanding_dues",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "publication",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Publication",
+   "options": "Electorate Publication",
+   "reqd": 1
+  },
+  {
+   "fieldname": "flat_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Flat No",
+   "reqd": 1
+  },
+  {
+   "fieldname": "block",
+   "fieldtype": "Data",
+   "label": "Block"
+  },
+  {
+   "default": "0.000",
+   "fieldname": "uds",
+   "fieldtype": "Float",
+   "label": "UDS",
+   "precision": "3"
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "owner_doc",
+   "fieldtype": "Link",
+   "label": "Owner Record",
+   "options": "Owners"
+  },
+  {
+   "fieldname": "owner_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Owner Name"
+  },
+  {
+   "fieldname": "voter_user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Voter User",
+   "options": "User"
+  },
+  {
+   "fieldname": "section_break_contact",
+   "fieldtype": "Section Break",
+   "label": "Contact Details"
+  },
+  {
+   "fieldname": "voter_email",
+   "fieldtype": "Data",
+   "label": "Voter Email"
+  },
+  {
+   "fieldname": "voter_phone",
+   "fieldtype": "Data",
+   "label": "Voter Phone"
+  },
+  {
+   "fieldname": "column_break_contact",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "masked_voter_name",
+   "fieldtype": "Data",
+   "label": "Masked Owner Name"
+  },
+  {
+   "fieldname": "section_break_eligibility",
+   "fieldtype": "Section Break",
+   "label": "Eligibility & Weight"
+  },
+  {
+   "default": "Eligible",
+   "fieldname": "eligibility_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Eligibility Status",
+   "options": "Eligible\nExcluded",
+   "reqd": 1
+  },
+  {
+   "default": "None",
+   "fieldname": "exclusion_reason",
+   "fieldtype": "Select",
+   "label": "Exclusion Reason",
+   "options": "None\nUnreconciled Dues Above Threshold\nNo Active Owner\nMultiple Active Owners\nMissing Contact User\nOther"
+  },
+  {
+   "fieldname": "column_break_weight",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1.000",
+   "fieldname": "voting_weight",
+   "fieldtype": "Float",
+   "label": "Voting Weight",
+   "precision": "3",
+   "reqd": 1
+  },
+  {
+   "default": "0.00",
+   "fieldname": "outstanding_dues",
+   "fieldtype": "Currency",
+   "label": "Outstanding Dues"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-05 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Provisional Electorate Member",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee Member",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "flat_no",
+ "sort_order": "ASC",
+ "states": []
+}

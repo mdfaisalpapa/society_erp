@@ -27,3 +27,13 @@ def ensure_voting_participation_unique_index():
         "unique_poll_flat",
     )
 
+
+def ensure_provisional_electorate_unique_index():
+    """Ensure flat number is unique within each electorate publication."""
+    if frappe.db.exists("DocType", "Provisional Electorate Member"):
+        frappe.db.add_unique(
+            "Provisional Electorate Member",
+            ["publication", "flat_no"],
+            "uniq_prov_member_pub_flat",
+        )
+

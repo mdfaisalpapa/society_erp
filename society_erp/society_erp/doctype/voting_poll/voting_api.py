@@ -36,6 +36,18 @@ _OTP_SEND_WINDOW_SECONDS = 900
 _OTP_AUTH_TTL_SECONDS = 600
 
 
+def _assert_legacy_voting_enabled():
+    try:
+        engine = frappe.db.get_single_value("Society ERP Settings", "voting_engine_active", cache=False) or "Legacy Voting"
+        if engine == "Consensus":
+            frappe.throw(
+                _("Legacy voting is currently disabled because the Consensus engine is active in Society ERP Settings."),
+                frappe.ValidationError,
+            )
+    except frappe.DoesNotExistError:
+        pass
+
+
 def _otp_cache_key(kind, user, poll_name, flat):
     raw = "\0".join([str(kind), str(user), str(poll_name), str(flat)])
     digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
@@ -83,6 +95,7 @@ def _consume_voting_otp_authorization(user, poll_name, flat):
 @frappe.whitelist(methods=["POST"])
 def send_voting_otp(poll_name, flat):
     """Send a short-lived OTP to the logged-in voter's registered email."""
+    _assert_legacy_voting_enabled()
     user = frappe.session.user
     if not user or user == "Guest":
         frappe.throw(_("Please log in to continue."), frappe.PermissionError)
@@ -130,6 +143,7 @@ def send_voting_otp(poll_name, flat):
 @frappe.whitelist(methods=["POST"])
 def verify_voting_otp(poll_name, flat, otp):
     """Verify a one-time email OTP and authorise one vote for this user, poll and flat."""
+    _assert_legacy_voting_enabled()
     user = frappe.session.user
     if not user or user == "Guest":
         frappe.throw(_("Please log in to continue."), frappe.PermissionError)
@@ -195,7 +209,7 @@ def _receipt_response(poll, flat, ballot, recovered=False):
 @frappe.whitelist(methods=["POST"])
 def cast_vote(poll_name, flat, selected_option, idempotency_key):
     """Cast one vote per flat and safely recover a lost vote response."""
-
+    _assert_legacy_voting_enabled()
     user = frappe.session.user
 
     if not user or user == "Guest":
@@ -676,6 +690,7 @@ def _resident_poll_response(poll, user, entries):
 @frappe.whitelist()
 def get_resident_polls():
     """List currently open polls for which the logged-in user is eligible."""
+    _assert_legacy_voting_enabled()
     user = frappe.session.user
     if not user or user == "Guest":
         frappe.throw(_("Please log in to view voting polls."), frappe.PermissionError)
@@ -721,6 +736,7 @@ def get_resident_polls():
 @frappe.whitelist()
 def get_resident_poll_details(poll_name):
     """Return poll options and only the logged-in user's eligible flats."""
+    _assert_legacy_voting_enabled()
     user = frappe.session.user
     if not user or user == "Guest":
         frappe.throw(_("Please log in to view this poll."), frappe.PermissionError)

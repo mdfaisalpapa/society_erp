@@ -46,8 +46,7 @@ fixtures = [
             ["module", "=", "Society Erp"]
         ]
     },
-    
-{
+    {
     "dt": "Role",
     "filters": [
         ["name", "in", [
@@ -111,5 +110,15 @@ doctype_js = {
     "Voting Poll": "public/js/voting_poll.js",
 }
 after_migrate = [
-    "society_erp.migrations.ensure_voting_participation_unique_index"
+    "society_erp.migrations.ensure_voting_participation_unique_index",
+    "society_erp.migrations.ensure_provisional_electorate_unique_index",
 ]
+
+consensus_voter_providers = [
+    "society_erp.voting.provider.SocietyERPProvider"
+]
+
+consensus_secret_resolvers = [
+    "society_erp.voting.secrets.SocietyERPSecretResolver"
+]
+

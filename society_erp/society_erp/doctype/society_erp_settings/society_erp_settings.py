@@ -2,7 +2,9 @@ import frappe
 from frappe.model.document import Document
 
 class SocietyERPSettings(Document):
-    pass
+    def validate(self):
+        if self.voting_engine_active and self.voting_engine_active not in ("Legacy Voting", "Consensus"):
+            frappe.throw("Invalid active voting engine. Must be 'Legacy Voting' or 'Consensus'.")
 
 @frappe.whitelist()
 def create_maintenance_item():

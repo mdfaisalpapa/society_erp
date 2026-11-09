@@ -1,0 +1,193 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:ELEC-OBJ-{YYYY}-{#####}",
+ "creation": "2026-11-05 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "publication",
+  "flat_no",
+  "status",
+  "objection_type",
+  "column_break_main",
+  "applicant_user",
+  "applicant_name",
+  "applicant_contact",
+  "section_break_details",
+  "details",
+  "supporting_document",
+  "section_break_review",
+  "officer_comments",
+  "evidence_request_details",
+  "additional_evidence",
+  "column_break_review",
+  "resolved_by",
+  "resolved_on",
+  "applied_correction"
+ ],
+ "fields": [
+  {
+   "fieldname": "publication",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Publication",
+   "options": "Electorate Publication",
+   "reqd": 1
+  },
+  {
+   "fieldname": "flat_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Flat No",
+   "reqd": 1
+  },
+  {
+   "default": "Submitted",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Submitted\nUnder Review\nEvidence Requested\nAccepted\nRejected",
+   "reqd": 1
+  },
+  {
+   "fieldname": "objection_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Objection Type",
+   "options": "Missing Voter / Omitted Flat\nIncorrect Owner Name\nIncorrect Allocation / Voting Weight\nIncorrect Dues / Payment Omission\nIncorrect Exclusion\nOther",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "applicant_user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Applicant User",
+   "options": "User"
+  },
+  {
+   "fieldname": "applicant_name",
+   "fieldtype": "Data",
+   "label": "Applicant Name"
+  },
+  {
+   "fieldname": "applicant_contact",
+   "fieldtype": "Data",
+   "label": "Applicant Contact"
+  },
+  {
+   "fieldname": "section_break_details",
+   "fieldtype": "Section Break",
+   "label": "Objection Details"
+  },
+  {
+   "fieldname": "details",
+   "fieldtype": "Long Text",
+   "label": "Objection Details / Grounds",
+   "reqd": 1
+  },
+  {
+   "fieldname": "supporting_document",
+   "fieldtype": "Attach",
+   "label": "Supporting Document / Evidence"
+  },
+  {
+   "fieldname": "section_break_review",
+   "fieldtype": "Section Break",
+   "label": "Officer Review & Resolution"
+  },
+  {
+   "fieldname": "officer_comments",
+   "fieldtype": "Long Text",
+   "label": "Officer Review Comments"
+  },
+  {
+   "fieldname": "evidence_request_details",
+   "fieldtype": "Small Text",
+   "label": "Evidence Requested"
+  },
+  {
+   "fieldname": "additional_evidence",
+   "fieldtype": "Attach",
+   "label": "Additional Evidence Submitted"
+  },
+  {
+   "fieldname": "column_break_review",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "resolved_by",
+   "fieldtype": "Link",
+   "label": "Resolved By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "resolved_on",
+   "fieldtype": "Datetime",
+   "label": "Resolved On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "applied_correction",
+   "fieldtype": "Small Text",
+   "label": "Applied Correction Summary"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-05 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Electorate Objection",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee Member",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "if_owner": 1,
+   "print": 0,
+   "read": 1,
+   "report": 0,
+   "role": "All",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

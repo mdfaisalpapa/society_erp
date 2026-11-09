@@ -52,9 +52,31 @@ frappe.ready(function () {
     }
 
     function call(method, args = {}) {
+        let fullMethod = `${API}.${method}`;
+        if (state.is_consensus) {
+            const flatVal = args.flat || (el.flat && el.flat.value);
+            const flatRow = (state.poll && state.poll.eligible_flats || []).find(item => item.flat === flatVal);
+            const eligName = flatRow ? flatRow.eligibility_name : (args.eligibility_name || null);
+
+            if (method === 'send_voting_otp') {
+                fullMethod = 'consensus.api.voting.send_otp';
+                args = { poll_name: args.poll_name, eligibility_name: eligName };
+            } else if (method === 'verify_voting_otp') {
+                fullMethod = 'consensus.api.voting.verify_otp';
+                args = { poll_name: args.poll_name, otp: args.otp, eligibility_name: eligName };
+            } else if (method === 'cast_vote') {
+                fullMethod = 'consensus.api.voting.cast';
+                args = {
+                    poll_name: args.poll_name,
+                    selected_option: args.selected_option,
+                    idempotency_key: args.idempotency_key,
+                    eligibility_name: eligName,
+                };
+            }
+        }
         return new Promise((resolve, reject) => {
             frappe.call({
-                method: `${API}.${method}`,
+                method: fullMethod,
                 args,
                 callback: (r) => {
                     if (r && !r.exc) {
@@ -74,6 +96,36 @@ frappe.ready(function () {
         });
     }
     async function downloadVotingReceipt(receipt, idempotencyKey) {
+        if (state.is_consensus) {
+            const flatVal = receipt.flat || (receipt.context_ref || (el.flat && el.flat.value));
+            const flatRow = (state.poll && state.poll.eligible_flats || []).find(item => item.flat === flatVal);
+            const eligName = flatRow ? flatRow.eligibility_name : '';
+            const pollName = receipt.poll_name || (state.poll && state.poll.name);
+            const endpoint = `/api/method/consensus.api.voting.download_receipt?poll_name=${encodeURIComponent(pollName)}&eligibility_name=${encodeURIComponent(eligName)}`;
+            const response = await fetch(endpoint, {
+                headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token },
+                credentials: 'same-origin',
+            });
+            if (!response.ok) {
+                let message = 'Unable to download signed receipt from Consensus.';
+                try {
+                    const data = await response.json();
+                    message = data.exception || data.message || message;
+                } catch (_) {}
+                throw new Error(message);
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Consensus-Receipt-${receipt.receipt_code || 'signed'}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            return;
+        }
+
         const endpoint =
             '/api/method/society_erp.society_erp.doctype.voting_poll.voting_receipt_pdf.download_voting_receipt_pdf';
 
@@ -466,12 +518,55 @@ frappe.ready(function () {
         el.empty.classList.add('d-none');
 
         try {
-            state.polls =
-                await call('get_resident_polls') || [];
+            const engineStatus = await new Promise((res) => {
+                frappe.call({
+                    method: 'society_erp.voting.portal_api.get_voting_status',
+                    callback: (r) => res(r && r.message ? r.message : { is_consensus: false })
+                });
+            });
+            state.is_consensus = !!engineStatus.is_consensus;
 
-            renderPolls();
+            if (state.is_consensus) {
+                const res = await new Promise((res, rej) => {
+                    frappe.call({
+                        method: 'consensus.api.voting.list_my_polls',
+                        callback: (r) => (r && !r.exc ? res(r.message) : rej(new Error((r && r.message) || 'Failed to load Consensus polls'))),
+                        error: (r) => rej(new Error((r && r.message) || 'Network error')),
+                    });
+                });
+                state.rawConsensusPolls = res.polls || [];
+                state.polls = state.rawConsensusPolls.map(p => ({
+                    name: p.poll_name,
+                    title: p.title,
+                    description: p.description,
+                    poll_type: p.poll_type,
+                    start_datetime: p.starts_at,
+                    end_datetime: p.ends_at,
+                    eligible_flat_count: (p.allocations || []).length,
+                    voted_flat_count: (p.allocations || []).filter(a => a.has_voted).length,
+                    turnout: { available: false },
+                    eligible_flats: (p.allocations || []).map(a => ({
+                        flat: a.context_ref || a.eligibility_name,
+                        eligibility_name: a.eligibility_name,
+                        voting_weight: a.voting_weight,
+                        already_voted: !!a.has_voted,
+                    })),
+                    options: (p.options || []).map(o => ({
+                        name: o.option_key,
+                        label: o.option_label,
+                        description: '',
+                    })),
+                    require_email_otp: !!p.require_otp,
+                }));
+                renderPolls();
+            } else {
+                state.polls =
+                    await call('get_resident_polls') || [];
 
-            await loadPublishedRegisters();
+                renderPolls();
+
+                await loadPublishedRegisters();
+            }
 
         } catch (error) {
             showAlert(error.message);
@@ -492,10 +587,16 @@ frappe.ready(function () {
         el.list.classList.add('d-none');
 
         try {
-            state.poll = await call(
-                'get_resident_poll_details',
-                { poll_name: name }
-            );
+            if (state.is_consensus) {
+                const match = (state.polls || []).find(p => p.name === name);
+                if (!match) throw new Error('Poll not found.');
+                state.poll = match;
+            } else {
+                state.poll = await call(
+                    'get_resident_poll_details',
+                    { poll_name: name }
+                );
+            }
 
             state.selectedOption = null;
             state.pendingKey = null;
@@ -547,7 +648,8 @@ frappe.ready(function () {
         el.flat.replaceChildren();
 
         (poll.eligible_flats || []).forEach(row => {
-            const option = make('option', '', row.flat);
+            const labelText = row.voting_weight ? `${row.flat} (Weight: ${row.voting_weight})` : row.flat;
+            const option = make('option', '', labelText);
 
             option.value = row.flat;
 

@@ -1,0 +1,282 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:ELEC-PUB-{YYYY}-{#####}",
+ "creation": "2026-11-05 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "status",
+  "version",
+  "electorate_content_hash",
+  "poll_type",
+  "column_break_main",
+  "association_company",
+  "consensus_poll",
+  "section_break_dues",
+  "dues_enforcement_enabled",
+  "dues_cutoff_date",
+  "dues_reconciliation_gap_days",
+  "column_break_dues",
+  "dues_threshold",
+  "maintenance_receivable_accounts",
+  "section_break_schedule",
+  "published_on",
+  "objection_submission_deadline",
+  "column_break_schedule",
+  "objection_resolution_deadline",
+  "section_break_metrics",
+  "total_flats_evaluated",
+  "eligible_count",
+  "column_break_metrics",
+  "excluded_count",
+  "total_voting_weight",
+  "section_break_approval",
+  "approval_certified_by",
+  "approval_certified_on",
+  "approval_notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nPublished\nObjections Closed\nApproved\nSuperceded\nCancelled"
+  },
+  {
+   "default": "1",
+   "fieldname": "version",
+   "fieldtype": "Int",
+   "label": "Version"
+  },
+  {
+   "fieldname": "electorate_content_hash",
+   "fieldtype": "Data",
+   "label": "Electorate Content Hash",
+   "read_only": 1
+  },
+  {
+   "fieldname": "poll_type",
+   "fieldtype": "Link",
+   "label": "Consensus Poll Type",
+   "options": "Consensus Poll Type"
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "association_company",
+   "fieldtype": "Link",
+   "label": "Association Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "consensus_poll",
+   "fieldtype": "Link",
+   "label": "Linked Consensus Poll",
+   "options": "Consensus Poll",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_dues",
+   "fieldtype": "Section Break",
+   "label": "Dues & Reconciliation Rules"
+  },
+  {
+   "default": "0",
+   "fieldname": "dues_enforcement_enabled",
+   "fieldtype": "Check",
+   "label": "Dues Enforcement Enabled"
+  },
+  {
+   "depends_on": "eval:doc.dues_enforcement_enabled == 1",
+   "fieldname": "dues_cutoff_date",
+   "fieldtype": "Date",
+   "label": "Dues Cutoff Date"
+  },
+  {
+   "default": "7",
+   "fieldname": "dues_reconciliation_gap_days",
+   "fieldtype": "Int",
+   "label": "Reconciliation Gap (Days)"
+  },
+  {
+   "fieldname": "column_break_dues",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0.00",
+   "depends_on": "eval:doc.dues_enforcement_enabled == 1",
+   "fieldname": "dues_threshold",
+   "fieldtype": "Currency",
+   "label": "Dues Threshold"
+  },
+  {
+   "depends_on": "eval:doc.dues_enforcement_enabled == 1",
+   "description": "JSON array of account names or comma-separated list. Excludes corpus fund.",
+   "fieldname": "maintenance_receivable_accounts",
+   "fieldtype": "Small Text",
+   "label": "Maintenance Receivable Accounts"
+  },
+  {
+   "fieldname": "section_break_schedule",
+   "fieldtype": "Section Break",
+   "label": "Publication & Objection Schedule"
+  },
+  {
+   "fieldname": "published_on",
+   "fieldtype": "Datetime",
+   "label": "Published On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "objection_submission_deadline",
+   "fieldtype": "Datetime",
+   "label": "Objection Submission Deadline"
+  },
+  {
+   "fieldname": "column_break_schedule",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "objection_resolution_deadline",
+   "fieldtype": "Datetime",
+   "label": "Objection Resolution Deadline"
+  },
+  {
+   "fieldname": "section_break_metrics",
+   "fieldtype": "Section Break",
+   "label": "Electorate Metrics"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_flats_evaluated",
+   "fieldtype": "Int",
+   "label": "Total Flats Evaluated",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "eligible_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Eligible Voters",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_metrics",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "excluded_count",
+   "fieldtype": "Int",
+   "label": "Excluded Flats",
+   "read_only": 1
+  },
+  {
+   "default": "0.000",
+   "fieldname": "total_voting_weight",
+   "fieldtype": "Float",
+   "label": "Total Voting Weight",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_approval",
+   "fieldtype": "Section Break",
+   "label": "Officer Approval & Certification"
+  },
+  {
+   "fieldname": "approval_certified_by",
+   "fieldtype": "Link",
+   "label": "Certified By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approval_certified_on",
+   "fieldtype": "Datetime",
+   "label": "Certified On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approval_notes",
+   "fieldtype": "Small Text",
+   "label": "Certification Notes"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "group": "Details",
+   "link_doctype": "Provisional Electorate Member",
+   "link_fieldname": "publication"
+  },
+  {
+   "group": "Details",
+   "link_doctype": "Electorate Objection",
+   "link_fieldname": "publication"
+  }
+ ],
+ "modified": "2026-11-05 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Electorate Publication",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee Member",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 0,
+   "role": "All",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title"
+}
