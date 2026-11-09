@@ -140,3 +140,43 @@ def get_dashboard():
         "owners": owners,
         "tickets": tickets,
     }
+
+@frappe.whitelist(allow_guest=False)
+def download_invoice_pdf(invoice_name):
+    user = frappe.session.user
+    user_email = (user or "").strip().lower()
+
+    # 1. Fetch invoice customer (flat number) bypassing permissions
+    invoice_customer = frappe.db.get_value("Sales Invoice", invoice_name, "customer")
+    if not invoice_customer:
+        frappe.throw(_("Invoice not found."), frappe.DoesNotExistError)
+
+    # 2. Verify permissions: system/accounts staff OR resident belonging to this specific flat
+    user_roles = frappe.get_roles(user)
+    has_staff_role = any(r in user_roles for r in ["System Manager", "Accounts User", "Accounts Manager"])
+
+    if not has_staff_role:
+        is_tenant = frappe.db.exists("Tenants", {"email": user_email, "active": 1, "flat": invoice_customer})
+        is_owner = (
+            frappe.db.exists("Owners", {"email": user_email, "active": 1, "flat": invoice_customer})
+            or frappe.db.exists("Owners", {"name": user, "active": 1, "flat": invoice_customer})
+        )
+
+        if not (is_tenant or is_owner):
+            frappe.throw(_("Access Denied: This invoice does not belong to your flat."), frappe.PermissionError)
+
+    # 3. Temporarily elevate print permissions to generate the PDF securely
+    frappe.flags.ignore_permissions = True
+    frappe.flags.ignore_print_permissions = True
+
+    try:
+        pdf_bytes = frappe.get_print("Sales Invoice", invoice_name, "Standard", as_pdf=True)
+    finally:
+        frappe.flags.ignore_permissions = False
+        frappe.flags.ignore_print_permissions = False
+
+    # 4. Construct the HTTP response to trigger a file download in the browser
+    safe_filename = invoice_name.replace(" ", "-").replace("/", "-")
+    frappe.local.response.filename = f"{safe_filename}.pdf"
+    frappe.local.response.filecontent = pdf_bytes
+    frappe.local.response.type = "pdf"

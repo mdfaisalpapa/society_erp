@@ -1,0 +1,198 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-4">
+    {% if not_a_resident %}
+        <div class="alert alert-danger shadow-sm">
+            <h5 class="alert-heading font-weight-bold mb-1">Access Restricted</h5>
+            <p class="mb-0">Your account is not linked to an active flat. Please contact the Estate Office.</p>
+        </div>
+        <div class="mt-3">
+            <a href="/resident" class="btn btn-outline-secondary">🔙 Back to Portal</a>
+        </div>
+    {% else %}
+        <!-- Header & Navigation -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+            <div>
+                <h2 class="mb-1 font-weight-bold">💳 My Dues & Invoices</h2>
+                <div class="text-muted">
+                    Flat <strong>{{ flat_number }}</strong> &bull; Signed in as <strong>{{ resident_name }}</strong> ({{ resident_type }})
+                </div>
+            </div>
+            <div class="mt-3 mt-md-0">
+                <a href="/resident" class="btn btn-outline-secondary">🔙 Back to Portal</a>
+            </div>
+        </div>
+
+        <!-- Highlighted Summary Card: Total Outstanding Balance -->
+        <div class="card shadow-sm mb-4 border-0 dues-summary-card {% if total_outstanding > 0 %}border-danger-left bg-light-danger{% else %}border-success-left bg-light-success{% endif %}">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-lg-8 col-md-7 mb-3 mb-md-0">
+                        <span class="text-uppercase font-weight-bold text-muted small letter-spacing">Total Outstanding Balance</span>
+                        <h1 class="display-4 font-weight-bold my-2 {% if total_outstanding > 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ formatted_total_outstanding }}
+                        </h1>
+                        <p class="mb-0 text-muted">
+                            {% if total_outstanding > 0 %}
+                                <span class="badge badge-danger px-2 py-1 mr-1">Dues Pending</span>
+                                You have unpaid society invoices requiring clearance.
+                            {% else %}
+                                <span class="badge badge-success px-2 py-1 mr-1">Up to Date</span>
+                                All billed dues for Flat <strong>{{ flat_number }}</strong> are fully settled.
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-lg-4 col-md-5 text-md-right">
+                        {% if total_outstanding > 0 %}
+                            <button type="button" class="btn btn-primary btn-lg shadow-sm btn-pay-dues px-4" data-amount="{{ total_outstanding }}">
+                                💳 Pay Outstanding Dues
+                            </button>
+                        {% else %}
+                            <div class="text-success font-weight-bold">
+                                <span style="font-size: 2.2rem; display: block; line-height: 1;">🎉</span>
+                                <span>No Outstanding Balance</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoices List Card -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap">
+                <h5 class="mb-0 font-weight-bold text-dark">
+                    📄 Billing & Invoice History
+                </h5>
+                <span class="badge badge-secondary py-1 px-2 mt-1 mt-md-0">
+                    {{ invoices | length }} {% if invoices | length == 1 %}Invoice{% else %}Invoices{% endif %}
+                </span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="thead-light">
+                            <tr>
+                                <th scope="col" class="border-top-0">Invoice #</th>
+                                <th scope="col" class="border-top-0">Posting Date</th>
+                                <th scope="col" class="border-top-0">Due Date</th>
+                                <th scope="col" class="border-top-0 text-right">Grand Total</th>
+                                <th scope="col" class="border-top-0 text-right">Outstanding</th>
+                                <th scope="col" class="border-top-0 text-center">Status</th>
+                                <th scope="col" class="border-top-0 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in invoices %}
+                            <tr>
+                                <!-- Invoice Identifier -->
+                                <td class="align-middle font-weight-bold text-primary">
+                                    {{ invoice.name }}
+                                </td>
+
+                                <!-- Posting Date -->
+                                <td class="align-middle text-muted">
+                                    {{ invoice.formatted_posting_date or invoice.posting_date }}
+                                </td>
+
+                                <!-- Due Date -->
+                                <td class="align-middle text-muted">
+                                    {{ invoice.formatted_due_date or invoice.due_date }}
+                                </td>
+
+                                <!-- Grand Total -->
+                                <td class="align-middle text-right font-weight-bold">
+                                    {{ invoice.formatted_grand_total }}
+                                </td>
+
+                                <!-- Outstanding Amount -->
+                                <td class="align-middle text-right">
+                                    {% if invoice.outstanding_amount > 0 %}
+                                        <span class="text-danger font-weight-bold">
+                                            {{ invoice.formatted_outstanding }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">
+                                            {{ invoice.formatted_outstanding }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Colored Status Badges -->
+                                <td class="align-middle text-center">
+                                    {% if invoice.status == 'Paid' %}
+                                        <span class="badge badge-success px-2 py-1">Paid</span>
+                                    {% elif invoice.status in ['Unpaid', 'Overdue'] %}
+                                        <span class="badge badge-danger px-2 py-1">{{ invoice.status }}</span>
+                                    {% elif invoice.status in ['Partially Paid', 'Partly Paid'] %}
+                                        <span class="badge badge-warning px-2 py-1 text-dark">{{ invoice.status }}</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary px-2 py-1">{{ invoice.status }}</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Actions: PDF Download / View & Payment -->
+                                <td class="align-middle text-center text-nowrap">
+                                    <a href="/api/method/society_erp.resident_portal.download_invoice_pdf?invoice_name={{ invoice.name }}"
+                                       class="btn btn-sm btn-outline-primary"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       title="Download Invoice PDF">
+                                        📄 PDF
+                                    </a>
+
+                                    {% if invoice.outstanding_amount > 0 %}
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-success ml-1 btn-pay-invoice"
+                                                data-invoice="{{ invoice.name }}"
+                                                data-amount="{{ invoice.outstanding_amount }}"
+                                                title="Pay this invoice">
+                                            💳 Pay
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <div class="py-4">
+                                        <div style="font-size: 2.5rem;" class="mb-2">📑</div>
+                                        <h5 class="text-muted">No invoices found</h5>
+                                        <p class="small text-muted mb-0">There are no billing records or invoices currently generated for Flat <strong>{{ flat_number }}</strong>.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .letter-spacing {
+        letter-spacing: 0.05rem;
+    }
+    .dues-summary-card {
+        border-radius: 8px;
+    }
+    .border-danger-left {
+        border-left: 6px solid #dc3545 !important;
+    }
+    .border-success-left {
+        border-left: 6px solid #28a745 !important;
+    }
+    .bg-light-danger {
+        background-color: #fff8f8;
+    }
+    .bg-light-success {
+        background-color: #f6fbf7;
+    }
+    .table td, .table th {
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}
