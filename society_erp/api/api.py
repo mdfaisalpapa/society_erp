@@ -128,7 +128,7 @@ def download_open_tickets_pdf():
     frappe.response['type'] = 'download'
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_maintenance_dues(flat_number=None):
     """Retrieve or dynamically calculate outstanding maintenance dues for a flat.
 
