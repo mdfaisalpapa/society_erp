@@ -71,13 +71,22 @@ def prepare_gst_details_for_unregistered(doc):
 def validate_purchase_invoice(doc, method=None):
     """
     Purchase Invoice validation hook for society_erp.
-    Sets ineligibility reason if any item is marked ineligible for ITC.
+    Sets ineligibility reason and marks items ineligible for ITC
+    if GST is present on an unregistered society invoice.
     """
     if not is_unregistered_society(doc):
         return
 
+    gst_account_map = get_gst_account_gst_tax_type_map()
+    has_gst = any(
+        (getattr(t, "gst_tax_type", None) or t.account_head in gst_account_map)
+        for t in doc.get("taxes", [])
+    )
     has_ineligible = any(item.get("is_ineligible_for_itc") for item in doc.get("items", []))
-    if has_ineligible:
+
+    if has_gst or has_ineligible:
+        for item in doc.get("items", []):
+            item.is_ineligible_for_itc = 1
         doc.ineligibility_reason = "Ineligible As Per Section 17(5)"
         prepare_gst_details_for_unregistered(doc)
 
@@ -108,8 +117,10 @@ def make_regional_gl_entries(gl_entries, doc):
     """
     Regional override for erpnext.accounts.doctype.purchase_invoice.purchase_invoice.make_regional_gl_entries.
     For registered companies: delegates to India Compliance.
-    For unregistered societies: processes Ineligible ITC reversing Input GST and allocating to item expense accounts,
-    and removes zero-net tax and clearing accounts from GL entries.
+    For unregistered societies:
+      - Keeps line items at their base net amounts (does not load GST into items).
+      - Excludes base Input Tax CGST/SGST/IGST entries.
+      - Generates a single GST Expense entry per Cost Center with detailed narration.
     """
     if not is_unregistered_society(doc):
         return ic_update_regional_gl_entries(gl_entries, doc)
@@ -121,11 +132,88 @@ def make_regional_gl_entries(gl_entries, doc):
     if not has_ineligible:
         return gl_entries
 
-    if prepare_gst_details_for_unregistered(doc):
-        if doc.doctype in DOCTYPE_MAPPING:
-            DOCTYPE_MAPPING[doc.doctype](doc).update_gl_entries(gl_entries)
+    from frappe.utils import flt
 
-    return filter_zero_balance_tax_entries(gl_entries, doc)
+    gst_account_map = get_gst_account_gst_tax_type_map()
+    prepare_gst_details_for_unregistered(doc)
+
+    company_doc = frappe.get_cached_doc("Company", doc.company)
+    gst_expense_account = company_doc.default_gst_expense_account
+    if not gst_expense_account:
+        frappe.throw(
+            _("Please set Default GST Expense Account in Company {0}").format(doc.company)
+        )
+
+    # 1. Identify all GST tax accounts to exclude from standard GL entries
+    tax_accounts = set(gst_account_map.keys())
+    for t in doc.get("taxes", []):
+        tax_type = getattr(t, "gst_tax_type", None) or gst_account_map.get(t.account_head)
+        if tax_type in GST_TAX_TYPES:
+            tax_accounts.add(t.account_head)
+
+    # 2. Filter out base Input Tax entries (keeps base item expense entries untouched)
+    filtered_entries = [e for e in gl_entries if e.get("account") not in tax_accounts]
+
+    # 3. Calculate GST total and group by Cost Center
+    total_tax = sum(
+        flt(t.base_tax_amount_after_discount_amount)
+        for t in doc.get("taxes", [])
+        if (getattr(t, "gst_tax_type", None) or gst_account_map.get(t.account_head)) in GST_TAX_TYPES
+    )
+
+    gst_by_cc = defaultdict(float)
+    for row in doc.get("_item_wise_tax_details") or []:
+        tax = row.get("tax")
+        tax_type = getattr(tax, "gst_tax_type", None) or gst_account_map.get(tax.account_head)
+        if tax_type in GST_TAX_TYPES:
+            item = row.get("item")
+            cc = (item.get("cost_center") if item else None) or doc.get("cost_center") or company_doc.cost_center
+            gst_by_cc[cc] += flt(row.get("amount", 0.0), 2)
+
+    # Fallback if _item_wise_tax_details was empty
+    if not gst_by_cc and total_tax:
+        for t in doc.get("taxes", []):
+            tax_type = getattr(t, "gst_tax_type", None) or gst_account_map.get(t.account_head)
+            if tax_type in GST_TAX_TYPES:
+                cc = t.get("cost_center") or doc.get("cost_center") or company_doc.cost_center
+                gst_by_cc[cc] += flt(t.base_tax_amount_after_discount_amount, 2)
+
+    if not gst_by_cc:
+        return gl_entries
+
+    # Defensive rounding adjustment to match total_tax exactly
+    diff = flt(total_tax - sum(gst_by_cc.values()), 2)
+    if abs(diff) > 0 and gst_by_cc:
+        largest_cc = max(gst_by_cc, key=gst_by_cc.get)
+        gst_by_cc[largest_cc] += diff
+
+    # 4. Generate a single GST Expense entry per Cost Center
+    dr_or_cr = "credit" if doc.get("is_return") else "debit"
+    bill_ref = doc.get("bill_no") or doc.name
+    supplier_label = doc.get("supplier_name") or doc.get("supplier")
+
+    for cc, amt in sorted(gst_by_cc.items()):
+        amt = flt(amt, 2)
+        if not amt:
+            continue
+
+        remarks_parts = [f"GST Expense: Bill {bill_ref}", supplier_label, cc]
+        if doc.get("remarks") and doc.get("remarks") != doc.name:
+            remarks_parts.append(doc.remarks)
+        narration = " - ".join(remarks_parts)
+
+        filtered_entries.append(
+            doc.get_gl_dict({
+                "account": gst_expense_account,
+                "against": doc.supplier,
+                dr_or_cr: amt,
+                f"{dr_or_cr}_in_account_currency": amt,
+                "cost_center": cc,
+                "remarks": narration,
+            })
+        )
+
+    return filtered_entries
 
 
 def update_regional_gl_entries_pr(gl_entries, doc):
