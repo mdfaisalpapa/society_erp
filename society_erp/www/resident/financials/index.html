@@ -14,9 +14,12 @@
         <!-- Header & Navigation -->
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
             <div>
-                <h2 class="mb-1 font-weight-bold">📊 Society Financials</h2>
+                <h2 class="mb-1 font-weight-bold">📊 Society Financials &amp; Transparency</h2>
                 <div class="text-muted">
                     Flat <strong>{{ flat_number }}</strong> &bull; Signed in as <strong>{{ resident_name }}</strong> ({{ resident_type }})
+                    {% if resident_block %}
+                        &bull; <span class="badge badge-light border">Block {{ resident_block }}{% if resident_uds and resident_uds > 0 %} &bull; {{ resident_uds }} sqft UDS{% endif %}</span>
+                    {% endif %}
                 </div>
             </div>
             <div class="mt-3 mt-md-0">
@@ -24,111 +27,934 @@
             </div>
         </div>
 
-        <!-- Filter Control Panel Card -->
-        <div class="card shadow-sm border-0 mb-4 bg-light">
-            <div class="card-body p-4">
-                <form id="financial-report-form" onsubmit="return false;">
-                    <div class="row align-items-end">
-                        <!-- Report Type -->
-                        <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
-                            <label for="report_name" class="font-weight-bold small text-muted text-uppercase">Report Type</label>
-                            <select id="report_name" class="form-control custom-select">
-                                <option value="Profit and Loss Statement" selected>📈 Profit & Loss Statement</option>
-                                <option value="Balance Sheet">📑 Balance Sheet</option>
-                            </select>
-                        </div>
+        <!-- Bootstrap Nav Tabs: Toggle between Reports, Purchase Invoices, and Maintenance Bills -->
+        <ul class="nav nav-tabs font-weight-bold mb-4" id="financialsTab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="reports-tab" data-toggle="tab" href="#reports-pane" role="tab" aria-controls="reports-pane" aria-selected="true">
+                    📈 Financial Statements
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="invoices-tab" data-toggle="tab" href="#invoices-pane" role="tab" aria-controls="invoices-pane" aria-selected="false">
+                    🧾 Purchase Invoices
+                    <span class="badge badge-primary ml-1">{{ purchase_invoices | length }}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="maintenance-tab" data-toggle="tab" href="#maintenance-pane" role="tab" aria-controls="maintenance-pane" aria-selected="false">
+                    🛠️ Maintenance Bills &amp; Analytics
+                    <span class="badge badge-info ml-1" id="maintenance-runs-tab-badge">{{ maintenance_runs | length }}</span>
+                </a>
+            </li>
+        </ul>
 
-                        <!-- Date Range: From Date -->
-                        <div class="col-lg-2 col-md-3 col-6 mb-3 mb-lg-0">
-                            <label for="from_date" class="font-weight-bold small text-muted text-uppercase">From Date</label>
-                            <input type="date" id="from_date" class="form-control" value="{{ default_from_date }}">
-                        </div>
+        <!-- Tab Content Panes -->
+        <div class="tab-content" id="financialsTabContent">
 
-                        <!-- Date Range: To Date -->
-                        <div class="col-lg-2 col-md-3 col-6 mb-3 mb-lg-0">
-                            <label for="to_date" class="font-weight-bold small text-muted text-uppercase">To Date</label>
-                            <input type="date" id="to_date" class="form-control" value="{{ default_to_date }}">
-                        </div>
+            <!-- TAB PANE 1: Financial Reports (Profit & Loss and Balance Sheet) -->
+            <div class="tab-pane fade show active" id="reports-pane" role="tabpanel" aria-labelledby="reports-tab">
+                <!-- Filter Control Panel Card -->
+                <div class="card shadow-sm border-0 mb-4 bg-light">
+                    <div class="card-body p-4">
+                        <form id="financial-report-form" onsubmit="return false;">
+                            <div class="form-row align-items-end">
+                                <!-- 1. Report Type -->
+                                <div class="col-lg-3 col-md-6 mb-3">
+                                    <label for="report_name" class="font-weight-bold small text-muted text-uppercase">Report Type</label>
+                                    <select id="report_name" class="form-control custom-select shadow-none">
+                                        <option value="Profit and Loss Statement" selected>📈 Profit & Loss Statement</option>
+                                        <option value="Balance Sheet">📑 Balance Sheet</option>
+                                    </select>
+                                </div>
 
-                        <!-- Cost Center Filter -->
-                        <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
-                            <label for="cost_center" class="font-weight-bold small text-muted text-uppercase">Cost Center</label>
-                            <select id="cost_center" class="form-control custom-select">
-                                <option value="" selected>🏛️ All Cost Centers (Consolidated)</option>
-                                {% for cc in cost_centers %}
-                                    <option value="{{ cc.name }}">
-                                        {% if cc.is_group %}📁{% else %}📍{% endif %} {{ cc.cost_center_name or cc.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                                <!-- 2. Date Filter Type -->
+                                <div class="col-lg-2 col-md-6 mb-3">
+                                    <label for="date_filter_type" class="font-weight-bold small text-muted text-uppercase">Period Filter</label>
+                                    <select id="date_filter_type" class="form-control custom-select shadow-none">
+                                        <option value="financial_year" selected>📅 Financial Year</option>
+                                        <option value="month_year">🗓️ Month & Year</option>
+                                        <option value="custom_range">⏱️ Custom Date Range</option>
+                                    </select>
+                                </div>
 
-                        <!-- Generate Button -->
-                        <div class="col-lg-2 col-md-6">
-                            <button type="button" id="btn-generate-report" class="btn btn-primary btn-block font-weight-bold shadow-sm">
-                                <span class="spinner-border spinner-border-sm d-none mr-1" id="report-spinner" role="status" aria-hidden="true"></span>
-                                <span>Generate Report</span>
-                            </button>
+                                <!-- 3. Dynamic Date Input Container -->
+                                <div class="col-lg-3 col-md-6 mb-3">
+                                    <!-- 3A. Financial Year Input Group -->
+                                    <div id="filter-group-fy" class="date-filter-group">
+                                        <label for="fiscal_year_select" class="font-weight-bold small text-muted text-uppercase">Financial Year</label>
+                                        <select id="fiscal_year_select" class="form-control custom-select shadow-none">
+                                            {% for fy in fiscal_years %}
+                                                <option value="{{ fy.name }}" 
+                                                        data-start="{{ fy.year_start_date }}" 
+                                                        data-end="{{ fy.year_end_date }}"
+                                                        {% if fy.name == current_fiscal_year %}selected{% endif %}>
+                                                    {{ fy.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <!-- 3B. Month and Year Input Group -->
+                                    <div id="filter-group-month" class="date-filter-group d-none">
+                                        <label class="font-weight-bold small text-muted text-uppercase">Month & Year</label>
+                                        <div class="form-row">
+                                            <div class="col-7">
+                                                <select id="select_month" class="form-control custom-select shadow-none">
+                                                    <option value="0">January</option>
+                                                    <option value="1">February</option>
+                                                    <option value="2">March</option>
+                                                    <option value="3">April</option>
+                                                    <option value="4">May</option>
+                                                    <option value="5">June</option>
+                                                    <option value="6">July</option>
+                                                    <option value="7">August</option>
+                                                    <option value="8">September</option>
+                                                    <option value="9">October</option>
+                                                    <option value="10">November</option>
+                                                    <option value="11">December</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-5">
+                                                <select id="select_year" class="form-control custom-select shadow-none">
+                                                    <!-- Injected dynamically via index.js -->
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 3C. Custom Date Range Group -->
+                                    <div id="filter-group-custom" class="date-filter-group d-none">
+                                        <label class="font-weight-bold small text-muted text-uppercase">From &bull; To Date</label>
+                                        <div class="form-row">
+                                            <div class="col-6">
+                                                <input type="date" id="from_date" class="form-control form-control-sm shadow-none" value="{{ default_from_date }}">
+                                            </div>
+                                            <div class="col-6">
+                                                <input type="date" id="to_date" class="form-control form-control-sm shadow-none" value="{{ default_to_date }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 4. Cost Center Filter (Pre-loaded with Non-Zero Balances) -->
+                                <div class="col-lg-3 col-md-6 mb-3">
+                                    <label for="cost_center" class="font-weight-bold small text-muted text-uppercase">Cost Center</label>
+                                    <select id="cost_center" class="form-control custom-select shadow-none">
+                                        <option value="">🏢 All Cost Centers</option>
+                                        {% for cc in cost_centers %}
+                                            <option value="{{ cc.name }}" {% if cc.is_group %}class="font-weight-bold bg-light"{% endif %}>
+                                                {% if cc.is_group %}📁 {% else %}&nbsp;&nbsp;&bull; {% endif %}{{ cc.cost_center_name or cc.name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- 5. Common Area Expenses Modal Trigger -->
+                                <div class="col-lg-2 col-md-6 mb-3">
+                                    <button type="button" id="btn-view-gross-common-report" class="btn btn-outline-info btn-block shadow-sm text-nowrap btn-view-gross-common" title="View gross expenses before cost center allocation">
+                                        🏢 Gross Common Expenses
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Report Viewer Card -->
+                <div class="card shadow-sm border-0 mb-4" id="report-card">
+                    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap">
+                        <div>
+                            <h5 class="mb-0 font-weight-bold text-dark" id="report-title-display">Profit and Loss Statement</h5>
+                            <small class="text-muted" id="report-subtitle-display">Showing ledger activity</small>
+                        </div>
+                        <div class="mt-2 mt-md-0 d-flex align-items-center">
+                            <span id="report-spinner" class="spinner-border spinner-border-sm text-primary mr-2 d-none" role="status" aria-hidden="true"></span>
+                            <span class="badge badge-light border px-2 py-1 mr-2" id="report-currency-badge">Currency: {{ currency }}</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-print-financial-report">🖨️ Print</button>
                         </div>
                     </div>
 
-                    <!-- Hidden company identifier -->
-                    <input type="hidden" id="company" value="{{ default_company }}">
-                </form>
-            </div>
-        </div>
+                    <div class="card-body p-0">
+                        <!-- Skeleton Loader -->
+                        <div id="report-skeleton" class="p-4 d-none">
+                            <div class="skeleton-line mb-3" style="height: 25px; width: 40%;"></div>
+                            <div class="skeleton-line mb-2" style="height: 18px; width: 100%;"></div>
+                            <div class="skeleton-line mb-2" style="height: 18px; width: 95%;"></div>
+                            <div class="skeleton-line mb-2" style="height: 18px; width: 85%;"></div>
+                            <div class="skeleton-line mb-2" style="height: 18px; width: 90%;"></div>
+                            <div class="skeleton-line mb-2" style="height: 18px; width: 75%;"></div>
+                        </div>
 
-        <!-- Active Filter Summary Bar -->
-        <div class="d-flex justify-content-between align-items-center mb-3 px-2 flex-wrap" id="report-meta-bar">
-            <div class="mb-2 mb-md-0">
-                <span class="font-weight-bold text-dark h5 mb-0" id="display-report-title">Profit & Loss Statement</span>
-                <span class="badge badge-info ml-2 px-2 py-1" id="display-cost-center-badge">All Cost Centers</span>
-            </div>
-            <div class="text-muted small">
-                <span id="display-date-range">From {{ default_from_date }} To {{ default_to_date }}</span>
-                <span class="mx-1">&bull;</span>
-                <span class="badge badge-light border" id="display-currency-badge">Currency: {{ currency }}</span>
-            </div>
-        </div>
+                        <!-- Empty State Notice -->
+                        <div id="report-empty-state" class="text-center py-5 d-none">
+                            <div class="py-4">
+                                <div style="font-size: 3rem;" class="mb-2">📊</div>
+                                <h5 class="text-muted font-weight-bold">No Financial Data Found</h5>
+                                <p class="text-muted small mb-0">No ledger transactions match the selected report parameters and date range.</p>
+                            </div>
+                        </div>
 
-        <!-- Dynamic Report Container -->
-        <div id="report-container" class="card shadow-sm border-0 mb-5">
-            <!-- Skeleton Loading State (Displayed by default while fetching) -->
-            <div id="report-skeleton" class="p-4">
-                <div class="skeleton-line mb-3" style="width: 35%; height: 24px;"></div>
-                <div class="skeleton-line mb-2" style="width: 100%; height: 16px;"></div>
-                <div class="skeleton-line mb-2" style="width: 90%; height: 16px;"></div>
-                <div class="skeleton-line mb-2" style="width: 95%; height: 16px;"></div>
-                <div class="skeleton-line mb-2" style="width: 80%; height: 16px;"></div>
-                <div class="skeleton-line mb-2" style="width: 100%; height: 20px;"></div>
-                <div class="text-center text-muted my-3 small">
-                    <span class="spinner-grow spinner-grow-sm text-primary mr-1" role="status"></span>
-                    Running ERPNext financial report engine...
+                        <!-- Dynamic Table Wrapper -->
+                        <div class="table-responsive" id="report-table-wrapper">
+                            <table class="table table-hover table-bordered mb-0" id="financial-report-table">
+                                <thead class="thead-light">
+                                    <tr id="report-header-row">
+                                        <!-- Injected dynamically via index.js -->
+                                    </tr>
+                                </thead>
+                                <tbody id="report-body">
+                                    <!-- Injected dynamically via index.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Generic Responsive Table Ready to Receive Data -->
-            <div class="table-responsive d-none" id="report-table-wrapper">
-                <table class="table table-hover table-bordered mb-0" id="financial-report-table">
-                    <thead class="thead-light" id="report-table-header">
-                        <tr>
-                            <th scope="col" class="border-top-0">Account</th>
-                            <th scope="col" class="border-top-0 text-right">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody id="report-table-body">
-                        <!-- Dynamically populated by index.js -->
-                    </tbody>
-                </table>
+            <!-- TAB PANE 2: Purchase Invoices (Detailed Item & Tax View) -->
+            <div class="tab-pane fade" id="invoices-pane" role="tabpanel" aria-labelledby="invoices-tab">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap">
+                        <div>
+                            <h5 class="mb-0 font-weight-bold text-dark">
+                                🧾 Society Purchase Invoices &amp; Procurement
+                            </h5>
+                            <small class="text-muted">
+                                Transparency register of submitted vendor bills and operational procurement
+                            </small>
+                        </div>
+                        <span class="badge badge-light border px-3 py-2 mt-2 mt-md-0 font-weight-normal">
+                            Total Records: <strong>{{ purchase_invoices | length }}</strong>
+                        </span>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped align-middle mb-0" id="purchase-invoices-table">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th style="min-width: 140px;">Invoice #</th>
+                                        <th style="min-width: 110px;">Date</th>
+                                        <th style="min-width: 120px;">Bill / Ref</th>
+                                        <th style="min-width: 200px;">Supplier</th>
+                                        <th class="text-right" style="min-width: 130px;">Amount</th>
+                                        <th class="text-center" style="min-width: 110px;">Status</th>
+                                        <th class="text-center" style="min-width: 130px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for inv in purchase_invoices %}
+                                    <tr>
+                                        <td class="font-weight-bold text-dark">
+                                            {{ inv.name }}
+                                        </td>
+                                        <td class="text-muted small">
+                                            {{ inv.formatted_posting_date }}
+                                        </td>
+                                        <td class="small text-muted">
+                                            {{ inv.bill_no or "-" }}
+                                        </td>
+                                        <td class="font-weight-500">
+                                            {{ inv.supplier_name }}
+                                        </td>
+                                        <td class="text-right font-weight-bold text-dark">
+                                            {{ inv.formatted_grand_total }}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if inv.status == "Paid" %}
+                                                <span class="badge badge-success px-2 py-1">Paid</span>
+                                            {% elif inv.status == "Unpaid" %}
+                                                <span class="badge badge-danger px-2 py-1">Unpaid</span>
+                                            {% elif inv.status == "Partly Paid" %}
+                                                <span class="badge badge-warning px-2 py-1">Partly Paid</span>
+                                            {% elif inv.status == "Overdue" %}
+                                                <span class="badge badge-danger px-2 py-1">Overdue</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary px-2 py-1">{{ inv.status }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-primary btn-view-purchase-invoice px-3"
+                                                    data-invoice="{{ inv.name }}">
+                                                👁️ View Details
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            <div class="py-4">
+                                                <div style="font-size: 2.5rem;" class="mb-2">📑</div>
+                                                <h5 class="text-muted font-weight-bold">No Submitted Purchase Invoices Found</h5>
+                                                <p class="small text-muted mb-0">No posted procurement bills are currently on file for this society company.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Empty State / Error Alert Container -->
-            <div id="report-empty-state" class="d-none text-center py-5">
-                <div style="font-size: 2.5rem;" class="mb-2">📑</div>
-                <h5 class="text-muted font-weight-bold">No Financial Data Found</h5>
-                <p class="text-muted small mb-0">No posted GL entries match the selected period and cost center filter.</p>
+            <!-- TAB PANE 3: Maintenance Bills & Analytics -->
+            <div class="tab-pane fade" id="maintenance-pane" role="tabpanel" aria-labelledby="maintenance-tab">
+                
+                <!-- Filter & Control Card: Financial Year Filter -->
+                <div class="card shadow-sm border-0 mb-4 bg-light">
+                    <div class="card-body p-3">
+                        <div class="form-row align-items-center">
+                            <div class="col-md-5 col-sm-6 mb-2 mb-md-0">
+                                <label for="maintenance_fy_filter" class="font-weight-bold small text-muted text-uppercase mb-1">
+                                    📅 Filter by Financial Year
+                                </label>
+                                <select id="maintenance_fy_filter" class="form-control custom-select shadow-none">
+                                    <option value="All Fiscal Years">All Financial Years</option>
+                                    {% for fy in fiscal_years %}
+                                        <option value="{{ fy.name }}" {% if fy.name == current_fiscal_year %}selected{% endif %}>
+                                            {{ fy.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-7 text-md-right mt-2 mt-md-0">
+                                <span class="badge badge-light border px-3 py-2 text-muted font-weight-normal">
+                                    Matching Billing Runs: <strong id="maintenance-runs-count">{{ maintenance_runs | length }}</strong>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monthly Maintenance Billing Runs Table (Base View) -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap">
+                        <div>
+                            <h5 class="mb-0 font-weight-bold text-dark">
+                                🛠️ Maintenance Calculations &amp; Proportionate Billing
+                            </h5>
+                            <small class="text-muted">
+                                Click <strong>"View Blocks &amp; UDS &raquo;"</strong> to drill down into block calculations, or <strong>"View Considered Invoices"</strong> to inspect vendor procurement
+                            </small>
+                        </div>
+                        <span class="badge badge-light border px-3 py-2 mt-2 mt-md-0 font-weight-normal">
+                            Filtered Runs: <strong id="maintenance-table-count">{{ maintenance_runs | length }}</strong>
+                        </span>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped align-middle mb-0" id="maintenance-runs-table">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th style="min-width: 160px;">Billing Month</th>
+                                        <th style="min-width: 130px;">Posting Date</th>
+                                        <th style="min-width: 130px;">Financial Year</th>
+                                        <th class="text-center" style="min-width: 90px;">Blocks</th>
+                                        <th class="text-right" style="min-width: 150px;">Total Billed Amount</th>
+                                        <th class="text-center" style="min-width: 320px;">Breakdown &amp; Transparency Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="maintenance-runs-tbody">
+                                    <!-- Injected and updated dynamically via index.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- MODAL 1: Level 1 Drill-Down - Blocks & UDS + Compact Objective Header -->
+        <!-- =================================================================== -->
+        <div class="modal fade" id="runBlocksModal" tabindex="-1" role="dialog" aria-labelledby="runBlocksModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
+                <div class="modal-content shadow border-0">
+                    <div class="modal-header bg-light border-bottom py-2">
+                        <div>
+                            <h5 class="modal-title font-weight-bold text-dark mb-0" id="runBlocksModalLabel">
+                                🏢 Block &amp; UDS Maintenance Allocation
+                            </h5>
+                            <small class="text-muted" id="blocks-modal-subtitle">
+                                Showing calculated UDS and proportional expenses per block
+                            </small>
+                        </div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body p-0">
+                        <!-- Resident Highlight Alert if applicable -->
+                        <div id="blocks-modal-resident-banner" class="alert alert-info border-0 rounded-0 mb-0 py-2 d-none">
+                            <!-- Populated dynamically -->
+                        </div>
+
+                        <!-- Compact Analytical Summary Header (Clean, objective single-tier vs two-tier comparison) -->
+                        <div class="bg-white border-bottom p-2" id="blocks-modal-analytics-header">
+                            <div class="card border mb-0 shadow-none bg-light">
+                                <div class="card-body p-2">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap mb-1 pb-1 border-bottom">
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge badge-secondary px-2 py-1 mr-2 font-weight-normal text-uppercase" style="font-size: 0.7rem;">Rate Comparison</span>
+                                            <span class="font-weight-bold text-dark small" id="modal-analytics-title">
+                                                Monthly Expense &amp; Rate Structure Overview
+                                            </span>
+                                        </div>
+                                        <div class="mt-1 mt-md-0">
+                                            <button type="button" class="btn btn-xs btn-outline-primary font-weight-bold shadow-none py-1 px-2" id="btn-view-complete-gl" style="font-size: 0.8rem;">
+                                                📑 View Complete Society GL &raquo;
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="row align-items-center text-center text-md-left">
+                                        <!-- Metric 1: Total Monthly Expenses -->
+                                        <div class="col-md-4 col-sm-6 py-1 border-right-md">
+                                            <div class="text-uppercase text-muted" style="font-size: 0.7rem; font-weight: 700;">
+                                                Total Monthly Expenses
+                                            </div>
+                                            <div class="h6 font-weight-bold text-dark mb-0" id="metric-society-expense">
+                                                ₹ 0.00
+                                            </div>
+                                            <div class="text-muted font-italic" style="font-size: 0.72rem;">
+                                                Across all blocks &amp; common complex areas
+                                            </div>
+                                        </div>
+
+                                        <!-- Metric 2: Society-Wide Rate (Flat / UDS) (Single Tier) (RED STYLING) -->
+                                        <div class="col-md-4 col-sm-6 py-1 border-right-md bg-white rounded border-danger">
+                                            <div class="d-flex justify-content-between align-items-center mb-0">
+                                                <span class="text-uppercase text-danger font-weight-bold" style="font-size: 0.7rem;">
+                                                    ⚖️ Society-Wide Rate (Flat / UDS) (Single Tier)
+                                                </span>
+                                            </div>
+                                            <!-- Red comparative rate -->
+                                            <div class="h6 font-weight-bold text-danger mb-0" id="metric-comparative-rate">
+                                                ₹ 0.0000 / sqft
+                                            </div>
+                                            <!-- Clean formula: (Rate x UDS = Total) -->
+                                            <div class="text-danger" style="font-size: 0.72rem; line-height: 1.2;" id="metric-single-tier-formula">
+                                                -
+                                            </div>
+                                        </div>
+
+                                        <!-- Metric 3: Block-Wise Rate (Two-Tier) -->
+                                        <div class="col-md-4 col-sm-12 py-1">
+                                            <div class="text-uppercase text-muted" style="font-size: 0.7rem; font-weight: 700;">
+                                                🏡 Block-Wise Rate (Two-Tier)
+                                            </div>
+                                            <div class="h6 font-weight-bold text-dark mb-0" id="metric-block-wise-rate">
+                                                -
+                                            </div>
+                                            <!-- Clean formula: (Rate x UDS = Total) -->
+                                            <div class="text-muted" style="font-size: 0.72rem; line-height: 1.2;" id="metric-two-tier-formula">
+                                                -
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Loader -->
+                        <div id="modal-blocks-loader" class="text-center py-4">
+                            <div class="spinner-border text-primary spinner-border-sm" role="status">
+                                <span class="sr-only">Loading blocks...</span>
+                            </div>
+                            <div class="text-muted small mt-1">Loading block calculations and UDS allocations...</div>
+                        </div>
+
+                        <!-- Modal Error State -->
+                        <div id="modal-blocks-error" class="alert alert-danger m-3 py-2 d-none">
+                            <span id="modal-blocks-error-text">Failed to load block details.</span>
+                        </div>
+
+                        <!-- Blocks Table Wrapper -->
+                        <div id="modal-blocks-table-wrapper" class="table-responsive d-none">
+                            <table class="table table-hover table-striped table-sm align-middle mb-0" id="runBlocksTable">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th style="min-width: 100px;">Block</th>
+                                        <th style="min-width: 160px;">Cost Center</th>
+                                        <th class="text-right" style="min-width: 130px;">Total Block UDS</th>
+                                        <th class="text-right" style="min-width: 150px;">Total Block Expense</th>
+                                        <th class="text-right" style="min-width: 130px;">Rate / UDS</th>
+                                        <th class="text-center" style="min-width: 150px;">GL Breakdown</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="run-blocks-tbody">
+                                    <!-- Injected dynamically via index.js -->
+                                </tbody>
+                                <tfoot class="thead-light font-weight-bold" id="run-blocks-tfoot">
+                                    <tr>
+                                        <th colspan="2" class="text-right">Grand Total:</th>
+                                        <th class="text-right" id="modal-blocks-total-uds">0.00</th>
+                                        <th class="text-right text-primary" id="modal-blocks-total-expense">₹ 0.00</th>
+                                        <th colspan="2"></th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-light py-2">
+                        <span class="small text-muted mr-auto" id="blocks-modal-footer-info"></span>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <!-- =================================================================== -->
+        <!-- MODAL 2: Refined Complete Society GL View (Consolidated by Account) -->
+        <!-- =================================================================== -->
+        <div class="modal fade" id="completeSocietyGlModal" tabindex="-1" role="dialog" aria-labelledby="completeSocietyGlModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+                <div class="modal-content shadow border-0">
+                    <div class="modal-header bg-light border-bottom py-2">
+                        <div>
+                            <h5 class="modal-title font-weight-bold text-dark mb-0" id="completeSocietyGlModalLabel">
+                                📑 Complete Society Operating Expenses
+                            </h5>
+                            <small class="text-muted" id="society-gl-modal-subtitle">
+                                Consolidated account-wise expenses for the society
+                            </small>
+                        </div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body p-0">
+                        <!-- Loader -->
+                        <div id="modal-society-gl-loader" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Loading society GL entries...</span>
+                            </div>
+                            <div class="text-muted small mt-2">Loading consolidated society expense accounts...</div>
+                        </div>
+
+                        <!-- Error State -->
+                        <div id="modal-society-gl-error" class="alert alert-danger m-3 d-none">
+                            <span id="modal-society-gl-error-text">Failed to load society GL entries.</span>
+                        </div>
+
+                        <!-- Clean 2-Column Table Wrapper: Expense Account & Total Amount -->
+                        <div id="modal-society-gl-table-wrapper" class="table-responsive d-none">
+                            <table class="table table-hover table-striped align-middle mb-0" id="completeSocietyGlTable">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th style="min-width: 280px;">Expense Account</th>
+                                        <th class="text-right" style="min-width: 160px;">Total Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="complete-society-gl-tbody">
+                                    <!-- Populated dynamically via index.js -->
+                                </tbody>
+                                <tfoot class="thead-light font-weight-bold">
+                                    <tr>
+                                        <th class="text-right">Grand Total Society Expenses:</th>
+                                        <th class="text-right text-primary h6 mb-0" id="complete-society-gl-total">₹ 0.00</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-light py-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm mr-auto" id="btn-back-from-society-gl">
+                            &laquo; Back to Blocks &amp; Analytics
+                        </button>
+                        <span class="small text-muted mr-3" id="society-gl-modal-footer-info"></span>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- MODAL 3: Purchase Invoices in Maintenance Run (Considered Invoices) -->
+        <!-- =================================================================== -->
+        <div class="modal fade" id="runInvoicesModal" tabindex="-1" role="dialog" aria-labelledby="runInvoicesModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
+                <div class="modal-content shadow border-0">
+                    <div class="modal-header bg-light border-bottom py-2">
+                        <div>
+                            <h5 class="modal-title font-weight-bold text-dark mb-0" id="runInvoicesModalLabel">
+                                🧾 Invoices Considered for Billing Run
+                            </h5>
+                            <small class="text-muted" id="run-invoices-modal-subtitle">
+                                Submitted purchase invoices accounting for this month's maintenance calculations
+                            </small>
+                        </div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body p-0">
+                        <!-- Invoices Loader -->
+                        <div id="modal-run-invoices-loader" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Loading considered invoices...</span>
+                            </div>
+                            <div class="text-muted small mt-2">Fetching procurement invoices for this billing run...</div>
+                        </div>
+
+                        <!-- Invoices Error -->
+                        <div id="modal-run-invoices-error" class="alert alert-danger m-3 d-none">
+                            <span id="modal-run-invoices-error-text">Failed to load invoices.</span>
+                        </div>
+
+                        <!-- Invoices Table: Date, Invoice ID, Supplier Name, and Grand Total -->
+                        <div id="modal-run-invoices-table-wrapper" class="table-responsive d-none">
+                            <table class="table table-hover table-striped align-middle mb-0" id="runInvoicesTable">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th style="min-width: 130px;">Date</th>
+                                        <th style="min-width: 170px;">Invoice ID</th>
+                                        <th style="min-width: 250px;">Supplier Name</th>
+                                        <th class="text-right" style="min-width: 160px;">Grand Total</th>
+                                        <th class="text-center" style="min-width: 110px;">Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="run-invoices-tbody">
+                                    <!-- Injected dynamically via index.js -->
+                                </tbody>
+                                <tfoot class="thead-light font-weight-bold">
+                                    <tr>
+                                        <th colspan="3" class="text-right">Total Invoiced Amount:</th>
+                                        <th class="text-right text-primary h6 mb-0" id="run-invoices-total-amount">₹ 0.00</th>
+                                        <th></th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-light py-2">
+                        <span class="small text-muted mr-auto" id="run-invoices-modal-footer-info"></span>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- MODAL 4: Level 2 Drill-Down - Block GL Expense Breakdown            -->
+        <!-- =================================================================== -->
+        <div class="modal fade" id="glBreakdownModal" tabindex="-1" role="dialog" aria-labelledby="glBreakdownModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+                <div class="modal-content shadow border-0">
+                    <div class="modal-header bg-light border-bottom py-2">
+                        <div>
+                            <h5 class="modal-title font-weight-bold text-dark mb-0" id="glBreakdownModalLabel">
+                                🔍 General Ledger (GL) Expense Breakdown
+                            </h5>
+                            <small class="text-muted" id="gl-modal-subtitle">
+                                Itemized ledger account entries for this block
+                            </small>
+                        </div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body p-0">
+                        <div id="modal-gl-loader" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Loading GL entries...</span>
+                            </div>
+                            <div class="text-muted small mt-2">Fetching ledger entries from General Ledger...</div>
+                        </div>
+
+                        <div id="modal-gl-error" class="alert alert-danger m-3 d-none">
+                            <span id="modal-gl-error-text">Failed to load GL breakdown.</span>
+                        </div>
+
+                        <div id="modal-gl-table-wrapper" class="table-responsive d-none">
+                            <table class="table table-hover table-striped align-middle mb-0" id="glBreakdownTable">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th style="min-width: 220px;">GL Account</th>
+                                        <th style="min-width: 100px;">Root Type</th>
+                                        <th class="text-right" style="min-width: 120px;">Debit</th>
+                                        <th class="text-right" style="min-width: 120px;">Credit</th>
+                                        <th class="text-right" style="min-width: 130px;">Net Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gl-breakdown-tbody">
+                                    <!-- Injected dynamically via index.js -->
+                                </tbody>
+                                <tfoot class="thead-light font-weight-bold" id="gl-breakdown-tfoot">
+                                    <tr>
+                                        <th colspan="4" class="text-right">Total Net Expense:</th>
+                                        <th class="text-right text-primary" id="modal-gl-total-amount">₹ 0.00</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-light py-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm mr-auto" id="btn-back-to-blocks">
+                            &laquo; Back to Blocks &amp; Analytics
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- MODAL 5: Purchase Invoice Detailed Item & Tax View                  -->
+        <!-- =================================================================== -->
+        <div class="modal fade" id="purchaseInvoiceModal" tabindex="-1" role="dialog" aria-labelledby="purchaseInvoiceModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
+                <div class="modal-content shadow border-0">
+                    <div class="modal-header bg-light border-bottom py-2">
+                        <div>
+                            <h5 class="modal-title font-weight-bold text-dark mb-0" id="purchaseInvoiceModalLabel">
+                                🧾 Purchase Invoice Details: <span id="pinv-modal-id" class="text-primary">-</span>
+                            </h5>
+                            <small class="text-muted" id="pinv-modal-subtitle">
+                                Verified vendor procurement line items, allocations, and applied taxes
+                            </small>
+                        </div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <div id="modal-pinv-loader" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Loading invoice details...</span>
+                            </div>
+                            <div class="text-muted small mt-2">Loading line items and tax breakdown...</div>
+                        </div>
+
+                        <div id="modal-pinv-error" class="alert alert-danger d-none">
+                            <span id="modal-pinv-error-text">Failed to load invoice details.</span>
+                        </div>
+
+                        <div id="modal-pinv-content" class="d-none">
+                            <div class="row mb-4">
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <div class="border rounded p-3 bg-light">
+                                        <div class="text-muted small text-uppercase font-weight-bold">Supplier</div>
+                                        <div class="font-weight-bold text-dark text-truncate" id="pinv-supplier-name">-</div>
+                                        <div class="small text-muted" id="pinv-supplier-code"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <div class="border rounded p-3 bg-light">
+                                        <div class="text-muted small text-uppercase font-weight-bold">Bill # &amp; Date</div>
+                                        <div class="font-weight-bold text-dark" id="pinv-bill-no">-</div>
+                                        <div class="small text-muted" id="pinv-posting-date"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <div class="border rounded p-3 bg-light">
+                                        <div class="text-muted small text-uppercase font-weight-bold">Status</div>
+                                        <div id="pinv-status-badge" class="mt-1">
+                                            <span class="badge badge-secondary">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <div class="border rounded p-3 bg-light">
+                                        <div class="text-muted small text-uppercase font-weight-bold">Grand Total</div>
+                                        <div class="h5 mb-0 font-weight-bold text-primary" id="pinv-grand-total">₹ 0.00</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="pinv-remarks-wrapper" class="alert alert-light border small text-muted mb-4 d-none">
+                                <strong>Remarks:</strong> <span id="pinv-remarks-text"></span>
+                            </div>
+
+                            <h6 class="font-weight-bold text-dark mb-2">📦 Line Items</h6>
+                            <div class="table-responsive border rounded mb-4">
+                                <table class="table table-hover table-striped mb-0" id="pinvItemsTable">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th style="min-width: 40px;">#</th>
+                                            <th style="min-width: 220px;">Item Name</th>
+                                            <th style="min-width: 160px;">Cost Center</th>
+                                            <th class="text-right" style="min-width: 80px;">Qty</th>
+                                            <th class="text-right" style="min-width: 120px;">Rate</th>
+                                            <th class="text-right" style="min-width: 130px;">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pinv-items-tbody">
+                                        <!-- Injected dynamically via index.js -->
+                                    </tbody>
+                                    <tfoot class="thead-light font-weight-bold">
+                                        <tr>
+                                            <th colspan="5" class="text-right">Net Total:</th>
+                                            <th class="text-right text-dark" id="pinv-items-net-total">₹ 0.00</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            <h6 class="font-weight-bold text-dark mb-2">📑 Taxes &amp; Charges</h6>
+                            <div class="table-responsive border rounded mb-2">
+                                <table class="table table-hover table-striped mb-0" id="pinvTaxesTable">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th style="min-width: 40px;">#</th>
+                                            <th style="min-width: 240px;">Account Head / Description</th>
+                                            <th class="text-right" style="min-width: 100px;">Rate (%)</th>
+                                            <th style="min-width: 160px;">Cost Center</th>
+                                            <th class="text-right" style="min-width: 140px;">Tax Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pinv-taxes-tbody">
+                                        <!-- Injected dynamically via index.js -->
+                                    </tbody>
+                                    <tfoot class="thead-light font-weight-bold">
+                                        <tr>
+                                            <th colspan="4" class="text-right">Total Taxes &amp; Charges:</th>
+                                            <th class="text-right text-primary" id="pinv-total-taxes">₹ 0.00</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-light py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- MODAL 6: Gross Common Expenses (Pre-Apportionment)                  -->
+        <!-- =================================================================== -->
+        <div class="modal fade" id="grossCommonExpensesModal" tabindex="-1" role="dialog" aria-labelledby="grossCommonExpensesModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+                <div class="modal-content shadow border-0">
+                    <div class="modal-header bg-light border-bottom py-2">
+                        <div>
+                            <h5 class="modal-title font-weight-bold text-dark mb-0" id="grossCommonExpensesModalLabel">
+                                🏢 Gross Common Expenses (Pre-Apportionment)
+                            </h5>
+                            <small class="text-muted" id="gross-common-modal-subtitle">
+                                Total booked operational expenditures in common cost centers before block allocation
+                            </small>
+                        </div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body p-0">
+                        <!-- Modal Filter Bar: Cost Center & Month -->
+                        <div class="bg-light border-bottom p-3">
+                            <div class="form-row align-items-center">
+                                <div class="col-md-6 col-sm-12 mb-2 mb-md-0">
+                                    <label for="gross_common_cost_center_filter" class="font-weight-bold small text-muted text-uppercase mb-1">
+                                        🏢 Common Cost Center
+                                    </label>
+                                    <select id="gross_common_cost_center_filter" class="form-control custom-select form-control-sm shadow-none">
+                                        <option value="">🏢 All Common Cost Centers (Combined)</option>
+                                        {% for cc in child_common_cost_centers %}
+                                            <option value="{{ cc.name }}">
+                                                &bull; {{ cc.cost_center_name or cc.name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-8 mb-2 mb-md-0">
+                                    <label for="gross_common_month_filter" class="font-weight-bold small text-muted text-uppercase mb-1">
+                                        🗓️ Month
+                                    </label>
+                                    <select id="gross_common_month_filter" class="form-control custom-select form-control-sm shadow-none">
+                                        <option value="4">April</option>
+                                        <option value="5">May</option>
+                                        <option value="6">June</option>
+                                        <option value="7">July</option>
+                                        <option value="8">August</option>
+                                        <option value="9">September</option>
+                                        <option value="10">October</option>
+                                        <option value="11">November</option>
+                                        <option value="12">December</option>
+                                        <option value="1">January</option>
+                                        <option value="2">February</option>
+                                        <option value="3">March</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2 col-sm-4 text-md-right mt-3 mt-md-0">
+                                    <span class="badge badge-secondary px-2 py-1 font-weight-normal text-truncate d-block" id="gross_common_fy_badge" title="Active Financial Year">
+                                        FY: {{ current_fiscal_year }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Loader -->
+                        <div id="modal-gross-common-loader" class="text-center py-5">
+                            <div class="spinner-border text-info" role="status">
+                                <span class="sr-only">Loading common expenses...</span>
+                            </div>
+                            <div class="text-muted small mt-2">Fetching pre-apportionment common area expenses...</div>
+                        </div>
+
+                        <!-- Error State -->
+                        <div id="modal-gross-common-error" class="alert alert-danger m-3 d-none">
+                            <span id="modal-gross-common-error-text">Failed to load common expenses.</span>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="modal-gross-common-empty" class="text-center py-5 d-none">
+                            <div style="font-size: 2.5rem;" class="mb-2">🏢</div>
+                            <h6 class="text-muted font-weight-bold">No Common Expenses Recorded</h6>
+                            <p class="text-muted small mb-0">No gross expenditures were booked to common cost centers for this period.</p>
+                        </div>
+
+                        <!-- 2-Column Responsive Table -->
+                        <div id="modal-gross-common-table-wrapper" class="table-responsive d-none">
+                            <div class="px-3 pt-3 pb-2 bg-light border-bottom small text-muted">
+                                <i class="fa fa-info-circle text-info mr-1"></i>
+                                Displays gross debits originally booked to society common pools (Common, General Common, WTP/STP, etc.) prior to Cost Center Allocation transfers.
+                            </div>
+                            <table class="table table-hover table-striped align-middle mb-0" id="grossCommonExpensesTable">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th style="min-width: 280px;">Expense Account</th>
+                                        <th class="text-right" style="min-width: 160px;">Total Booked Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gross-common-tbody">
+                                    <!-- Injected dynamically via index.js -->
+                                </tbody>
+                                <tfoot class="thead-light font-weight-bold">
+                                    <tr>
+                                        <th class="text-right">Grand Total:</th>
+                                        <th class="text-right text-primary h6 mb-0" id="gross-common-grand-total">₹ 0.00</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-light py-2">
+                        <span class="small text-muted mr-auto" id="gross-common-modal-footer-info"></span>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     {% endif %}
 </div>
 
@@ -145,13 +971,15 @@
         100% { background-position: -200% 0; }
     }
 
-    /* Financial Table Styling */
-    #financial-report-table td, #financial-report-table th {
+    /* Financial & Purchase Invoices Table Styling */
+    #financial-report-table td, #financial-report-table th,
+    #purchase-invoices-table td, #purchase-invoices-table th,
+    #maintenance-runs-table td, #maintenance-runs-table th {
         vertical-align: middle;
         padding: 0.65rem 0.85rem;
     }
 
-    /* Hierarchy & Row Formatters */
+    /* Hierarchy & Row Formatters for Financial Statements */
     .row-group {
         background-color: #fafbfc;
         font-weight: 600;
@@ -174,14 +1002,132 @@
         padding: 4px !important;
     }
 
-    /* Print Optimization */
+    /* Tab Customizations */
+    .nav-tabs .nav-link {
+        color: #495057;
+        padding: 0.75rem 1.25rem;
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+    }
+    .nav-tabs .nav-link.active {
+        color: #1b68b3;
+        border-color: #dee2e6 #dee2e6 #fff;
+    }
+
+    /* Interactive block hover styling in modal */
+    .block-drilldown-row:hover {
+        background-color: #e9ecef !important;
+    }
+
+    /* Primary highlight for Gross Common Expenses button */
+    #btn-view-gross-common-report {
+        font-weight: 600;
+        border-width: 1px;
+        transition: all 0.2s ease-in-out;
+    }
+    #btn-view-gross-common-report:hover,
+    #btn-view-gross-common-report:focus {
+        background-color: #17a2b8 !important;
+        border-color: #17a2b8 !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 8px rgba(23, 162, 184, 0.25) !important;
+    }
+
+    @media (min-width: 768px) {
+        .border-right-md {
+            border-right: 1px solid #dee2e6 !important;
+        }
+    }
+
+    /* Print Optimization: Clean report print view */
     @media print {
-        #financial-report-form, .btn, .mt-3 {
+        /* Hide all UI clutter, navigation, filters, buttons, headers/footers, and modals */
+        header, footer, nav, .navbar, .web-footer,
+        .nav-tabs,
+        #financial-report-form,
+        .btn,
+        .btn-view-gross-common,
+        #btn-print-financial-report,
+        .modal,
+        .mt-3,
+        .skeleton-line,
+        #report-skeleton,
+        #report-spinner,
+        .badge-light.border,
+        .page-header-actions {
             display: none !important;
         }
-        .card {
+
+        /* Strictly hide all inactive tab panes */
+        .tab-pane:not(.active) {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            overflow: hidden !important;
+        }
+
+        /* Ensure active tab pane is clearly displayed and expanded */
+        .tab-pane.active {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Full width and reset containers */
+        body, html, .container, .page-container, .main-section {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            font-size: 11pt !important;
+        }
+
+        .card, #report-card {
             border: none !important;
             box-shadow: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+        }
+
+        .card-header {
+            background-color: transparent !important;
+            border-bottom: 2px solid #222 !important;
+            padding: 0.5rem 0 !important;
+        }
+
+        .table-responsive {
+            overflow: visible !important;
+            display: block !important;
+            width: 100% !important;
+        }
+
+        table, #financial-report-table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            page-break-inside: auto !important;
+        }
+
+        tr {
+            page-break-inside: avoid !important;
+            page-break-after: auto !important;
+        }
+
+        thead {
+            display: table-header-group !important;
+        }
+
+        tfoot {
+            display: table-footer-group !important;
+        }
+
+        th, td {
+            padding: 6px 8px !important;
+            border: 1px solid #ddd !important;
         }
     }
 </style>

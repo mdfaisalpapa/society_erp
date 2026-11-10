@@ -19,184 +19,194 @@
         </div>
         {% endif %}
 
-        <!-- Modules Grid -->
-        <div class="row mt-4">
+        <!-- Modules Grid (3 tiles/row on mobile, 4 tiles/row on desktop) -->
+        <div class="row mt-4 portal-grid">
             
             <!-- 1. Flat & Profile Details (Common) -->
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover">
-                    <div class="card-body">
-                        <h1 class="card-title mt-2">👤</h1>
-                        <h5 class="card-title mt-3">Flat Details</h5>
-                        <p class="text-muted small">Profile & Property Info</p>
-                        <a href="/resident/profile" class="btn btn-outline-primary btn-sm stretched-link">View</a>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/profile" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">👤</h1>
+                            <h5 class="card-title mt-3">Flat Details</h5>
+                            <p class="text-muted small portal-desc mb-0">Profile & Property Info</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- 2. Owner Details (RESTRICTED TO OWNERS) -->
             {% if is_owner %}
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover border-warning">
-                    <div class="card-body">
-                        <h1 class="card-title mt-2">📜</h1>
-                        <h5 class="card-title mt-3">Owner Details</h5>
-                        <p class="text-muted small">Current & Past Owners</p>
-                        <a href="/resident/owners" class="btn btn-outline-warning btn-sm stretched-link">View History</a>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/owners" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover border-warning">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">📜</h1>
+                            <h5 class="card-title mt-3">Owner Details</h5>
+                            <p class="text-muted small portal-desc mb-0">Current & Past Owners</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
             {% endif %}
 
             <!-- 3. Society Dues (Common) -->
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover">
-                    <div class="card-body">
-                        <h1 class="card-title mt-2">📊</h1>
-                        <h5 class="card-title mt-3">Check Dues</h5>
-                        <p class="text-muted small">Maintenance & Ledger</p>
-                        <a href="/resident/dues" class="btn btn-outline-primary btn-sm stretched-link">Pay / View</a>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/dues" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">📊</h1>
+                            <h5 class="card-title mt-3">Check Dues</h5>
+                            <p class="text-muted small portal-desc mb-0">Maintenance & Ledger</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- 3b. Society Financials (Common) -->
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover">
-                    <div class="card-body">
-                        <h1 class="card-title mt-2">📈</h1>
-                        <h5 class="card-title mt-3">Financials</h5>
-                        <p class="text-muted small">P&L & Balance Sheet</p>
-                        <a href="/resident/financials" class="btn btn-outline-primary btn-sm stretched-link">View Reports</a>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/financials" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">📈</h1>
+                            <h5 class="card-title mt-3">Financials</h5>
+                            <p class="text-muted small portal-desc mb-0">P&L & Balance Sheet</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- 4. Tenant Management (RESTRICTED TO OWNERS) -->
             {% if is_owner %}
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover border-warning">
-                    <div class="card-body">
-                        <h1 class="card-title mt-2">🏠</h1>
-                        <h5 class="card-title mt-3">Tenant Mgmt</h5>
-                        <p class="text-muted small">Manage Leases & Tenants</p>
-                        <a href="/resident/tenants" class="btn btn-outline-warning btn-sm stretched-link">Manage</a>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/tenants" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover border-warning">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">🏠</h1>
+                            <h5 class="card-title mt-3">Tenant Mgmt</h5>
+                            <p class="text-muted small portal-desc mb-0">Manage Leases & Tenants</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
             {% endif %}
 
             <!-- 5. Book Facility (Common) -->
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover">
-                    <div class="card-body">
-                        <h1 class="card-title mt-2">🏛️</h1>
-                        <h5 class="card-title mt-3">Book Facility</h5>
-                        <p class="text-muted small">Community Hall & Amenities</p>
-                        <a href="/resident/book_facility" class="btn btn-outline-primary btn-sm stretched-link">Book</a>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/book_facility" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">🏛️</h1>
+                            <h5 class="card-title mt-3">Book Facility</h5>
+                            <p class="text-muted small portal-desc mb-0">Community Hall & Amenities</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- 6. Visitor Management (Common) -->
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover">
-                    <div class="card-body">
-                        <h1 class="card-title mt-2">🎫</h1>
-                        <h5 class="card-title mt-3">Gate Pass</h5>
-                        <p class="text-muted small">Pre-Approve Visitors</p>
-                        <a href="/resident/visitors" class="btn btn-outline-primary btn-sm stretched-link">Manage</a>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/visitors" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">🎫</h1>
+                            <h5 class="card-title mt-3">Gate Pass</h5>
+                            <p class="text-muted small portal-desc mb-0">Pre-Approve Visitors</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- 7. Maintenance Tickets (Common) -->
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover">
-                    <div class="card-body">
-                        <h1 class="card-title mt-2">🛠️</h1>
-                        <h5 class="card-title mt-3">Maintenance</h5>
-                        <p class="text-muted small">Raise & Track Tickets</p>
-                        <a href="/resident/maintenance" class="btn btn-outline-primary btn-sm stretched-link">Manage</a>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/maintenance" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">🛠️</h1>
+                            <h5 class="card-title mt-3">Maintenance</h5>
+                            <p class="text-muted small portal-desc mb-0">Raise & Track Tickets</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- 8. Vehicles & Parking (Common) -->
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover">
-                    <div class="card-body">
-                        <h1 class="card-title mt-2">🚗</h1>
-                        <h5 class="card-title mt-3">Vehicles & Parking</h5>
-                        <p class="text-muted small">Manage Cars, Bikes & Slots</p>
-                        <a href="/resident/vehicles" class="btn btn-outline-primary btn-sm stretched-link">Manage</a>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/vehicles" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">🚗</h1>
+                            <h5 class="card-title mt-3">Vehicles & Parking</h5>
+                            <p class="text-muted small portal-desc mb-0">Manage Cars, Bikes & Slots</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- 9. Family Members (Common) -->
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover">
-                    <div class="card-body">
-                        <h1 class="card-title mt-2">👨‍👩‍👧‍👦</h1>
-                        <h5 class="card-title mt-3">Family</h5>
-                        <p class="text-muted small">Manage Family Members</p>
-                        <a href="/resident/family" class="btn btn-outline-primary btn-sm stretched-link">Manage</a>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/family" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">👨‍👩‍👧‍👦</h1>
+                            <h5 class="card-title mt-3">Family</h5>
+                            <p class="text-muted small portal-desc mb-0">Manage Family Members</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- 10. Domestic Staff (Common) -->
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover">
-                    <div class="card-body">
-                        <h1 class="card-title mt-2">🧹</h1>
-                        <h5 class="card-title mt-3">Domestic Staff</h5>
-                        <p class="text-muted small">Maids, Drivers & Cooks</p>
-                        <a href="/resident/staff" class="btn btn-outline-primary btn-sm stretched-link">Manage</a>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/staff" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">🧹</h1>
+                            <h5 class="card-title mt-3">Domestic Staff</h5>
+                            <p class="text-muted small portal-desc mb-0">Maids, Drivers & Cooks</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- 11. Notice Board (Common) -->
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover">
-                    <div class="card-body">
-                        <h1 class="card-title mt-2">📋</h1>
-                        <h5 class="card-title mt-3">Notice Board</h5>
-                        <p class="text-muted small">Society Announcements</p>
-                        <a href="/resident/notices" class="btn btn-outline-primary btn-sm stretched-link">View</a>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/notices" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">📋</h1>
+                            <h5 class="card-title mt-3">Notice Board</h5>
+                            <p class="text-muted small portal-desc mb-0">Society Announcements</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- 13. Polls & Voting (Common) -->
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover border-primary">
-                    <div class="card-body d-flex flex-column justify-content-between">
-                        <div>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/consensus-vote" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover border-primary">
+                        <div class="card-body">
                             <h1 class="card-title mt-2">🗳️</h1>
-                            <h5 class="card-title mt-2 font-weight-bold text-primary">Polls & Voting</h5>
-                            <p class="text-muted small">Elections, Resolutions &amp; Electorate Rolls</p>
-                        </div>
-                        <div class="mt-3">
-                            <a href="/consensus-vote" class="btn btn-primary btn-sm btn-block">Polls & Voting</a>
+                            <h5 class="card-title mt-3 font-weight-bold text-primary">Polls & Voting</h5>
+                            <p class="text-muted small portal-desc mb-0">Elections, Resolutions & Electorate</p>
                         </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- 12. Work Permit Management (RESTRICTED TO OWNERS) -->
             {% if is_owner %}
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card h-100 text-center shadow-sm transition-hover border-warning">
-                    <div class="card-body">
-                        <h1 class="card-title mt-2">👷</h1>
-                        <h5 class="card-title mt-3">Work Permits</h5>
-                        <p class="text-muted small">Contractors & Approvals</p>
-                        <a href="/resident/work_permits" class="btn btn-outline-warning btn-sm stretched-link">Manage</a>
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/work_permits" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover border-warning">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">👷</h1>
+                            <h5 class="card-title mt-3">Work Permits</h5>
+                            <p class="text-muted small portal-desc mb-0">Contractors & Approvals</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
             {% endif %}
         </div>
@@ -211,15 +221,71 @@
 </div>
 
 <style>
-    .transition-hover {
+    /* Desktop & Base Card Styling */
+    .portal-card-link {
+        text-decoration: none !important;
+        color: inherit !important;
+    }
+    .portal-card-link:hover,
+    .portal-card-link:focus {
+        text-decoration: none !important;
+        color: inherit !important;
+    }
+    .portal-card-link .card {
+        border-radius: 12px;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .transition-hover:hover {
+    .portal-card-link:hover .transition-hover {
         transform: translateY(-5px);
-        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
     }
     h1.card-title {
-        font-size: 3rem; 
+        font-size: 2.8rem;
+        margin-bottom: 0;
+    }
+    h5.card-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    .portal-desc {
+        line-height: 1.3;
+    }
+
+    /* Mobile Optimization: 3 Tiles per Row */
+    @media (max-width: 767px) {
+        .portal-grid {
+            margin-left: -6px;
+            margin-right: -6px;
+        }
+        .portal-grid > [class*="col-"] {
+            padding-left: 6px;
+            padding-right: 6px;
+            margin-bottom: 12px !important;
+        }
+        .portal-card-link .card {
+            border-radius: 10px;
+        }
+        .portal-card-link .card-body {
+            padding: 0.65rem 0.25rem !important;
+        }
+        h1.card-title {
+            font-size: 1.65rem;
+            margin-top: 0 !important;
+        }
+        h5.card-title {
+            font-size: 0.78rem;
+            margin-top: 0.35rem !important;
+            margin-bottom: 0 !important;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+        /* Completely hide description text on mobile for clean 3-column layout */
+        .portal-desc {
+            display: none !important;
+        }
+        .portal-card-link:active .card {
+            transform: scale(0.96);
+        }
     }
 </style>
 {% endblock %}

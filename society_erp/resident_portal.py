@@ -180,3 +180,68 @@ def download_invoice_pdf(invoice_name):
     frappe.local.response.filename = f"{safe_filename}.pdf"
     frappe.local.response.filecontent = pdf_bytes
     frappe.local.response.type = "pdf"
+
+
+@frappe.whitelist(allow_guest=False)
+def download_purchase_invoice_pdf(invoice_name):
+    """
+    Secure endpoint allowing verified active residents (Owners or Tenants)
+    or society staff to download society Purchase Invoices as PDF.
+    """
+    user = frappe.session.user
+    user_email = (user or "").strip().lower()
+
+    # 1. Verify existence of the Purchase Invoice
+    if not frappe.db.exists("Purchase Invoice", invoice_name):
+        frappe.throw(_("Purchase Invoice not found."), frappe.DoesNotExistError)
+
+    # 2. Verify permissions: staff roles OR active resident (Owner / Tenant)
+    user_roles = frappe.get_roles(user)
+    has_staff_role = any(
+        r in user_roles
+        for r in ["System Manager", "Accounts User", "Accounts Manager"]
+    )
+
+    if not has_staff_role:
+        is_tenant = frappe.db.exists(
+            "Tenants", {"email": user_email, "active": 1}
+        )
+        is_owner = frappe.db.exists(
+            "Owners", {"email": user_email, "active": 1}
+        ) or frappe.db.exists("Owners", {"name": user, "active": 1})
+
+        if not (is_tenant or is_owner):
+            try:
+                verified_records = get_verified_owner_records()
+                if not verified_records:
+                    frappe.throw(
+                        _(
+                            "Access Denied: Only active residents and members can access society purchase invoices."
+                        ),
+                        frappe.PermissionError,
+                    )
+            except Exception:
+                frappe.throw(
+                    _(
+                        "Access Denied: Only active residents and members can access society purchase invoices."
+                    ),
+                    frappe.PermissionError,
+                )
+
+    # 3. Temporarily elevate privileges to generate the PDF securely
+    frappe.flags.ignore_permissions = True
+    frappe.flags.ignore_print_permissions = True
+
+    try:
+        pdf_bytes = frappe.get_print(
+            "Purchase Invoice", invoice_name, "Standard", as_pdf=True
+        )
+    finally:
+        frappe.flags.ignore_permissions = False
+        frappe.flags.ignore_print_permissions = False
+
+    # 4. Construct HTTP response to trigger browser file download
+    safe_filename = invoice_name.replace(" ", "-").replace("/", "-")
+    frappe.local.response.filename = f"{safe_filename}.pdf"
+    frappe.local.response.filecontent = pdf_bytes
+    frappe.local.response.type = "pdf"

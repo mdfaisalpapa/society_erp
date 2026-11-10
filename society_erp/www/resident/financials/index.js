@@ -1,87 +1,195 @@
 /**
- * Society Financials - Resident Portal
- * Interactive frontend viewer for Profit & Loss Statement and Balance Sheet.
+ * Society Financials & Procurement - Resident Portal
+ * Interactive frontend viewer for:
+ * 1. Profit & Loss Statement & Balance Sheet
+ * 2. Purchase Invoices (Detailed Item & Tax View)
+ * 3. Maintenance Bills & Transparency:
+ *    - Financial Year filtering on billing run list
+ *    - "View Considered Invoices" Modal: Date, Invoice ID, Supplier Name, Grand Total
+ *    - Refined "View Complete Society GL" Modal: 2-column Account-wise consolidation (Expense Account & Total Amount)
+ *    - Compact Level 1 "Block & UDS Maintenance" Modal with clean, objective Single-Tier vs Two-Tier rates
+ *    - Level 2 Drill-Down: Block Cost Center GL Breakdown
  */
 
 frappe.ready(function () {
-    initFinancialReport();
+    initFinancialsPortal();
 });
 
+function initFinancialsPortal() {
+    // 1. Initialize Bootstrap Tabs & Hash Navigation
+    initTabsHandler();
+
+    // 2. Initialize Financial Statements Report Engine
+    initFinancialReport();
+
+    // 3. Initialize Purchase Invoice Detail Modal Handler
+    initPurchaseInvoiceDetailsHandler();
+
+    // 4. Initialize Maintenance Module (FY filter, Considered Invoices, Consolidated Society GL, Multi-Level Drilldown)
+    initMaintenanceModule();
+}
+
+/**
+ * Initializes and manages Bootstrap Nav Tabs switching and URL hash persistence
+ */
+function initTabsHandler() {
+    $('#financialsTab a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
+        const targetHash = $(e.target).attr("href");
+        if (history.pushState) {
+            history.pushState(null, null, targetHash);
+        } else {
+            location.hash = targetHash;
+        }
+    });
+
+    const currentHash = window.location.hash;
+    if (currentHash && $(`#financialsTab a[href="${currentHash}"]`).length) {
+        $(`#financialsTab a[href="${currentHash}"]`).tab("show");
+    }
+}
+
+/* ==========================================================================
+   PART 1: Financial Reports Engine (P&L and Balance Sheet)
+   ========================================================================== */
+
+let reportDebounceTimer = null;
+
 function initFinancialReport() {
-    const $btnGenerate = $("#btn-generate-report");
     const $form = $("#financial-report-form");
+    const $dateFilterType = $("#date_filter_type");
 
-    // 1. Bind Click & Submit Handlers
-    $btnGenerate.on("click", function (e) {
+    populateYearDropdown();
+
+    const currentMonth = new Date().getMonth();
+    $("#select_month").val(currentMonth);
+
+    // Toggle dynamic date controls and trigger debounced fetch
+    $dateFilterType.on("change", function () {
+        handleDateFilterToggle($(this).val());
+        triggerAutoApplyReport(100);
+    });
+
+    // Auto-apply on dropdown selection change (immediate 100ms debounce)
+    $form.on("change", "select", function () {
+        triggerAutoApplyReport(100);
+    });
+
+    // Auto-apply on date picker input change (400ms debounce to prevent rapid consecutive requests)
+    $form.on("input change", "input[type='date']", function () {
+        triggerAutoApplyReport(400);
+    });
+
+    // Print handler: prints strictly the active Financial Statement report
+    $("#btn-print-financial-report").on("click", function (e) {
         e.preventDefault();
-        loadFinancialReport();
+        printActiveFinancialReport();
     });
 
-    $form.on("change", "select, input", function () {
-        // Quick update of title badge when report dropdown changes
-        updateReportMetaPreview();
-    });
-
-    // 2. Auto-load default report on page arrival
+    handleDateFilterToggle($dateFilterType.val());
     loadFinancialReport();
 }
 
 /**
- * Updates header badges dynamically based on user selections
+ * Debounced trigger for auto-applying financial report filters
  */
-function updateReportMetaPreview() {
-    const reportName = $("#report_name").val();
-    const costCenterText = $("#cost_center option:selected").text().trim();
-    const fromDate = $("#from_date").val();
-    const toDate = $("#to_date").val();
+function triggerAutoApplyReport(delayMs) {
+    updateReportMetaPreview();
+    if (reportDebounceTimer) {
+        clearTimeout(reportDebounceTimer);
+    }
+    reportDebounceTimer = setTimeout(function () {
+        loadFinancialReport();
+    }, delayMs || 300);
+}
 
-    $("#display-report-title").text(
-        reportName === "Profit and Loss Statement"
-            ? "Profit & Loss Statement"
-            : "Balance Sheet"
-    );
+function handleDateFilterToggle(filterType) {
+    $(".date-filter-group").addClass("d-none");
 
-    $("#display-cost-center-badge").text(
-        $("#cost_center").val() ? costCenterText : "All Cost Centers"
-    );
-
-    if (fromDate && toDate) {
-        $("#display-date-range").text(`From ${fromDate} To ${toDate}`);
+    if (filterType === "financial_year") {
+        $("#filter-group-fy").removeClass("d-none");
+    } else if (filterType === "month_year") {
+        $("#filter-group-month").removeClass("d-none");
+    } else if (filterType === "custom_range") {
+        $("#filter-group-custom").removeClass("d-none");
     }
 }
 
-/**
- * Invokes the whitelisted Python backend to run the native ERPNext report
- */
+function populateYearDropdown() {
+    const $yearSelect = $("#select_year").empty();
+    const currentYear = new Date().getFullYear();
+
+    for (let yr = currentYear; yr >= currentYear - 4; yr--) {
+        $yearSelect.append(new Option(yr, yr));
+    }
+}
+
+function resolveActiveDateRange() {
+    const filterType = $("#date_filter_type").val();
+    let fromDate = null;
+    let toDate = null;
+
+    if (filterType === "financial_year") {
+        const $selectedOption = $("#fiscal_year_select option:selected");
+        fromDate = $selectedOption.data("start");
+        toDate = $selectedOption.data("end");
+    } else if (filterType === "month_year") {
+        const month = parseInt($("#select_month").val(), 10);
+        const year = parseInt($("#select_year").val(), 10);
+
+        const startDate = new Date(year, month, 1);
+        const endDate = new Date(year, month + 1, 0);
+
+        fromDate = formatDateYMD(startDate);
+        toDate = formatDateYMD(endDate);
+    } else if (filterType === "custom_range") {
+        fromDate = $("#from_date").val();
+        toDate = $("#to_date").val();
+    }
+
+    return { fromDate: fromDate, toDate: toDate };
+}
+
+function formatDateYMD(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const d = String(dateObj.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+function updateReportMetaPreview() {
+    const reportName = $("#report_name").val();
+    const costCenter = $("#cost_center").val() || "All Cost Centers";
+    const dates = resolveActiveDateRange();
+
+    $("#report-title-display").text(reportName);
+    $("#report-subtitle-display").text(
+        `Cost Center: ${costCenter} • Period: ${dates.fromDate || "-"} to ${dates.toDate || "-"}`
+    );
+}
+
 function loadFinancialReport() {
     const reportName = $("#report_name").val();
-    const fromDate = $("#from_date").val();
-    const toDate = $("#to_date").val();
     const costCenter = $("#cost_center").val();
-    const company = $("#company").val();
+    const dates = resolveActiveDateRange();
 
-    updateReportMetaPreview();
-
-    // Show Loading Skeleton & Disable Button
     setLoadingState(true);
+    updateReportMetaPreview();
 
     frappe.call({
         method: "society_erp.www.resident.financials.index.get_financial_report",
         args: {
             report_name: reportName,
-            from_date: fromDate,
-            to_date: toDate,
-            cost_center: costCenter || null,
-            company: company || null,
-            periodicity: "Yearly"
+            from_date: dates.fromDate,
+            to_date: dates.toDate,
+            cost_center: costCenter
         },
         callback: function (r) {
             setLoadingState(false);
-            if (r.message) {
-                renderReportTable(r.message);
-            } else {
+            if (r.exc || !r.message) {
                 showEmptyState(true);
+                return;
             }
+            renderFinancialTable(r.message);
         },
         error: function (err) {
             setLoadingState(false);
@@ -90,65 +198,42 @@ function loadFinancialReport() {
     });
 }
 
-/**
- * Parses ERPNext query_report columns and result rows to render the dynamic HTML table
- */
-function renderReportTable(data) {
-    const columns = data.columns || [];
-    const rows = data.result || [];
-    const currency = data.currency || "INR";
+function renderFinancialTable(reportData) {
+    const $thead = $("#report-header-row").empty();
+    const $tbody = $("#report-body").empty();
+    const columns = reportData.columns || [];
+    const result = reportData.result || [];
+    const currency = reportData.currency || "INR";
 
-    const $tableWrapper = $("#report-table-wrapper");
-    const $headerRow = $("#report-table-header tr");
-    const $tbody = $("#report-table-body");
-    const $emptyState = $("#report-empty-state");
+    $("#report-currency-badge").text(`Currency: ${currency}`);
 
-    // Filter out hidden columns
-    const visibleCols = columns.filter((col) => !col.hidden);
-
-    if (!visibleCols.length || !rows.length) {
-        $tableWrapper.addClass("d-none");
-        $emptyState.removeClass("d-none");
+    if (result.length === 0) {
+        showEmptyState(true);
         return;
     }
 
-    $emptyState.addClass("d-none");
-    $tableWrapper.removeClass("d-none");
+    showEmptyState(false);
+    $("#report-table-wrapper").removeClass("d-none");
 
-    // 1. Build Table Headers
-    $headerRow.empty();
-    visibleCols.forEach((col, idx) => {
-        const isNumeric = col.fieldtype === "Currency" || col.fieldtype === "Float" || idx > 0;
-        const alignClass = isNumeric ? "text-right" : "text-left";
-        const colLabel = col.label || col.fieldname;
-        $headerRow.append(
-            `<th scope="col" class="${alignClass} border-top-0">${frappe.utils.escape_html(colLabel)}</th>`
-        );
+    const activeCols = columns.filter(col => {
+        const fieldname = typeof col === "object" ? col.fieldname : col;
+        return !fieldname.startsWith("__");
     });
 
-    // 2. Build Table Body Rows
-    $tbody.empty();
+    activeCols.forEach((col, idx) => {
+        const label = typeof col === "object" ? (col.label || col.fieldname) : col;
+        const alignClass = idx === 0 ? "text-left" : "text-right";
+        $thead.append(`<th class="${alignClass}" style="min-width: 160px;">${frappe.utils.escape_html(label)}</th>`);
+    });
 
-    rows.forEach((row) => {
-        // Handle Empty Spacer Rows
-        const isSpacer = !row || (!row.account && !row.account_name && row.total == null);
-        if (isSpacer) {
-            $tbody.append(
-                `<tr class="row-spacer"><td colspan="${visibleCols.length}"></td></tr>`
-            );
-            return;
-        }
-
-        // Determine Row Semantic Classes
-        const rawAccount = String(row.account || row.account_name || "").trim();
-        const isTotalRow =
-            (rawAccount.startsWith("'") && rawAccount.endsWith("'")) ||
-            rawAccount.toLowerCase().startsWith("total ") ||
-            rawAccount.toLowerCase().includes("profit for the year") ||
-            rawAccount.toLowerCase().includes("provisional profit");
-
-        const isGroupRow = !isTotalRow && (row.is_group === 1 || row.is_group === true);
-        const indentLevel = Math.max(0, parseInt(row.indent) || 0);
+    result.forEach((row) => {
+        const isGroupRow = row.is_group === 1 || row.is_group === true || row.indent === 0;
+        const isTotalRow = row.account_name && (
+            row.account_name.toLowerCase().includes("total") ||
+            row.account_name.toLowerCase().includes("profit") ||
+            row.account_name.toLowerCase().includes("loss")
+        );
+        const indentLevel = row.indent || 0;
 
         let rowClass = "";
         if (isTotalRow) {
@@ -157,33 +242,23 @@ function renderReportTable(data) {
             rowClass = "row-group";
         }
 
-        // Strip surrounding single quotes ERPNext uses for calculated totals
-        const cleanAccountLabel = rawAccount.replace(/^['"]|['"]$/g, "");
-
         let trHtml = `<tr class="${rowClass}">`;
 
-        visibleCols.forEach((col, idx) => {
-            const fieldname = col.fieldname;
+        activeCols.forEach((col, idx) => {
+            const fieldname = typeof col === "object" ? col.fieldname : col;
             const val = row[fieldname];
-            const isNumeric = col.fieldtype === "Currency" || col.fieldtype === "Float" || idx > 0;
 
             if (idx === 0) {
-                // Primary Account Column with Indentation
-                const indentPadding = isTotalRow ? 14 : 14 + indentLevel * 22;
-                const icon = isTotalRow
-                    ? "📌"
-                    : isGroupRow
-                    ? "📁"
-                    : "•";
+                const titleText = row.account_name || row.account || val || "";
+                const paddingPx = Math.min(indentLevel * 22, 100);
+                const icon = isGroupRow ? "📁 " : "";
 
                 trHtml += `
-                    <td class="text-left font-weight-${isTotalRow || isGroupRow ? "bold" : "normal"}" style="padding-left: ${indentPadding}px;">
-                        <span class="mr-2 text-muted" style="font-size: 0.85rem;">${icon}</span>
-                        <span>${frappe.utils.escape_html(cleanAccountLabel)}</span>
+                    <td class="text-left font-weight-${isGroupRow || isTotalRow ? 'bold' : 'normal'}" style="padding-left: ${paddingPx + 12}px;">
+                        ${icon}${frappe.utils.escape_html(titleText)}
                     </td>
                 `;
             } else {
-                // Numeric / Value Columns
                 const formattedNumber = formatFinancialAmount(val, currency);
                 const isNegative = typeof val === "number" && val < 0;
                 const textClass = isNegative ? "text-danger" : "";
@@ -202,9 +277,6 @@ function renderReportTable(data) {
     });
 }
 
-/**
- * Formats numeric values with currency symbols and standard comma grouping
- */
 function formatFinancialAmount(val, currency) {
     if (val == null || val === "") {
         return "-";
@@ -215,7 +287,6 @@ function formatFinancialAmount(val, currency) {
         return frappe.utils.escape_html(String(val));
     }
 
-    // Format with 2 decimal places & standard local commas
     const absFormatted = Math.abs(num).toLocaleString("en-IN", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
@@ -232,24 +303,18 @@ function formatFinancialAmount(val, currency) {
     }
 }
 
-/**
- * Toggles skeleton UI while querying the backend
- */
 function setLoadingState(isLoading) {
     const $spinner = $("#report-spinner");
     const $skeleton = $("#report-skeleton");
     const $tableWrapper = $("#report-table-wrapper");
     const $emptyState = $("#report-empty-state");
-    const $btn = $("#btn-generate-report");
 
     if (isLoading) {
-        $btn.prop("disabled", true);
         $spinner.removeClass("d-none");
         $skeleton.removeClass("d-none");
         $tableWrapper.addClass("d-none");
         $emptyState.addClass("d-none");
     } else {
-        $btn.prop("disabled", false);
         $spinner.addClass("d-none");
         $skeleton.addClass("d-none");
     }
@@ -275,3 +340,1002 @@ function showErrorState(err) {
             </div>
         `);
 }
+
+/**
+ * Triggers clean printing of the active Financial Statement report
+ */
+function printActiveFinancialReport() {
+    // Ensure Financial Statements tab is active
+    if (!$("#reports-pane").hasClass("active")) {
+        $('#financialsTab a[href="#reports-pane"]').tab("show");
+    }
+    // Small timeout to allow DOM/tab state to settle before printing
+    setTimeout(function () {
+        window.print();
+    }, 50);
+}
+
+/* ==========================================================================
+   PART 2: Purchase Invoices Detailed Item & Tax View
+   ========================================================================== */
+
+function initPurchaseInvoiceDetailsHandler() {
+    $(document).on("click", ".btn-view-purchase-invoice", function (e) {
+        e.preventDefault();
+        const invoiceName = $(this).data("invoice");
+        if (!invoiceName) return;
+
+        openPurchaseInvoiceModal(invoiceName);
+    });
+}
+
+function openPurchaseInvoiceModal(invoiceName) {
+    const $modal = $("#purchaseInvoiceModal");
+    const $loader = $("#modal-pinv-loader");
+    const $error = $("#modal-pinv-error");
+    const $errorText = $("#modal-pinv-error-text");
+    const $content = $("#modal-pinv-content");
+
+    $("#pinv-modal-id").text(invoiceName);
+    $error.addClass("d-none");
+    $content.addClass("d-none");
+    $loader.removeClass("d-none");
+
+    $modal.modal("show");
+
+    frappe.call({
+        method: "society_erp.www.resident.financials.index.get_purchase_invoice_details",
+        args: {
+            invoice_name: invoiceName
+        },
+        callback: function (r) {
+            $loader.addClass("d-none");
+
+            if (r.exc || !r.message) {
+                $errorText.text(r.exc || "Failed to load details for this purchase invoice.");
+                $error.removeClass("d-none");
+                return;
+            }
+
+            renderPurchaseInvoiceDetails(r.message);
+        },
+        error: function (err) {
+            $loader.addClass("d-none");
+            $errorText.text(err.message || "An unexpected server or network error occurred.");
+            $error.removeClass("d-none");
+        }
+    });
+}
+
+function renderPurchaseInvoiceDetails(data) {
+    const $content = $("#modal-pinv-content");
+    const $itemsTbody = $("#pinv-items-tbody").empty();
+    const $taxesTbody = $("#pinv-taxes-tbody").empty();
+
+    $("#pinv-supplier-name").text(data.supplier_name);
+    $("#pinv-supplier-code").text(data.supplier !== data.supplier_name ? data.supplier : "");
+    $("#pinv-bill-no").text(data.bill_no !== "-" ? data.bill_no : data.name);
+    $("#pinv-posting-date").text(`Posting Date: ${data.posting_date}`);
+    $("#pinv-grand-total").text(data.formatted_grand_total);
+
+    let badgeClass = "badge-secondary";
+    if (data.status === "Paid") badgeClass = "badge-success";
+    else if (data.status === "Unpaid" || data.status === "Overdue") badgeClass = "badge-danger";
+    else if (data.status === "Partly Paid") badgeClass = "badge-warning";
+    $("#pinv-status-badge").html(`<span class="badge ${badgeClass} px-3 py-1 font-weight-normal">${data.status}</span>`);
+
+    if (data.remarks && data.remarks.trim()) {
+        $("#pinv-remarks-text").text(data.remarks);
+        $("#pinv-remarks-wrapper").removeClass("d-none");
+    } else {
+        $("#pinv-remarks-wrapper").addClass("d-none");
+    }
+
+    const items = data.items || [];
+    if (items.length === 0) {
+        $itemsTbody.append(`
+            <tr>
+                <td colspan="6" class="text-center py-3 text-muted">No line items recorded for this invoice.</td>
+            </tr>
+        `);
+    } else {
+        items.forEach((item, idx) => {
+            const desc = item.description && item.description !== item.item_name 
+                ? `<div class="small text-muted">${frappe.utils.escape_html(item.description)}</div>` 
+                : "";
+
+            $itemsTbody.append(`
+                <tr>
+                    <td class="text-muted small">${idx + 1}</td>
+                    <td>
+                        <div class="font-weight-bold text-dark">${frappe.utils.escape_html(item.item_name)}</div>
+                        ${desc}
+                        <div class="small text-muted font-italic">${frappe.utils.escape_html(item.item_code)}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-light border px-2 py-1 font-weight-normal text-muted">
+                            ${frappe.utils.escape_html(item.cost_center)}
+                        </span>
+                    </td>
+                    <td class="text-right">${item.qty} ${item.uom || ''}</td>
+                    <td class="text-right text-muted">${item.formatted_rate}</td>
+                    <td class="text-right font-weight-bold text-dark">${item.formatted_amount}</td>
+                </tr>
+            `);
+        });
+    }
+    $("#pinv-items-net-total").text(data.formatted_net_total || "₹ 0.00");
+
+    const taxes = data.taxes || [];
+    if (taxes.length === 0) {
+        $taxesTbody.append(`
+            <tr>
+                <td colspan="5" class="text-center py-3 text-muted">No taxes or charges recorded for this invoice.</td>
+            </tr>
+        `);
+    } else {
+        taxes.forEach((tax, idx) => {
+            $taxesTbody.append(`
+                <tr>
+                    <td class="text-muted small">${idx + 1}</td>
+                    <td class="font-weight-500 text-dark">
+                        ${frappe.utils.escape_html(tax.account_head)}
+                    </td>
+                    <td class="text-right text-muted">
+                        ${tax.rate > 0 ? tax.rate + '%' : '-'}
+                    </td>
+                    <td>
+                        <span class="small text-muted">${frappe.utils.escape_html(tax.cost_center)}</span>
+                    </td>
+                    <td class="text-right font-weight-bold text-dark">${tax.formatted_tax_amount}</td>
+                </tr>
+            `);
+        });
+    }
+    $("#pinv-total-taxes").text(data.formatted_total_taxes || "₹ 0.00");
+
+    $content.removeClass("d-none");
+}
+
+/* ==========================================================================
+   PART 3: Maintenance Bills & Analytics Module
+   - Financial Year filtering on billing runs list
+   - "View Considered Invoices" Modal: Date, Invoice ID, Supplier Name, Grand Total
+   - Refined "View Complete Society GL" Modal: 2-column Account-wise consolidation
+   - Compact Level 1 Modal with clean Single-Tier vs Two-Tier rates
+   - Level 2 Drill-Down: Block Cost Center GL Breakdown
+   ========================================================================== */
+
+let currentMaintenanceRuns = [];
+let activeBillingRunData = null;
+let currentActiveRunId = null;
+let currentActiveRunMonth = null;
+let currentActiveRunDate = null;
+
+function initMaintenanceModule() {
+    // 1. Initial load of billing runs
+    loadMaintenanceRuns();
+
+    // 2. Financial Year filter change
+    $("#maintenance_fy_filter").on("change", function () {
+        loadMaintenanceRuns($(this).val());
+    });
+
+    // 3. Click on "View Blocks & UDS" Button -> Opens Compact Level 1 Modal
+    $(document).on("click", ".btn-drilldown-run", function (e) {
+        e.preventDefault();
+        const runId = $(this).data("run");
+        const billingMonth = $(this).data("month") || runId;
+        if (!runId) return;
+
+        openRunBlocksModal(runId, billingMonth);
+    });
+
+    // 4. Click on "View Considered Invoices" Button -> Opens Considered Invoices Modal
+    $(document).on("click", ".btn-view-run-invoices", function (e) {
+        e.preventDefault();
+        const runId = $(this).data("run");
+        const billingMonth = $(this).data("month") || runId;
+        const startDate = $(this).data("start");
+        const endDate = $(this).data("end");
+
+        openRunInvoicesModal(runId, billingMonth, startDate, endDate);
+    });
+
+    // 5. "View Complete Society GL" button click (inside Blocks & UDS modal header)
+    $("#btn-view-complete-gl").on("click", function (e) {
+        e.preventDefault();
+        const runId = currentActiveRunId;
+        const billingMonth = currentActiveRunMonth || runId;
+        const postingDate = currentActiveRunDate || "";
+        openCompleteSocietyGlModal(runId, billingMonth, postingDate);
+    });
+
+    // 5B. "View Gross Common Expenses" button click (available in Reports tab and Blocks modal)
+    $(document).on("click", ".btn-view-gross-common", function (e) {
+        e.preventDefault();
+        const runId = $(this).data("run") || currentActiveRunId;
+        const billingMonth = $(this).data("month") || currentActiveRunMonth;
+        let startDate = $(this).data("start");
+        let endDate = $(this).data("end");
+
+        // If not specified on button, check if triggered from financial report tab
+        if (!runId && (!startDate || !endDate)) {
+            const activeDates = resolveActiveDateRange();
+            startDate = activeDates.fromDate;
+            endDate = activeDates.toDate;
+        }
+
+        openGrossCommonExpensesModal(runId, billingMonth, startDate, endDate);
+    });
+
+    // 5C. Filter changes inside the Gross Common Expenses modal
+    $("#gross_common_cost_center_filter, #gross_common_month_filter").on("change", function () {
+        refreshGrossCommonExpensesModal();
+    });
+
+    // 6. Back button from Complete Society GL modal -> Returns to Blocks & UDS modal
+    $("#btn-back-from-society-gl").on("click", function () {
+        $("#completeSocietyGlModal").modal("hide");
+        if (currentActiveRunId) {
+            setTimeout(function () {
+                $("#runBlocksModal").modal("show");
+            }, 300);
+        }
+    });
+
+    // 7. Level 2 Drilldown: Click on a Block in Level 1 -> Open GL Breakdown
+    $(document).on("click", ".btn-block-gl-drilldown, .block-drilldown-row", function (e) {
+        if ($(e.target).closest("a, button").length && !$(e.target).closest(".btn-block-gl-drilldown").length) {
+            return;
+        }
+        e.preventDefault();
+
+        const blockName = $(this).data("block");
+        const costCenter = $(this).data("costcenter");
+        const runId = $(this).data("run") || currentActiveRunId;
+        const billingMonth = $(this).data("month") || currentActiveRunMonth;
+
+        if (!blockName) return;
+
+        openBlockGlModal(blockName, costCenter, runId, billingMonth);
+    });
+
+    // 8. Back button in Level 2 Modal -> Returns to Blocks & UDS modal
+    $("#btn-back-to-blocks").on("click", function () {
+        $("#glBreakdownModal").modal("hide");
+        if (currentActiveRunId) {
+            setTimeout(function () {
+                $("#runBlocksModal").modal("show");
+            }, 300);
+        }
+    });
+}
+
+/**
+ * Loads maintenance billing runs from the backend filtered by Financial Year
+ */
+function loadMaintenanceRuns(fiscalYear) {
+    const fy = fiscalYear !== undefined ? fiscalYear : $("#maintenance_fy_filter").val();
+
+    frappe.call({
+        method: "society_erp.www.resident.financials.index.get_maintenance_billing_runs",
+        args: {
+            fiscal_year: fy
+        },
+        callback: function (r) {
+            if (r.exc || !r.message) {
+                return;
+            }
+            const data = r.message;
+            currentMaintenanceRuns = data.runs || [];
+
+            $("#maintenance-runs-tab-badge").text(currentMaintenanceRuns.length);
+            $("#maintenance-runs-count").text(currentMaintenanceRuns.length);
+            $("#maintenance-table-count").text(currentMaintenanceRuns.length);
+
+            renderMaintenanceRunsTable(currentMaintenanceRuns, data.currency);
+        }
+    });
+}
+
+/**
+ * Renders the Maintenance Billing Runs table rows dynamically
+ */
+function renderMaintenanceRunsTable(runs, currency) {
+    const $tbody = $("#maintenance-runs-tbody").empty();
+
+    if (!runs || runs.length === 0) {
+        $tbody.append(`
+            <tr>
+                <td colspan="6" class="text-center py-5 text-muted">
+                    <div class="py-4">
+                        <div style="font-size: 2.5rem;" class="mb-2">🛠️</div>
+                        <h5 class="text-muted font-weight-bold">No Maintenance Runs Found</h5>
+                        <p class="small text-muted mb-0">No submitted monthly maintenance billing runs match the selected Financial Year.</p>
+                    </div>
+                </td>
+            </tr>
+        `);
+        return;
+    }
+
+    runs.forEach(function (run) {
+        const fyBadge = run.fiscal_year 
+            ? `<span class="badge badge-light border text-muted px-2 py-1">${frappe.utils.escape_html(run.fiscal_year)}</span>`
+            : "-";
+
+        $tbody.append(`
+            <tr>
+                <td class="font-weight-bold text-primary">
+                    📅 ${frappe.utils.escape_html(run.billing_month)}
+                    <div class="small text-muted font-weight-normal">${frappe.utils.escape_html(run.name)}</div>
+                </td>
+                <td class="text-muted small">
+                    ${run.formatted_posting_date}
+                </td>
+                <td>
+                    ${fyBadge}
+                </td>
+                <td class="text-center">
+                    <span class="badge badge-secondary px-2 py-1 font-weight-normal">
+                        ${run.blocks_count} Blocks
+                    </span>
+                </td>
+                <td class="text-right font-weight-bold text-dark">
+                    ${run.formatted_total_amount}
+                </td>
+                <td class="text-center">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" 
+                                class="btn btn-outline-primary btn-drilldown-run shadow-none"
+                                data-run="${frappe.utils.escape_html(run.name)}"
+                                data-month="${frappe.utils.escape_html(run.billing_month)}"
+                                title="View Block calculations and Comparative Rate">
+                            🏢 View Blocks &amp; UDS &raquo;
+                        </button>
+                        <button type="button" 
+                                class="btn btn-outline-secondary btn-view-run-invoices shadow-none"
+                                data-run="${frappe.utils.escape_html(run.name)}"
+                                data-month="${frappe.utils.escape_html(run.billing_month)}"
+                                data-start="${frappe.utils.escape_html(run.start_date || '')}"
+                                data-end="${frappe.utils.escape_html(run.end_date || '')}"
+                                title="View vendor purchase invoices for this month">
+                            🧾 View Considered Invoices
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `);
+    });
+}
+
+/**
+ * Level 1 Drill-Down: Open Blocks & UDS Modal with Compact Clean Objective Header
+ */
+function openRunBlocksModal(runId, billingMonth) {
+    currentActiveRunId = runId;
+    currentActiveRunMonth = billingMonth;
+
+    const $modal = $("#runBlocksModal");
+    const $loader = $("#modal-blocks-loader");
+    const $error = $("#modal-blocks-error");
+    const $errorText = $("#modal-blocks-error-text");
+    const $tableWrapper = $("#modal-blocks-table-wrapper");
+    const $tbody = $("#run-blocks-tbody").empty();
+    const $subtitle = $("#blocks-modal-subtitle");
+    const $footerInfo = $("#blocks-modal-footer-info");
+    const $residentBanner = $("#blocks-modal-resident-banner").addClass("d-none");
+
+    $subtitle.text(`Billing Run: ${runId} • Month: ${billingMonth}`);
+    $footerInfo.text(`Run ID: ${runId}`);
+    $error.addClass("d-none");
+    $tableWrapper.addClass("d-none");
+    $loader.removeClass("d-none");
+
+    $modal.modal("show");
+
+    frappe.call({
+        method: "society_erp.www.resident.financials.index.get_billing_run_blocks",
+        args: {
+            run_id: runId
+        },
+        callback: function (r) {
+            $loader.addClass("d-none");
+
+            if (r.exc || !r.message) {
+                $errorText.text(r.exc || "Failed to load block calculations for this billing run.");
+                $error.removeClass("d-none");
+                return;
+            }
+
+            activeBillingRunData = r.message;
+            currentActiveRunDate = activeBillingRunData.raw_posting_date || "";
+
+            populateModalAnalyticsHeader(activeBillingRunData);
+            renderRunBlocksTable(activeBillingRunData);
+        },
+        error: function (err) {
+            $loader.addClass("d-none");
+            $errorText.text(err.message || "An unexpected server or network error occurred.");
+            $error.removeClass("d-none");
+        }
+    });
+}
+
+/**
+ * Populates the compact modal header cleanly with objective Single-Tier vs Two-Tier rates
+ */
+function populateModalAnalyticsHeader(data) {
+    $("#modal-analytics-title").text(`${data.billing_month} — Expense & Rate Structure Overview`);
+    
+    // Metric 1: Total Monthly Expenses: [Dynamic Grand Total]
+    $("#metric-society-expense").text(data.formatted_society_expense);
+
+    const singleTierRate = parseFloat(data.comparative_rate_uds) || 0;
+    const userUds = parseFloat(data.user_uds) || 0;
+    const currency = data.currency || "INR";
+
+    // Metric 2: Society-Wide Rate (Flat / UDS) (Single Tier): ₹ [Rate] / sqft ([Rate] x UDS = Total)
+    $("#metric-comparative-rate").text(`₹ ${singleTierRate.toFixed(4)} / sqft`);
+
+    if (userUds > 0) {
+        const singleTierTotal = (singleTierRate * userUds).toFixed(2);
+        const singleTierFormattedTotal = formatFinancialAmount(singleTierTotal, currency);
+        $("#metric-single-tier-formula").text(`(${singleTierRate.toFixed(4)} × ${userUds} UDS = ${singleTierFormattedTotal})`);
+    } else {
+        $("#metric-single-tier-formula").text(`(${singleTierRate.toFixed(4)} × UDS = Total)`);
+    }
+
+    // Metric 3: Block-Wise Rate (Two-Tier): ₹ [Rate] / sqft (₹ [Rate] x UDS = Total)
+    const blocks = data.blocks || [];
+    let blockRate = data.user_block_rate;
+    let blockName = data.user_block;
+
+    // If user has no resident block assigned (e.g. staff), pick the first block for display
+    if (blockRate == null && blocks.length > 0) {
+        blockRate = blocks[0].rate_per_uds;
+        blockName = blocks[0].block;
+    }
+
+    if (blockRate != null) {
+        const parsedBlockRate = parseFloat(blockRate) || 0;
+        const blockLabel = blockName ? `Block ${blockName}: ` : "";
+        $("#metric-block-wise-rate").text(`${blockLabel}₹ ${parsedBlockRate.toFixed(4)} / sqft`);
+
+        if (userUds > 0) {
+            const twoTierTotal = (parsedBlockRate * userUds).toFixed(2);
+            const twoTierFormattedTotal = formatFinancialAmount(twoTierTotal, currency);
+            $("#metric-two-tier-formula").text(`(₹ ${parsedBlockRate.toFixed(4)} × ${userUds} UDS = ${twoTierFormattedTotal})`);
+        } else {
+            $("#metric-two-tier-formula").text(`(₹ ${parsedBlockRate.toFixed(4)} × UDS = Total)`);
+        }
+    } else {
+        $("#metric-block-wise-rate").text("-");
+        $("#metric-two-tier-formula").text("(Block Rate × UDS = Total)");
+    }
+}
+
+/**
+ * Render Level 1 Blocks Table
+ */
+function renderRunBlocksTable(data) {
+    const $tableWrapper = $("#modal-blocks-table-wrapper");
+    const $tbody = $("#run-blocks-tbody").empty();
+    const $residentBanner = $("#blocks-modal-resident-banner");
+    const blocks = data.blocks || [];
+
+    if (data.user_block && data.user_uds > 0) {
+        const userBlockRow = blocks.find(b => b.block === data.user_block);
+        const userShare = userBlockRow && userBlockRow.formatted_resident_share 
+            ? userBlockRow.formatted_resident_share 
+            : "-";
+
+        $residentBanner.html(`
+            <div class="d-flex justify-content-between align-items-center flex-wrap small">
+                <div>
+                    <strong>Your Flat:</strong> Block <strong>${frappe.utils.escape_html(data.user_block)}</strong> 
+                    &bull; UDS: <strong>${data.user_uds} sqft</strong>
+                </div>
+                <div class="mt-1 mt-md-0 font-weight-bold">
+                    Monthly Maintenance: <span class="text-primary">${userShare}</span>
+                </div>
+            </div>
+        `).removeClass("d-none");
+    } else {
+        $residentBanner.addClass("d-none");
+    }
+
+    if (blocks.length === 0) {
+        $tbody.append(`
+            <tr>
+                <td colspan="6" class="text-center py-4 text-muted">
+                    No block calculations found for this billing run.
+                </td>
+            </tr>
+        `);
+    } else {
+        blocks.forEach(function (b) {
+            const isUserBlock = b.is_user_block;
+            const rowClass = isUserBlock ? "table-warning font-weight-500" : "block-drilldown-row";
+            const blockBadge = isUserBlock 
+                ? `<span class="badge badge-warning px-2 py-1">Block ${frappe.utils.escape_html(b.block)} (Your Block)</span>` 
+                : `<span class="badge badge-light border px-2 py-1 font-weight-bold">Block ${frappe.utils.escape_html(b.block)}</span>`;
+
+            const residentShareHtml = isUserBlock && b.formatted_resident_share
+                ? `<div class="small text-muted font-weight-normal">Your Share: <span class="text-primary font-weight-bold">${b.formatted_resident_share}</span></div>`
+                : "";
+
+            $tbody.append(`
+                <tr class="${rowClass}" data-block="${frappe.utils.escape_html(b.block)}" data-costcenter="${frappe.utils.escape_html(b.cost_center)}" data-run="${frappe.utils.escape_html(data.run_id)}" data-month="${frappe.utils.escape_html(data.billing_month)}" style="cursor: pointer;">
+                    <td>${blockBadge}</td>
+                    <td class="small text-muted">${frappe.utils.escape_html(b.cost_center)}</td>
+                    <td class="text-right text-muted">${b.total_block_uds.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                    <td class="text-right font-weight-bold text-dark">
+                        ${b.formatted_total_expense}
+                        ${residentShareHtml}
+                    </td>
+                    <td class="text-right font-weight-bold text-info">${b.formatted_rate_per_uds}</td>
+                    <td class="text-center">
+                        <button type="button" 
+                                class="btn btn-xs btn-outline-primary btn-block-gl-drilldown px-2 py-1"
+                                data-block="${frappe.utils.escape_html(b.block)}"
+                                data-costcenter="${frappe.utils.escape_html(b.cost_center)}"
+                                data-run="${frappe.utils.escape_html(data.run_id)}"
+                                data-month="${frappe.utils.escape_html(data.billing_month)}">
+                            🔍 GL Breakdown &raquo;
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+    }
+
+    $("#modal-blocks-total-uds").text(data.total_run_uds.toLocaleString("en-IN", { minimumFractionDigits: 2 }));
+    $("#modal-blocks-total-expense").text(data.formatted_total_run_expense || data.formatted_total_billed_amount || "₹ 0.00");
+    $tableWrapper.removeClass("d-none");
+}
+
+/**
+ * Considered Invoices Modal: Date, Invoice ID, Supplier Name, Grand Total
+ */
+function openRunInvoicesModal(runId, billingMonth, startDate, endDate) {
+    const $modal = $("#runInvoicesModal");
+    const $loader = $("#modal-run-invoices-loader");
+    const $error = $("#modal-run-invoices-error");
+    const $errorText = $("#modal-run-invoices-error-text");
+    const $tableWrapper = $("#modal-run-invoices-table-wrapper");
+    const $tbody = $("#run-invoices-tbody").empty();
+    const $subtitle = $("#run-invoices-modal-subtitle");
+    const $total = $("#run-invoices-total-amount");
+    const $footerInfo = $("#run-invoices-modal-footer-info");
+
+    $subtitle.text(`Submitted Purchase Invoices considered in ${billingMonth} calculations (${runId})`);
+    $footerInfo.text(`Billing Run: ${runId}`);
+    $error.addClass("d-none");
+    $tableWrapper.addClass("d-none");
+    $loader.removeClass("d-none");
+    $total.text("₹ 0.00");
+
+    $modal.modal("show");
+
+    frappe.call({
+        method: "society_erp.www.resident.financials.index.get_maintenance_run_invoices",
+        args: {
+            run_id: runId,
+            billing_month_start_date: startDate,
+            billing_month_end_date: endDate
+        },
+        callback: function (r) {
+            $loader.addClass("d-none");
+
+            if (r.exc || !r.message) {
+                $errorText.text(r.exc || "Failed to load considered invoices.");
+                $error.removeClass("d-none");
+                return;
+            }
+
+            renderRunInvoicesTable(r.message);
+        },
+        error: function (err) {
+            $loader.addClass("d-none");
+            $errorText.text(err.message || "An unexpected network or server error occurred.");
+            $error.removeClass("d-none");
+        }
+    });
+}
+
+function renderRunInvoicesTable(data) {
+    const $tableWrapper = $("#modal-run-invoices-table-wrapper");
+    const $tbody = $("#run-invoices-tbody").empty();
+    const $total = $("#run-invoices-total-amount");
+    const invoices = data.invoices || [];
+
+    if (invoices.length === 0) {
+        $tbody.append(`
+            <tr>
+                <td colspan="5" class="text-center py-4 text-muted">
+                    No submitted purchase invoices found for this billing month range (${data.from_date} to ${data.to_date}).
+                </td>
+            </tr>
+        `);
+    } else {
+        invoices.forEach(function (inv) {
+            $tbody.append(`
+                <tr>
+                    <td class="text-muted small">${inv.posting_date}</td>
+                    <td class="font-weight-bold text-dark">
+                        ${frappe.utils.escape_html(inv.name)}
+                        ${inv.bill_no !== '-' ? `<div class="small text-muted font-weight-normal">Ref: ${frappe.utils.escape_html(inv.bill_no)}</div>` : ''}
+                    </td>
+                    <td>
+                        <div class="font-weight-500 text-dark">${frappe.utils.escape_html(inv.supplier_name)}</div>
+                    </td>
+                    <td class="text-right font-weight-bold text-dark">${inv.formatted_grand_total}</td>
+                    <td class="text-center">
+                        <button type="button" 
+                                class="btn btn-xs btn-outline-info btn-view-purchase-invoice px-2 py-1"
+                                data-invoice="${frappe.utils.escape_html(inv.name)}">
+                            👁️ View
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+    }
+
+    $total.text(data.formatted_total_invoiced || "₹ 0.00");
+    $tableWrapper.removeClass("d-none");
+}
+
+/**
+ * Refined Complete Society GL View: 2-Column Table (Expense Account & Total Amount)
+ */
+function openCompleteSocietyGlModal(runId, billingMonth, postingDate) {
+    const $modal = $("#completeSocietyGlModal");
+    const $loader = $("#modal-society-gl-loader");
+    const $error = $("#modal-society-gl-error");
+    const $errorText = $("#modal-society-gl-error-text");
+    const $tableWrapper = $("#modal-society-gl-table-wrapper");
+    const $tbody = $("#complete-society-gl-tbody").empty();
+    const $subtitle = $("#society-gl-modal-subtitle");
+    const $total = $("#complete-society-gl-total");
+    const $footerInfo = $("#society-gl-modal-footer-info");
+
+    $("#runBlocksModal").modal("hide");
+
+    $subtitle.text(`Account-wise consolidated society operating expenses • ${billingMonth}`);
+    $footerInfo.text(`Billing Run: ${runId}`);
+    $error.addClass("d-none");
+    $tableWrapper.addClass("d-none");
+    $loader.removeClass("d-none");
+    $total.text("₹ 0.00");
+
+    $modal.modal("show");
+
+    frappe.call({
+        method: "society_erp.www.resident.financials.index.get_complete_society_gl",
+        args: {
+            run_id: runId,
+            posting_date: postingDate
+        },
+        callback: function (r) {
+            $loader.addClass("d-none");
+
+            if (r.exc || !r.message) {
+                $errorText.text(r.exc || "Failed to load complete society ledger entries.");
+                $error.removeClass("d-none");
+                return;
+            }
+
+            renderCompleteSocietyGlTable(r.message);
+        },
+        error: function (err) {
+            $loader.addClass("d-none");
+            $errorText.text(err.message || "An unexpected server error occurred.");
+            $error.removeClass("d-none");
+        }
+    });
+}
+
+function renderCompleteSocietyGlTable(data) {
+    const $tableWrapper = $("#modal-society-gl-table-wrapper");
+    const $tbody = $("#complete-society-gl-tbody").empty();
+    const $total = $("#complete-society-gl-total");
+    const entries = data.entries || [];
+
+    if (entries.length === 0) {
+        $tbody.append(`
+            <tr>
+                <td colspan="2" class="text-center py-4 text-muted">
+                    No operating expense ledger entries found for this month across the society.
+                </td>
+            </tr>
+        `);
+    } else {
+        entries.forEach((row) => {
+            $tbody.append(`
+                <tr>
+                    <td>
+                        <div class="font-weight-bold text-dark">${frappe.utils.escape_html(row.account_name || row.account)}</div>
+                        <div class="small text-muted">${frappe.utils.escape_html(row.account)}</div>
+                    </td>
+                    <td class="text-right font-weight-bold text-dark">${row.formatted_net_expense}</td>
+                </tr>
+            `);
+        });
+    }
+
+    $total.text(data.formatted_total_society_expense || "₹ 0.00");
+    $tableWrapper.removeClass("d-none");
+}
+
+/**
+ * Level 2 Drill-Down: Open GL Entries Modal for a specific Block in that Billing Run
+ */
+function openBlockGlModal(blockName, costCenter, runId, billingMonth) {
+    const $modal = $("#glBreakdownModal");
+    const $loader = $("#modal-gl-loader");
+    const $error = $("#modal-gl-error");
+    const $errorText = $("#modal-gl-error-text");
+    const $tableWrapper = $("#modal-gl-table-wrapper");
+    const $tbody = $("#gl-breakdown-tbody").empty();
+    const $subtitle = $("#gl-modal-subtitle");
+    const $totalAmount = $("#modal-gl-total-amount");
+
+    $("#runBlocksModal").modal("hide");
+
+    $subtitle.text(`Block ${blockName} • ${billingMonth || ''} (${costCenter || runId})`);
+    $error.addClass("d-none");
+    $tableWrapper.addClass("d-none");
+    $loader.removeClass("d-none");
+    $totalAmount.text("₹ 0.00");
+
+    $modal.modal("show");
+
+    frappe.call({
+        method: "society_erp.www.resident.financials.index.get_block_gl_entries",
+        args: {
+            block_name: blockName,
+            cost_center: costCenter,
+            run_id: runId
+        },
+        callback: function (r) {
+            $loader.addClass("d-none");
+
+            if (r.exc || !r.message) {
+                $errorText.text(r.exc || "Failed to retrieve ledger entries for this block.");
+                $error.removeClass("d-none");
+                return;
+            }
+
+            renderBlockGlTable(r.message);
+        },
+        error: function (err) {
+            $loader.addClass("d-none");
+            $errorText.text(err.message || "An unexpected network or server error occurred.");
+            $error.removeClass("d-none");
+        }
+    });
+}
+
+function renderBlockGlTable(data) {
+    const $tableWrapper = $("#modal-gl-table-wrapper");
+    const $tbody = $("#gl-breakdown-tbody").empty();
+    const $totalAmount = $("#modal-gl-total-amount");
+    const entries = data.entries || [];
+
+    if (entries.length === 0) {
+        $tbody.append(`
+            <tr>
+                <td colspan="5" class="text-center py-4 text-muted">
+                    No General Ledger expense entries found for Block ${frappe.utils.escape_html(data.block)} (${data.from_date} to ${data.to_date}).
+                </td>
+            </tr>
+        `);
+    } else {
+        entries.forEach(function (row) {
+            const badgeClass = row.root_type === "Expense" ? "badge-danger" : "badge-success";
+            const netAmountClass = row.net_amount < 0 ? "text-success" : "text-dark font-weight-bold";
+
+            $tbody.append(`
+                <tr>
+                    <td>
+                        <div class="font-weight-bold text-dark">${frappe.utils.escape_html(row.account_name || row.account)}</div>
+                        <div class="small text-muted">${frappe.utils.escape_html(row.account)}</div>
+                    </td>
+                    <td>
+                        <span class="badge ${badgeClass} px-2 py-1 font-weight-normal">
+                            ${frappe.utils.escape_html(row.root_type || "Expense")}
+                        </span>
+                    </td>
+                    <td class="text-right text-muted">${row.formatted_debit}</td>
+                    <td class="text-right text-muted">${row.formatted_credit}</td>
+                    <td class="text-right ${netAmountClass}">${row.formatted_net_amount}</td>
+                </tr>
+            `);
+        });
+    }
+
+    $totalAmount.text(data.formatted_total_expense || "₹ 0.00");
+    $tableWrapper.removeClass("d-none");
+}
+
+// Global active state tracking for Gross Common Expenses modal
+let currentGrossCommonRunId = null;
+let currentGrossCommonFy = null;
+
+/**
+ * Resolves the currently active Financial Year from the UI
+ */
+function resolveActiveFinancialYear() {
+    // 1. From Financial Statements tab dropdown
+    const fyFromReport = $("#fiscal_year_select").val();
+    if (fyFromReport && fyFromReport !== "All Fiscal Years") {
+        return fyFromReport;
+    }
+
+    // 2. From Maintenance Bills FY filter dropdown
+    const fyFromMaint = $("#maintenance_fy_filter").val();
+    if (fyFromMaint && fyFromMaint !== "All Fiscal Years") {
+        return fyFromMaint;
+    }
+
+    // 3. Fallback to badge text
+    const badgeText = ($("#gross_common_fy_badge").text() || "").replace("FY:", "").trim();
+    return badgeText || null;
+}
+
+/**
+ * Common Area Expense Breakdown: Pre-Apportionment Gross Expenses
+ */
+function openGrossCommonExpensesModal(runId, billingMonth, startDate, endDate) {
+    const $modal = $("#grossCommonExpensesModal");
+    currentGrossCommonRunId = runId || null;
+
+    // Resolve Active Financial Year
+    currentGrossCommonFy = resolveActiveFinancialYear();
+    if (currentGrossCommonFy) {
+        $("#gross_common_fy_badge").text(`FY: ${currentGrossCommonFy}`).attr("title", `Active Financial Year: ${currentGrossCommonFy}`);
+    }
+
+    // Attempt to set month dropdown in modal based on billingMonth or startDate
+    let targetMonth = null;
+    if (startDate) {
+        try {
+            targetMonth = parseInt(startDate.split("-")[1], 10);
+        } catch (e) {}
+    } else if (billingMonth) {
+        const monthNames = [
+            "january", "february", "march", "april", "may", "june",
+            "july", "august", "september", "october", "november", "december"
+        ];
+        const lowerMonth = billingMonth.toLowerCase();
+        for (let idx = 0; idx < monthNames.length; idx++) {
+            if (lowerMonth.includes(monthNames[idx])) {
+                targetMonth = idx + 1;
+                break;
+            }
+        }
+    }
+
+    if (!targetMonth) {
+        // If triggered from financial report month/year filter
+        if ($("#date_filter_type").val() === "month_year") {
+            const mVal = parseInt($("#select_month").val(), 10);
+            targetMonth = mVal + 1; // select_month is 0-indexed
+        } else {
+            targetMonth = new Date().getMonth() + 1;
+        }
+    }
+
+    if (targetMonth) {
+        $("#gross_common_month_filter").val(String(targetMonth));
+    }
+
+    // Reset Cost Center filter to combined (blank)
+    $("#gross_common_cost_center_filter").val("");
+
+    $modal.modal("show");
+
+    // Fetch and render data with active filters
+    refreshGrossCommonExpensesModal(startDate, endDate);
+}
+
+/**
+ * Re-fetches and renders the Gross Common Expenses modal according to active filters
+ */
+function refreshGrossCommonExpensesModal(fallbackStartDate, fallbackEndDate) {
+    const $loader = $("#modal-gross-common-loader");
+    const $error = $("#modal-gross-common-error");
+    const $errorText = $("#modal-gross-common-error-text");
+    const $empty = $("#modal-gross-common-empty");
+    const $tableWrapper = $("#modal-gross-common-table-wrapper");
+    const $tbody = $("#gross-common-tbody").empty();
+    const $subtitle = $("#gross-common-modal-subtitle");
+    const $grandTotal = $("#gross-common-grand-total");
+    const $footerInfo = $("#gross-common-modal-footer-info");
+
+    const selectedCostCenter = $("#gross_common_cost_center_filter").val() || "";
+    const selectedMonth = $("#gross_common_month_filter").val() || "";
+    const activeFy = currentGrossCommonFy || resolveActiveFinancialYear();
+
+    $error.addClass("d-none");
+    $empty.addClass("d-none");
+    $tableWrapper.addClass("d-none");
+    $loader.removeClass("d-none");
+    $grandTotal.text("₹ 0.00");
+
+    frappe.call({
+        method: "society_erp.www.resident.financials.index.get_gross_common_expenses",
+        args: {
+            specific_cost_center: selectedCostCenter,
+            month: selectedMonth,
+            financial_year: activeFy,
+            month_start_date: fallbackStartDate || null,
+            month_end_date: fallbackEndDate || null,
+            run_id: currentGrossCommonRunId || null
+        },
+        callback: function (r) {
+            $loader.addClass("d-none");
+
+            if (r.exc || !r.message) {
+                $errorText.text(r.exc || "Failed to load gross common expenses.");
+                $error.removeClass("d-none");
+                return;
+            }
+
+            const data = r.message;
+            const costCenterLabel = selectedCostCenter ? $("#gross_common_cost_center_filter option:selected").text().replace("•", "").trim() : "All Common Cost Centers";
+            $subtitle.text(`${costCenterLabel} • ${data.billing_month || data.from_date + " to " + data.to_date}`);
+            $footerInfo.text(`Financial Year: ${activeFy || "-"} | Period: ${data.from_date} to ${data.to_date}`);
+
+            renderGrossCommonExpensesTable(data);
+        },
+        error: function (err) {
+            $loader.addClass("d-none");
+            $errorText.text(err.message || "An unexpected error occurred while fetching common expenses.");
+            $error.removeClass("d-none");
+        }
+    });
+}
+
+function renderGrossCommonExpensesTable(data) {
+    const $tableWrapper = $("#modal-gross-common-table-wrapper");
+    const $tbody = $("#gross-common-tbody").empty();
+    const $grandTotal = $("#gross-common-grand-total");
+    const $empty = $("#modal-gross-common-empty");
+    const entries = data.entries || [];
+
+    if (entries.length === 0) {
+        $empty.removeClass("d-none");
+        $tableWrapper.addClass("d-none");
+        $grandTotal.text(data.formatted_grand_total_gross || "₹ 0.00");
+        return;
+    }
+
+    entries.forEach(function (row) {
+        const typeBadge = row.root_type === "Income" 
+            ? `<span class="badge badge-success px-1 py-0 ml-1 small">Income</span>` 
+            : "";
+
+        $tbody.append(`
+            <tr>
+                <td>
+                    <div class="font-weight-bold text-dark">
+                        ${frappe.utils.escape_html(row.account_name || row.account)}
+                        ${typeBadge}
+                    </div>
+                    <div class="small text-muted font-monospace">${frappe.utils.escape_html(row.account)}</div>
+                </td>
+                <td class="text-right font-weight-bold text-dark">
+                    ${row.formatted_gross_debit}
+                </td>
+            </tr>
+        `);
+    });
+
+    $grandTotal.text(data.formatted_grand_total_gross || "₹ 0.00");
+    $tableWrapper.removeClass("d-none");
+}
+
