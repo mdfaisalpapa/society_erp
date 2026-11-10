@@ -440,13 +440,26 @@
                     <div class="modal-header bg-light border-bottom py-2">
                         <div>
                             <h5 class="modal-title font-weight-bold text-dark mb-0" id="runBlocksModalLabel">
-                                🏢 Block &amp; UDS Maintenance Allocation
+                                🏢 Block &amp; Maintenance Allocation
                             </h5>
                             <small class="text-muted" id="blocks-modal-subtitle">
-                                Showing calculated UDS and proportional expenses per block
+                                Showing calculated allocations and proportional expenses per block
                             </small>
                         </div>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <div class="d-flex align-items-center ml-auto mr-2">
+                            <!-- Toggle switch for UDS vs Super Builtup Area (SBA) - Default: SBA -->
+                            <div class="btn-group btn-group-toggle btn-group-sm" data-toggle="buttons" id="allocation-basis-toggle">
+                                <label class="btn btn-outline-primary active py-1 px-2 font-weight-bold shadow-none" id="label-basis-sba" style="font-size: 0.78rem;">
+                                    <input type="radio" name="allocation_basis" value="sba" checked autocomplete="off">
+                                    🏢 Builtup Area (SBA)
+                                </label>
+                                <label class="btn btn-outline-primary py-1 px-2 font-weight-bold shadow-none" id="label-basis-uds" style="font-size: 0.78rem;">
+                                    <input type="radio" name="allocation_basis" value="uds" autocomplete="off">
+                                    📐 UDS Basis
+                                </label>
+                            </div>
+                        </div>
+                        <button type="button" class="close ml-0" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
@@ -477,7 +490,7 @@
 
                                     <div class="row align-items-center text-center text-md-left">
                                         <!-- Metric 1: Total Monthly Expenses -->
-                                        <div class="col-md-4 col-sm-6 py-1 border-right-md">
+                                        <div class="col-md-3 col-sm-6 py-1 border-right-md">
                                             <div class="text-uppercase text-muted" style="font-size: 0.7rem; font-weight: 700;">
                                                 Total Monthly Expenses
                                             </div>
@@ -490,19 +503,19 @@
                                         </div>
 
                                         <!-- Metric 2: Society-Wide Rate (Flat / UDS) (Single Tier) (RED STYLING) -->
-                                        <div class="col-md-4 col-sm-6 py-1 border-right-md bg-white rounded border-danger">
+                                        <div class="col-md-5 col-sm-6 py-1 border-right-md bg-white rounded border-danger">
                                             <div class="d-flex justify-content-between align-items-center mb-0">
                                                 <span class="text-uppercase text-danger font-weight-bold" style="font-size: 0.7rem;">
-                                                    ⚖️ Society-Wide Rate (Flat / UDS) (Single Tier)
+                                                    ⚖️ Society-Wide Rate (Single Tier)
                                                 </span>
                                             </div>
                                             <!-- Red comparative rate -->
                                             <div class="h6 font-weight-bold text-danger mb-0" id="metric-comparative-rate">
                                                 ₹ 0.0000 / sqft
                                             </div>
-                                            <!-- Clean formula: (Rate x UDS = Total) -->
-                                            <div class="text-danger" style="font-size: 0.72rem; line-height: 1.2;" id="metric-single-tier-formula">
-                                                -
+                                            <!-- All 4 Flat Types (Single-Tier calculation) -->
+                                            <div class="mt-1 pt-1 border-top text-danger" style="font-size: 0.73rem; line-height: 1.3;" id="metric-single-tier-types-list">
+                                                <!-- Dynamic list injected via index.js -->
                                             </div>
                                         </div>
 
@@ -546,9 +559,9 @@
                                         <tr>
                                             <th style="min-width: 100px;">Block</th>
                                             <th style="min-width: 160px;">Cost Center</th>
-                                            <th class="text-right" style="min-width: 130px;">Total Block UDS</th>
+                                            <th class="text-right" style="min-width: 130px;" id="th-total-block-area">Total Block UDS</th>
                                             <th class="text-right" style="min-width: 150px;">Total Block Expense</th>
-                                            <th class="text-right" style="min-width: 130px;">Rate / UDS</th>
+                                            <th class="text-right" style="min-width: 180px;" id="th-rate-per-area">Rate / UDS &bull; Flat Maint</th>
                                             <th class="text-center" style="min-width: 150px;">GL Breakdown</th>
                                         </tr>
                                     </thead>

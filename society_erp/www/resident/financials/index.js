@@ -690,6 +690,7 @@ let activeBillingRunData = null;
 let currentActiveRunId = null;
 let currentActiveRunMonth = null;
 let currentActiveRunDate = null;
+let currentAllocationBasis = "sba"; // 'sba' (Super Builtup Area - Default) or 'uds'
 
 function initMaintenanceModule() {
     // 1. Initial load of billing runs
@@ -787,6 +788,15 @@ function initMaintenanceModule() {
             setTimeout(function () {
                 $("#runBlocksModal").modal("show");
             }, 300);
+        }
+    });
+
+    // 9. Allocation Basis Toggle (UDS vs Super Builtup Area - SBA)
+    $('input[name="allocation_basis"]').on("change", function () {
+        currentAllocationBasis = $(this).val(); // 'uds' or 'sba'
+        if (activeBillingRunData) {
+            populateModalAnalyticsHeader(activeBillingRunData);
+            renderRunBlocksTable(activeBillingRunData);
         }
     });
 }
@@ -989,36 +999,70 @@ function openRunBlocksModal(runId, billingMonth) {
 
 /**
  * Populates the compact modal header cleanly with objective Single-Tier vs Two-Tier rates
+ * based on selected allocation basis ('uds' or 'sba').
  */
 function populateModalAnalyticsHeader(data) {
-    $("#modal-analytics-title").text(`${data.billing_month} — Expense & Rate Structure Overview`);
+    const isSba = (currentAllocationBasis === "sba");
+    const basisLabel = isSba ? "Super Builtup Area (SBA)" : "UDS";
+    const basisUnit = isSba ? "sqft SBA" : "sqft UDS";
+
+    $("#modal-analytics-title").text(`${data.billing_month} — Expense & Rate Structure (${basisLabel})`);
     
     // Metric 1: Total Monthly Expenses: [Dynamic Grand Total]
     $("#metric-society-expense").text(data.formatted_society_expense);
 
-    const singleTierRate = parseFloat(data.comparative_rate_uds) || 0;
-    const userUds = parseFloat(data.user_uds) || 0;
+    const singleTierRate = isSba 
+        ? (parseFloat(data.comparative_rate_sba) || 0)
+        : (parseFloat(data.comparative_rate_uds) || 0);
+
+    const userArea = isSba 
+        ? (parseFloat(data.user_sba) || 0)
+        : (parseFloat(data.user_uds) || 0);
+
     const currency = data.currency || "INR";
 
-    // Metric 2: Society-Wide Rate (Flat / UDS) (Single Tier): ₹ [Rate] / sqft ([Rate] x UDS = Total)
+    // Metric 2: Society-Wide Rate (Flat / Area) (Single Tier)
     $("#metric-comparative-rate").text(`₹ ${singleTierRate.toFixed(4)} / sqft`);
 
-    if (userUds > 0) {
-        const singleTierTotal = (singleTierRate * userUds).toFixed(2);
-        const singleTierFormattedTotal = formatFinancialAmount(singleTierTotal, currency);
-        $("#metric-single-tier-formula").text(`(${singleTierRate.toFixed(4)} × ${userUds} UDS = ${singleTierFormattedTotal})`);
+    // Render All 4 Flat Types (A Type, B Type, C Type, D Type) in Single Tier Comparison
+    const $singleTierList = $("#metric-single-tier-types-list").empty();
+    const flatTypeComparison = data.flat_type_comparison || [];
+
+    if (flatTypeComparison.length > 0) {
+        let typesHtml = `<div class="d-flex flex-column" style="gap: 2px;">`;
+        flatTypeComparison.forEach(function (ft) {
+            const areaVal = isSba ? ft.sba : ft.uds;
+            const maintVal = isSba ? ft.formatted_total_maintenance_sba : ft.formatted_total_maintenance_uds;
+            const isUserType = userArea > 0 && Math.abs(areaVal - userArea) < 0.5;
+            const highlightBadge = isUserType ? ' <span class="badge badge-danger px-1 py-0" style="font-size: 0.65rem;">Your Flat</span>' : '';
+
+            typesHtml += `
+                <div class="d-flex justify-content-between align-items-center ${isUserType ? 'font-weight-bold' : ''}" style="font-size: 0.72rem;">
+                    <span>${frappe.utils.escape_html(ft.flat_type)}${highlightBadge} (${areaVal} ${isSba ? 'SBA' : 'UDS'}):</span>
+                    <span class="font-monospace">${singleTierRate.toFixed(4)} &times; ${areaVal} = <strong>${maintVal}</strong></span>
+                </div>
+            `;
+        });
+        typesHtml += `</div>`;
+        $singleTierList.html(typesHtml);
     } else {
-        $("#metric-single-tier-formula").text(`(${singleTierRate.toFixed(4)} × UDS = Total)`);
+        if (userArea > 0) {
+            const singleTierTotal = (singleTierRate * userArea).toFixed(2);
+            const singleTierFormattedTotal = formatFinancialAmount(singleTierTotal, currency);
+            $singleTierList.text(`(${singleTierRate.toFixed(4)} × ${userArea} ${basisLabel} = ${singleTierFormattedTotal})`);
+        } else {
+            $singleTierList.text(`(${singleTierRate.toFixed(4)} × ${basisLabel} = Total)`);
+        }
     }
 
-    // Metric 3: Block-Wise Rate (Two-Tier): ₹ [Rate] / sqft (₹ [Rate] x UDS = Total)
+    // Metric 3: Block-Wise Rate (Two-Tier): ₹ [Rate] / sqft (₹ [Rate] x Area = Total)
     const blocks = data.blocks || [];
-    let blockRate = data.user_block_rate;
+    let blockRate = isSba ? data.user_block_rate_sba : data.user_block_rate;
     let blockName = data.user_block;
 
     // If user has no resident block assigned (e.g. staff), pick the first block for display
     if (blockRate == null && blocks.length > 0) {
-        blockRate = blocks[0].rate_per_uds;
+        blockRate = isSba ? blocks[0].rate_per_sba : blocks[0].rate_per_uds;
         blockName = blocks[0].block;
     }
 
@@ -1027,30 +1071,41 @@ function populateModalAnalyticsHeader(data) {
         const blockLabel = blockName ? `Block ${blockName}: ` : "";
         $("#metric-block-wise-rate").text(`${blockLabel}₹ ${parsedBlockRate.toFixed(4)} / sqft`);
 
-        if (userUds > 0) {
-            const twoTierTotal = (parsedBlockRate * userUds).toFixed(2);
+        if (userArea > 0) {
+            const twoTierTotal = (parsedBlockRate * userArea).toFixed(2);
             const twoTierFormattedTotal = formatFinancialAmount(twoTierTotal, currency);
-            $("#metric-two-tier-formula").text(`(₹ ${parsedBlockRate.toFixed(4)} × ${userUds} UDS = ${twoTierFormattedTotal})`);
+            $("#metric-two-tier-formula").text(`(₹ ${parsedBlockRate.toFixed(4)} × ${userArea} ${basisLabel} = ${twoTierFormattedTotal})`);
         } else {
-            $("#metric-two-tier-formula").text(`(₹ ${parsedBlockRate.toFixed(4)} × UDS = Total)`);
+            $("#metric-two-tier-formula").text(`(₹ ${parsedBlockRate.toFixed(4)} × ${basisLabel} = Total)`);
         }
     } else {
         $("#metric-block-wise-rate").text("-");
-        $("#metric-two-tier-formula").text("(Block Rate × UDS = Total)");
+        $("#metric-two-tier-formula").text(`(Block Rate × ${basisLabel} = Total)`);
     }
 }
 
 /**
  * Render Level 1 Blocks Table and Mobile Cards
+ * dynamically supports UDS or Super Builtup Area (SBA).
  */
 function renderRunBlocksTable(data) {
+    const isSba = (currentAllocationBasis === "sba");
+    const basisLabel = isSba ? "Builtup Area (SBA)" : "UDS";
+    const basisShort = isSba ? "SBA" : "UDS";
+
+    // Update column headers for desktop table
+    $("#th-total-block-area").text(`Total Block ${basisShort}`);
+    $("#th-rate-per-area").html(`Rate / ${basisShort} &bull; Flat Maint`);
+
     const $tableWrapper = $("#modal-blocks-table-wrapper");
     const $tbody = $("#run-blocks-tbody").empty();
     const $cards = $("#run-blocks-cards").empty();
     const $residentBanner = $("#blocks-modal-resident-banner");
     const blocks = data.blocks || [];
 
-    if (data.user_block && data.user_uds > 0) {
+    const userArea = isSba ? (parseFloat(data.user_sba) || 0) : (parseFloat(data.user_uds) || 0);
+
+    if (data.user_block && userArea > 0) {
         const userBlockRow = blocks.find(b => b.block === data.user_block);
         const userShare = userBlockRow && userBlockRow.formatted_resident_share 
             ? userBlockRow.formatted_resident_share 
@@ -1060,7 +1115,7 @@ function renderRunBlocksTable(data) {
             <div class="d-flex justify-content-between align-items-center flex-wrap small">
                 <div>
                     <strong>Your Flat:</strong> Block <strong>${frappe.utils.escape_html(data.user_block)}</strong> 
-                    &bull; UDS: <strong>${data.user_uds} sqft</strong>
+                    &bull; ${basisLabel}: <strong>${userArea} sqft</strong>
                 </div>
                 <div class="mt-1 mt-md-0 font-weight-bold">
                     Monthly Maintenance: <span class="text-primary">${userShare}</span>
@@ -1096,17 +1151,33 @@ function renderRunBlocksTable(data) {
                 ? `<div class="small text-muted font-weight-normal">Your Share: <span class="text-primary font-weight-bold">${b.formatted_resident_share}</span></div>`
                 : "";
 
+            // Use SBA or UDS metrics based on toggle
+            const blockTotalArea = isSba ? (parseFloat(b.total_block_sba) || 0) : (parseFloat(b.total_block_uds) || 0);
+            const flatArea = isSba ? (parseFloat(b.flat_sba) || 0) : (parseFloat(b.flat_uds) || 0);
+            const rateVal = isSba ? (parseFloat(b.rate_per_sba) || 0) : (parseFloat(b.rate_per_uds) || 0);
+            const rateFormatted = isSba ? (b.formatted_rate_per_sba || `${rateVal.toFixed(4)} / sqft`) : (b.formatted_rate_per_uds || `${rateVal.toFixed(4)} / sqft`);
+            const flatMaintFormatted = b.formatted_flat_maintenance || "-";
+            const flatTypeLabel = b.flat_type ? `(${frappe.utils.escape_html(b.flat_type)})` : "";
+
             // Desktop Table Row
             $tbody.append(`
                 <tr class="${rowClass}" data-block="${frappe.utils.escape_html(b.block)}" data-costcenter="${frappe.utils.escape_html(b.cost_center)}" data-run="${frappe.utils.escape_html(data.run_id)}" data-month="${frappe.utils.escape_html(data.billing_month)}" style="cursor: pointer;">
-                    <td>${blockBadge}</td>
+                    <td>${blockBadge} <span class="small text-muted font-weight-normal">${flatTypeLabel}</span></td>
                     <td class="small text-muted">${frappe.utils.escape_html(b.cost_center)}</td>
-                    <td class="text-right text-muted">${b.total_block_uds.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                    <td class="text-right text-muted">${blockTotalArea.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                     <td class="text-right font-weight-bold text-dark">
                         ${b.formatted_total_expense}
                         ${residentShareHtml}
                     </td>
-                    <td class="text-right font-weight-bold text-info">${b.formatted_rate_per_uds}</td>
+                    <td class="text-right">
+                        <div class="font-weight-bold text-info">${rateFormatted}</div>
+                        ${flatArea > 0 ? `
+                            <div class="small text-dark font-weight-bold mt-1" title="${rateVal.toFixed(4)} × ${flatArea} ${basisShort}">
+                                ${rateVal.toFixed(4)} &times; ${flatArea} = <span class="text-primary font-weight-bold">${flatMaintFormatted}</span>
+                                <div class="text-muted font-weight-normal" style="font-size: 0.72rem;">per flat</div>
+                            </div>
+                        ` : ''}
+                    </td>
                     <td class="text-center">
                         <button type="button" 
                                 class="btn btn-xs btn-outline-primary btn-block-gl-drilldown px-2 py-1"
@@ -1120,23 +1191,30 @@ function renderRunBlocksTable(data) {
                 </tr>
             `);
 
-            // Mobile Card View: Left = Block Name & Cost Center, Right = Total Expense & Rate/UDS, Bottom = Full-width Button
+            // Mobile Card View: Left = Block Name & Cost Center, Right = Total Expense & Rate with Flat Maintenance, Bottom = Full-width Button
             $cards.append(`
                 <div class="app-card mb-2 p-3 ${isUserBlock ? 'border-warning bg-light' : 'bg-white'} shadow-sm">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div class="pr-2">
                             <div class="font-weight-bold text-dark h6 mb-0">
-                                🏢 Block ${frappe.utils.escape_html(b.block)}
+                                🏢 Block ${frappe.utils.escape_html(b.block)} ${flatTypeLabel}
                                 ${isUserBlock ? '<span class="badge badge-warning ml-1">Your Flat</span>' : ''}
                             </div>
                             <div class="small text-muted">${frappe.utils.escape_html(b.cost_center)}</div>
-                            <div class="small text-muted">${b.total_block_uds.toLocaleString("en-IN", { minimumFractionDigits: 0 })} sqft UDS</div>
+                            <div class="small text-muted">${blockTotalArea.toLocaleString("en-IN", { minimumFractionDigits: 0 })} sqft Block ${basisShort}</div>
                         </div>
                         <div class="text-right flex-shrink-0">
                             <div class="font-weight-bold text-dark h6 mb-0">${b.formatted_total_expense}</div>
-                            <div class="small text-info font-weight-bold">${b.formatted_rate_per_uds}</div>
+                            <div class="small text-info font-weight-bold">${rateFormatted}</div>
                         </div>
                     </div>
+                    ${flatArea > 0 ? `
+                        <div class="mb-2 p-2 bg-light rounded border text-right small">
+                            <span class="text-muted">${rateVal.toFixed(4)} &times; ${flatArea} sqft ${basisShort} =</span>
+                            <span class="h6 mb-0 font-weight-bold text-primary ml-1">${flatMaintFormatted}</span>
+                            <div class="text-muted" style="font-size: 0.72rem;">Monthly Maintenance per Flat</div>
+                        </div>
+                    ` : ''}
                     ${residentShareHtml ? `<div class="mb-2 py-1 px-2 bg-white rounded border small">${residentShareHtml}</div>` : ''}
                     <button type="button" 
                             class="btn btn-outline-primary btn-block btn-sm btn-block-gl-drilldown font-weight-bold shadow-none"
@@ -1151,7 +1229,11 @@ function renderRunBlocksTable(data) {
         });
     }
 
-    $("#modal-blocks-total-uds").text(data.total_run_uds.toLocaleString("en-IN", { minimumFractionDigits: 2 }));
+    const totalComplexArea = isSba 
+        ? (parseFloat(data.total_run_sba) || 0)
+        : (parseFloat(data.total_run_uds) || 0);
+
+    $("#modal-blocks-total-uds").text(totalComplexArea.toLocaleString("en-IN", { minimumFractionDigits: 2 }));
     $("#modal-blocks-total-expense").text(data.formatted_total_run_expense || data.formatted_total_billed_amount || "₹ 0.00");
     $tableWrapper.removeClass("d-none");
     $tableWrapper.find(".table-responsive").removeClass("d-none").addClass("d-none d-md-block");

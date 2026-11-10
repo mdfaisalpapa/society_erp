@@ -839,16 +839,54 @@ def get_billing_run_blocks(run_id):
     blocks = []
     total_run_expense = 0.0
     total_run_uds = 0.0
+    total_run_sba = 0.0
+
+    # Fetch block master metadata to determine flat_type, per-flat UDS, and Super Builtup Area (square_feet)
+    block_records = frappe.get_all(
+        "Block",
+        fields=["name", "flat_type", "uds", "square_feet", "number_of_flats"],
+        order_by="name asc",
+    )
+    block_info_map = {
+        b.name: {
+            "flat_type": b.flat_type or "",
+            "flat_uds": flt(b.uds),
+            "flat_sba": flt(b.square_feet),
+            "number_of_flats": b.number_of_flats or 0,
+        }
+        for b in block_records
+    }
+
+    user_sba = 0.0
+    if user_block and user_block in block_info_map:
+        user_sba = block_info_map[user_block]["flat_sba"]
 
     for row in run.get("block_details", []):
         total_exp = flt(row.total_expense)
         block_uds = flt(row.total_block_uds)
-        rate = flt(row.rate_per_uds, 6)
+        rate_uds = flt(row.rate_per_uds, 6)
         total_run_expense += total_exp
         total_run_uds += block_uds
 
+        b_meta = block_info_map.get(row.block, {})
+        flat_type = b_meta.get("flat_type", "")
+        per_flat_uds = b_meta.get("flat_uds", 0.0)
+        per_flat_sba = b_meta.get("flat_sba", 0.0)
+        num_flats = b_meta.get("number_of_flats", 0)
+
+        # If per_flat_uds wasn't in Block record, try dividing total_block_uds / number_of_flats
+        if per_flat_uds <= 0 and num_flats > 0:
+            per_flat_uds = flt(block_uds / num_flats, 2)
+
+        total_block_sba = flt(per_flat_sba * num_flats, 2)
+        total_run_sba += total_block_sba
+
+        rate_sba = flt(total_exp / total_block_sba, 6) if total_block_sba > 0 else 0.0
+
         is_user_block = (row.block == user_block)
-        resident_share = flt(rate * user_uds, 2) if (is_user_block and user_uds > 0) else None
+        resident_share = flt(rate_uds * user_uds, 2) if (is_user_block and user_uds > 0) else None
+
+        flat_maintenance = flt(rate_uds * per_flat_uds, 2) if per_flat_uds > 0 else 0.0
 
         blocks.append({
             "block": row.block,
@@ -856,8 +894,16 @@ def get_billing_run_blocks(run_id):
             "total_expense": total_exp,
             "formatted_total_expense": fmt_money(total_exp, currency=currency),
             "total_block_uds": block_uds,
-            "rate_per_uds": rate,
-            "formatted_rate_per_uds": f"{flt(rate, 4)} / sqft",
+            "total_block_sba": total_block_sba,
+            "rate_per_uds": rate_uds,
+            "rate_per_sba": rate_sba,
+            "formatted_rate_per_uds": f"{flt(rate_uds, 4)} / sqft",
+            "formatted_rate_per_sba": f"{flt(rate_sba, 4)} / sqft",
+            "flat_type": flat_type,
+            "flat_uds": per_flat_uds,
+            "flat_sba": per_flat_sba,
+            "flat_maintenance": flat_maintenance,
+            "formatted_flat_maintenance": fmt_money(flat_maintenance, currency=currency),
             "is_user_block": is_user_block,
             "resident_share": resident_share,
             "formatted_resident_share": fmt_money(resident_share, currency=currency) if resident_share is not None else None,
@@ -885,13 +931,64 @@ def get_billing_run_blocks(run_id):
         society_expense = total_run_expense
 
     comparative_rate_uds = flt(society_expense / total_run_uds, 4) if total_run_uds > 0 else 0.0
+    comparative_rate_sba = flt(society_expense / total_run_sba, 4) if total_run_sba > 0 else 0.0
 
     user_block_rate = None
+    user_block_rate_sba = None
     if user_block:
         for b in blocks:
             if b["block"] == user_block:
                 user_block_rate = flt(b["rate_per_uds"], 4)
+                user_block_rate_sba = flt(b["rate_per_sba"], 4)
                 break
+
+    # Standard flat type names: 1 BHK -> A Type, 2 BHK -> B Type, 3 BHK -> C Type, 4 BHK -> D Type
+    type_display_names = {
+        "1 BHK": "A Type",
+        "2 BHK": "B Type",
+        "3 BHK": "C Type",
+        "4 BHK": "D Type",
+    }
+
+    # Precompute Single-Tier Flat Type comparison for the 4 distinct property types
+    flat_type_comparison = []
+    seen_types = {}
+    for b in block_records:
+        raw_type = b.flat_type or b.name
+        display_name = type_display_names.get(raw_type, raw_type)
+        f_uds = flt(b.uds)
+        f_sba = flt(b.square_feet)
+        if display_name not in seen_types:
+            seen_types[display_name] = {
+                "flat_type": display_name,
+                "raw_type": raw_type,
+                "uds": f_uds,
+                "sba": f_sba,
+                "blocks": [b.name],
+            }
+        else:
+            seen_types[display_name]["blocks"].append(b.name)
+
+    for t_name, t_info in sorted(seen_types.items(), key=lambda x: x[1]["uds"]):
+        t_uds = t_info["uds"]
+        t_sba = t_info["sba"]
+        single_tier_maint_uds = flt(comparative_rate_uds * t_uds, 2)
+        single_tier_maint_sba = flt(comparative_rate_sba * t_sba, 2)
+        flat_type_comparison.append({
+            "flat_type": t_name,
+            "raw_type": t_info["raw_type"],
+            "uds": t_uds,
+            "sba": t_sba,
+            "blocks": ", ".join(t_info["blocks"]),
+            "rate_per_uds": comparative_rate_uds,
+            "rate_per_sba": comparative_rate_sba,
+            "total_maintenance_uds": single_tier_maint_uds,
+            "total_maintenance_sba": single_tier_maint_sba,
+            "formatted_total_maintenance_uds": fmt_money(single_tier_maint_uds, currency=currency),
+            "formatted_total_maintenance_sba": fmt_money(single_tier_maint_sba, currency=currency),
+            "formula_uds": f"₹ {comparative_rate_uds:.4f} × {t_uds} = {fmt_money(single_tier_maint_uds, currency=currency)}",
+            "formula_sba": f"₹ {comparative_rate_sba:.4f} × {t_sba} = {fmt_money(single_tier_maint_sba, currency=currency)}",
+        })
 
     return {
         "run_id": run.name,
@@ -907,14 +1004,21 @@ def get_billing_run_blocks(run_id):
         "total_run_expense": flt(total_run_expense, 2),
         "formatted_total_run_expense": fmt_money(total_run_expense, currency=currency),
         "total_run_uds": flt(total_run_uds, 2),
+        "total_run_sba": flt(total_run_sba, 2),
         "formatted_complex_uds": f"{total_run_uds:,.2f} sqft",
+        "formatted_complex_sba": f"{total_run_sba:,.2f} sqft",
         "user_block": user_block,
         "user_uds": user_uds,
+        "user_sba": user_sba,
         "user_block_rate": user_block_rate,
+        "user_block_rate_sba": user_block_rate_sba,
         "total_society_expense": society_expense,
         "formatted_society_expense": fmt_money(society_expense, currency=currency),
         "comparative_rate_uds": comparative_rate_uds,
+        "comparative_rate_sba": comparative_rate_sba,
         "formatted_comparative_rate_uds": f"₹ {comparative_rate_uds:.4f} / sqft",
+        "formatted_comparative_rate_sba": f"₹ {comparative_rate_sba:.4f} / sqft",
+        "flat_type_comparison": flat_type_comparison,
         "blocks": blocks,
     }
 
