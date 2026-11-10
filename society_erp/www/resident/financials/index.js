@@ -30,21 +30,40 @@ function initFinancialsPortal() {
 }
 
 /**
- * Initializes and manages Bootstrap Nav Tabs switching and URL hash persistence
+ * Initializes and manages Sticky iOS-Style Segmented Control & tab switching
  */
 function initTabsHandler() {
-    $('#financialsTab a[data-toggle="tab"]').on("shown.bs.tab", function (e) {
-        const targetHash = $(e.target).attr("href");
+    // Segmented control button click handler
+    $(".segmented-btn").on("click", function (e) {
+        e.preventDefault();
+        const targetSelector = $(this).data("target");
+        if (!targetSelector) return;
+
+        // Update active state in segmented control
+        $(".segmented-btn").removeClass("active");
+        $(this).addClass("active");
+
+        // Switch active tab pane
+        $(".tab-pane").removeClass("show active");
+        $(targetSelector).addClass("show active");
+
+        // Sync with legacy bootstrap nav if present
+        $(`#financialsTab a[href="${targetSelector}"]`).tab("show");
+
+        // Update URL hash
         if (history.pushState) {
-            history.pushState(null, null, targetHash);
+            history.pushState(null, null, targetSelector);
         } else {
-            location.hash = targetHash;
+            location.hash = targetSelector;
         }
     });
 
+    // Hash-based initial tab activation
     const currentHash = window.location.hash;
-    if (currentHash && $(`#financialsTab a[href="${currentHash}"]`).length) {
-        $(`#financialsTab a[href="${currentHash}"]`).tab("show");
+    if (currentHash && $(`#financialsSegmentedControl .segmented-btn[data-target="${currentHash}"]`).length) {
+        $(`#financialsSegmentedControl .segmented-btn[data-target="${currentHash}"]`).trigger("click");
+    } else if (currentHash && $(`#financialsTab a[href="${currentHash}"]`).length) {
+        $(`#financialsSegmentedControl .segmented-btn[data-target="${currentHash}"]`).trigger("click");
     }
 }
 
@@ -201,6 +220,7 @@ function loadFinancialReport() {
 function renderFinancialTable(reportData) {
     const $thead = $("#report-header-row").empty();
     const $tbody = $("#report-body").empty();
+    const $cardsWrapper = $("#report-cards-wrapper").empty();
     const columns = reportData.columns || [];
     const result = reportData.result || [];
     const currency = reportData.currency || "INR";
@@ -214,27 +234,40 @@ function renderFinancialTable(reportData) {
 
     showEmptyState(false);
     $("#report-table-wrapper").removeClass("d-none");
+    $("#report-cards-wrapper").removeClass("d-none");
 
     const activeCols = columns.filter(col => {
         const fieldname = typeof col === "object" ? col.fieldname : col;
         return !fieldname.startsWith("__");
     });
 
+    // 1. Build Desktop Table Headers
     activeCols.forEach((col, idx) => {
         const label = typeof col === "object" ? (col.label || col.fieldname) : col;
         const alignClass = idx === 0 ? "text-left" : "text-right";
-        $thead.append(`<th class="${alignClass}" style="min-width: 160px;">${frappe.utils.escape_html(label)}</th>`);
+        $thead.append(`<th class="${alignClass}">${frappe.utils.escape_html(label)}</th>`);
     });
 
-    result.forEach((row) => {
-        const isGroupRow = row.is_group === 1 || row.is_group === true || row.indent === 0;
-        const isTotalRow = row.account_name && (
-            row.account_name.toLowerCase().includes("total") ||
-            row.account_name.toLowerCase().includes("profit") ||
-            row.account_name.toLowerCase().includes("loss")
-        );
-        const indentLevel = row.indent || 0;
+    // 2. Build Desktop Table Body & Mobile Accordion Cards
+    let currentGroupId = null;
+    let $currentGroupBody = null;
+    let groupCounter = 0;
 
+    result.forEach((row, rowIndex) => {
+        const accountRaw = row.account_name || row.account || "";
+        const cleanAccountName = accountRaw.replace(/^'+|'+$/g, "").trim();
+
+        if (!cleanAccountName) {
+            return; // Skip empty separator objects
+        }
+
+        const isGroupRow = row.is_group === 1 || row.is_group === true;
+        const isTotalRow = cleanAccountName.toLowerCase().includes("total") ||
+                           cleanAccountName.toLowerCase().includes("profit") ||
+                           cleanAccountName.toLowerCase().includes("loss");
+        const indentLevel = typeof row.indent === "number" ? row.indent : 0;
+
+        // Determine desktop row class
         let rowClass = "";
         if (isTotalRow) {
             rowClass = "row-total";
@@ -242,20 +275,19 @@ function renderFinancialTable(reportData) {
             rowClass = "row-group";
         }
 
+        // --- A. Render Desktop Table Row ---
         let trHtml = `<tr class="${rowClass}">`;
-
         activeCols.forEach((col, idx) => {
             const fieldname = typeof col === "object" ? col.fieldname : col;
             const val = row[fieldname];
 
             if (idx === 0) {
-                const titleText = row.account_name || row.account || val || "";
                 const paddingPx = Math.min(indentLevel * 22, 100);
                 const icon = isGroupRow ? "📁 " : "";
 
                 trHtml += `
                     <td class="text-left font-weight-${isGroupRow || isTotalRow ? 'bold' : 'normal'}" style="padding-left: ${paddingPx + 12}px;">
-                        ${icon}${frappe.utils.escape_html(titleText)}
+                        ${icon}${frappe.utils.escape_html(cleanAccountName)}
                     </td>
                 `;
             } else {
@@ -271,9 +303,109 @@ function renderFinancialTable(reportData) {
                 `;
             }
         });
-
         trHtml += "</tr>";
         $tbody.append(trHtml);
+
+        // --- B. Render Mobile Card-Based Ledgers (Vertical Stack & Accordion Groups) ---
+        // Get the primary amount for mobile card (use total or first value column)
+        const primaryValField = activeCols.length > 1 ? (typeof activeCols[activeCols.length - 1] === "object" ? activeCols[activeCols.length - 1].fieldname : activeCols[activeCols.length - 1]) : "total";
+        const mobileVal = row.total !== undefined ? row.total : row[primaryValField];
+        const formattedAmount = formatFinancialAmount(mobileVal, currency);
+        const isNegativeVal = typeof mobileVal === "number" && mobileVal < 0;
+        const textClass = isNegativeVal ? "text-danger" : "text-dark";
+
+        if (isTotalRow) {
+            // Standalone Total / Net Profit / Loss Card
+            const isProfit = cleanAccountName.toLowerCase().includes("profit");
+            const isLoss = cleanAccountName.toLowerCase().includes("loss");
+            let cardClass = "ledger-total-card";
+            if (isProfit) cardClass = "ledger-net-profit-card";
+            else if (isLoss) cardClass = "ledger-net-loss-card";
+
+            $cardsWrapper.append(`
+                <div class="${cardClass}">
+                    <div class="d-flex align-items-center">
+                        <span class="mr-2">${isProfit ? '📈' : isLoss ? '📉' : '📊'}</span>
+                        <span class="text-uppercase" style="font-size: 0.85rem; letter-spacing: 0.3px;">${frappe.utils.escape_html(cleanAccountName)}</span>
+                    </div>
+                    <div class="h6 mb-0 font-weight-bold ${textClass}">
+                        ${formattedAmount}
+                    </div>
+                </div>
+            `);
+            // Reset current group so subsequent items start fresh
+            currentGroupId = null;
+            $currentGroupBody = null;
+        } else if (isGroupRow && indentLevel === 0) {
+            // Top-Level Parent Account Group (Accordion Card Header)
+            groupCounter++;
+            currentGroupId = `ledger-group-collapse-${groupCounter}`;
+
+            const $groupItem = $(`
+                <div class="ledger-group-item">
+                    <div class="ledger-group-header" data-toggle="collapse" data-target="#${currentGroupId}" aria-expanded="true" aria-controls="${currentGroupId}">
+                        <div class="d-flex align-items-center">
+                            <span class="group-toggle-icon">▼</span>
+                            <span class="font-weight-bold text-dark" style="font-size: 0.9rem;">
+                                📁 ${frappe.utils.escape_html(cleanAccountName)}
+                            </span>
+                        </div>
+                        <div class="font-weight-bold ${textClass}" style="font-size: 0.9rem;">
+                            ${formattedAmount}
+                        </div>
+                    </div>
+                    <div id="${currentGroupId}" class="collapse show ledger-group-body">
+                    </div>
+                </div>
+            `);
+
+            $cardsWrapper.append($groupItem);
+            $currentGroupBody = $groupItem.find(".ledger-group-body");
+        } else if (isGroupRow && indentLevel > 0) {
+            // Intermediate Sub-group Title
+            const subGroupHtml = `
+                <div class="ledger-subgroup-title d-flex justify-content-between align-items-center">
+                    <span>📁 ${frappe.utils.escape_html(cleanAccountName)}</span>
+                    <span class="${textClass}">${formattedAmount}</span>
+                </div>
+            `;
+            if ($currentGroupBody) {
+                $currentGroupBody.append(subGroupHtml);
+            } else {
+                $cardsWrapper.append(`<div class="p-1 mb-1">${subGroupHtml}</div>`);
+            }
+        } else {
+            // Child Ledger Item Card
+            const indentPadding = Math.max(0, (indentLevel - 1)) * 14;
+            const childCardHtml = `
+                <div class="ledger-child-card" style="padding-left: ${indentPadding + 6}px;">
+                    <div class="flex-grow-1 pr-2">
+                        <div class="text-dark ${indentLevel === 1 ? 'font-weight-600' : ''}" style="font-size: 0.85rem; line-height: 1.3;">
+                            ${indentLevel > 1 ? '<span class="text-muted mr-1">&bull;</span>' : ''}${frappe.utils.escape_html(cleanAccountName)}
+                        </div>
+                        ${row.acc_number ? `<small class="text-muted">#${frappe.utils.escape_html(row.acc_number)}</small>` : ''}
+                    </div>
+                    <div class="text-right flex-shrink-0 font-weight-bold ${textClass}" style="font-size: 0.88rem;">
+                        ${formattedAmount}
+                    </div>
+                </div>
+            `;
+
+            if ($currentGroupBody) {
+                $currentGroupBody.append(childCardHtml);
+            } else {
+                $cardsWrapper.append(`
+                    <div class="card p-2 mb-2 bg-white border shadow-none">
+                        ${childCardHtml}
+                    </div>
+                `);
+            }
+        }
+    });
+
+    // Bind accordion icon rotation listener
+    $cardsWrapper.find('.ledger-group-header').off('click.toggleIcon').on('click.toggleIcon', function() {
+        $(this).toggleClass('collapsed');
     });
 }
 
@@ -307,12 +439,14 @@ function setLoadingState(isLoading) {
     const $spinner = $("#report-spinner");
     const $skeleton = $("#report-skeleton");
     const $tableWrapper = $("#report-table-wrapper");
+    const $cardsWrapper = $("#report-cards-wrapper");
     const $emptyState = $("#report-empty-state");
 
     if (isLoading) {
         $spinner.removeClass("d-none");
         $skeleton.removeClass("d-none");
         $tableWrapper.addClass("d-none");
+        $cardsWrapper.addClass("d-none");
         $emptyState.addClass("d-none");
     } else {
         $spinner.addClass("d-none");
@@ -323,6 +457,7 @@ function setLoadingState(isLoading) {
 function showEmptyState(show) {
     if (show) {
         $("#report-table-wrapper").addClass("d-none");
+        $("#report-cards-wrapper").addClass("d-none");
         $("#report-empty-state").removeClass("d-none");
     } else {
         $("#report-empty-state").addClass("d-none");
@@ -331,6 +466,7 @@ function showEmptyState(show) {
 
 function showErrorState(err) {
     $("#report-table-wrapper").addClass("d-none");
+    $("#report-cards-wrapper").addClass("d-none");
     $("#report-empty-state")
         .removeClass("d-none")
         .html(`
@@ -410,7 +546,9 @@ function openPurchaseInvoiceModal(invoiceName) {
 function renderPurchaseInvoiceDetails(data) {
     const $content = $("#modal-pinv-content");
     const $itemsTbody = $("#pinv-items-tbody").empty();
+    const $itemsCards = $("#pinv-items-cards").empty();
     const $taxesTbody = $("#pinv-taxes-tbody").empty();
+    const $taxesCards = $("#pinv-taxes-cards").empty();
 
     $("#pinv-supplier-name").text(data.supplier_name);
     $("#pinv-supplier-code").text(data.supplier !== data.supplier_name ? data.supplier : "");
@@ -438,12 +576,16 @@ function renderPurchaseInvoiceDetails(data) {
                 <td colspan="6" class="text-center py-3 text-muted">No line items recorded for this invoice.</td>
             </tr>
         `);
+        $itemsCards.append(`
+            <div class="text-center py-3 text-muted small">No line items recorded for this invoice.</div>
+        `);
     } else {
         items.forEach((item, idx) => {
             const desc = item.description && item.description !== item.item_name 
                 ? `<div class="small text-muted">${frappe.utils.escape_html(item.description)}</div>` 
                 : "";
 
+            // Desktop Table Row
             $itemsTbody.append(`
                 <tr>
                     <td class="text-muted small">${idx + 1}</td>
@@ -462,6 +604,23 @@ function renderPurchaseInvoiceDetails(data) {
                     <td class="text-right font-weight-bold text-dark">${item.formatted_amount}</td>
                 </tr>
             `);
+
+            // Mobile Card
+            $itemsCards.append(`
+                <div class="app-card mb-2 p-2 bg-white border rounded shadow-sm">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div class="pr-2 text-truncate">
+                            <div class="font-weight-bold text-dark text-truncate" style="font-size: 0.88rem;">${frappe.utils.escape_html(item.item_name)}</div>
+                            ${desc}
+                            <span class="badge badge-light border font-weight-normal text-muted" style="font-size: 0.72rem;">${frappe.utils.escape_html(item.cost_center)}</span>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <div class="font-weight-bold text-dark" style="font-size: 0.9rem;">${item.formatted_amount}</div>
+                            <small class="text-muted">${item.qty} ${item.uom || ''} &times; ${item.formatted_rate}</small>
+                        </div>
+                    </div>
+                </div>
+            `);
         });
     }
     $("#pinv-items-net-total").text(data.formatted_net_total || "₹ 0.00");
@@ -473,8 +632,12 @@ function renderPurchaseInvoiceDetails(data) {
                 <td colspan="5" class="text-center py-3 text-muted">No taxes or charges recorded for this invoice.</td>
             </tr>
         `);
+        $taxesCards.append(`
+            <div class="text-center py-3 text-muted small">No taxes or charges recorded for this invoice.</div>
+        `);
     } else {
         taxes.forEach((tax, idx) => {
+            // Desktop Table Row
             $taxesTbody.append(`
                 <tr>
                     <td class="text-muted small">${idx + 1}</td>
@@ -489,6 +652,21 @@ function renderPurchaseInvoiceDetails(data) {
                     </td>
                     <td class="text-right font-weight-bold text-dark">${tax.formatted_tax_amount}</td>
                 </tr>
+            `);
+
+            // Mobile Card
+            $taxesCards.append(`
+                <div class="app-card mb-2 p-2 bg-white border rounded shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="pr-2 text-truncate">
+                            <div class="font-weight-500 text-dark text-truncate" style="font-size: 0.85rem;">${frappe.utils.escape_html(tax.account_head)}</div>
+                            <small class="text-muted">${frappe.utils.escape_html(tax.cost_center)} ${tax.rate > 0 ? '(' + tax.rate + '%)' : ''}</small>
+                        </div>
+                        <div class="text-right flex-shrink-0 font-weight-bold text-dark" style="font-size: 0.9rem;">
+                            ${tax.formatted_tax_amount}
+                        </div>
+                    </div>
+                </div>
             `);
         });
     }
@@ -640,10 +818,11 @@ function loadMaintenanceRuns(fiscalYear) {
 }
 
 /**
- * Renders the Maintenance Billing Runs table rows dynamically
+ * Renders the Maintenance Billing Runs table rows and mobile card stack dynamically
  */
 function renderMaintenanceRunsTable(runs, currency) {
     const $tbody = $("#maintenance-runs-tbody").empty();
+    const $cards = $("#maintenance-runs-cards").empty();
 
     if (!runs || runs.length === 0) {
         $tbody.append(`
@@ -657,6 +836,14 @@ function renderMaintenanceRunsTable(runs, currency) {
                 </td>
             </tr>
         `);
+
+        $cards.append(`
+            <div class="text-center py-5 text-muted">
+                <div style="font-size: 2rem;">🛠️</div>
+                <div class="font-weight-bold mt-1">No Maintenance Runs Found</div>
+                <small>No submitted runs match this Financial Year.</small>
+            </div>
+        `);
         return;
     }
 
@@ -665,6 +852,7 @@ function renderMaintenanceRunsTable(runs, currency) {
             ? `<span class="badge badge-light border text-muted px-2 py-1">${frappe.utils.escape_html(run.fiscal_year)}</span>`
             : "-";
 
+        // Desktop Table Row
         $tbody.append(`
             <tr>
                 <td class="font-weight-bold text-primary">
@@ -706,6 +894,41 @@ function renderMaintenanceRunsTable(runs, currency) {
                     </div>
                 </td>
             </tr>
+        `);
+
+        // Mobile Banking-App Style Transaction Card
+        $cards.append(`
+            <div class="app-card mb-2 p-3 bg-white border rounded shadow-sm">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <div class="d-flex align-items-center flex-grow-1 pr-2 text-truncate">
+                        <span class="app-card-icon mr-2">📅</span>
+                        <div class="text-truncate">
+                            <div class="font-weight-bold text-dark text-truncate h6 mb-0">${frappe.utils.escape_html(run.billing_month)}</div>
+                            <div class="small text-muted text-truncate">${frappe.utils.escape_html(run.name)} &bull; ${run.blocks_count} Blocks</div>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <div class="font-weight-bold text-dark h6 mb-0">${run.formatted_total_amount}</div>
+                        <div class="small text-muted">${run.formatted_posting_date}</div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                    <button type="button" 
+                            class="btn btn-xs btn-outline-primary btn-drilldown-run flex-fill mr-1 py-1"
+                            data-run="${frappe.utils.escape_html(run.name)}"
+                            data-month="${frappe.utils.escape_html(run.billing_month)}">
+                        🏢 Blocks &amp; UDS &raquo;
+                    </button>
+                    <button type="button" 
+                            class="btn btn-xs btn-outline-secondary btn-view-run-invoices flex-fill ml-1 py-1"
+                            data-run="${frappe.utils.escape_html(run.name)}"
+                            data-month="${frappe.utils.escape_html(run.billing_month)}"
+                            data-start="${frappe.utils.escape_html(run.start_date || '')}"
+                            data-end="${frappe.utils.escape_html(run.end_date || '')}">
+                        🧾 Invoices
+                    </button>
+                </div>
+            </div>
         `);
     });
 }
@@ -817,11 +1040,12 @@ function populateModalAnalyticsHeader(data) {
 }
 
 /**
- * Render Level 1 Blocks Table
+ * Render Level 1 Blocks Table and Mobile Cards
  */
 function renderRunBlocksTable(data) {
     const $tableWrapper = $("#modal-blocks-table-wrapper");
     const $tbody = $("#run-blocks-tbody").empty();
+    const $cards = $("#run-blocks-cards").empty();
     const $residentBanner = $("#blocks-modal-resident-banner");
     const blocks = data.blocks || [];
 
@@ -854,6 +1078,11 @@ function renderRunBlocksTable(data) {
                 </td>
             </tr>
         `);
+        $cards.append(`
+            <div class="text-center py-4 text-muted">
+                No block calculations found.
+            </div>
+        `);
     } else {
         blocks.forEach(function (b) {
             const isUserBlock = b.is_user_block;
@@ -866,6 +1095,7 @@ function renderRunBlocksTable(data) {
                 ? `<div class="small text-muted font-weight-normal">Your Share: <span class="text-primary font-weight-bold">${b.formatted_resident_share}</span></div>`
                 : "";
 
+            // Desktop Table Row
             $tbody.append(`
                 <tr class="${rowClass}" data-block="${frappe.utils.escape_html(b.block)}" data-costcenter="${frappe.utils.escape_html(b.cost_center)}" data-run="${frappe.utils.escape_html(data.run_id)}" data-month="${frappe.utils.escape_html(data.billing_month)}" style="cursor: pointer;">
                     <td>${blockBadge}</td>
@@ -887,6 +1117,35 @@ function renderRunBlocksTable(data) {
                         </button>
                     </td>
                 </tr>
+            `);
+
+            // Mobile Card View: Left = Block Name & Cost Center, Right = Total Expense & Rate/UDS, Bottom = Full-width Button
+            $cards.append(`
+                <div class="app-card mb-2 p-3 ${isUserBlock ? 'border-warning bg-light' : 'bg-white'} shadow-sm">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="pr-2">
+                            <div class="font-weight-bold text-dark h6 mb-0">
+                                🏢 Block ${frappe.utils.escape_html(b.block)}
+                                ${isUserBlock ? '<span class="badge badge-warning ml-1">Your Flat</span>' : ''}
+                            </div>
+                            <div class="small text-muted">${frappe.utils.escape_html(b.cost_center)}</div>
+                            <div class="small text-muted">${b.total_block_uds.toLocaleString("en-IN", { minimumFractionDigits: 0 })} sqft UDS</div>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <div class="font-weight-bold text-dark h6 mb-0">${b.formatted_total_expense}</div>
+                            <div class="small text-info font-weight-bold">${b.formatted_rate_per_uds}</div>
+                        </div>
+                    </div>
+                    ${residentShareHtml ? `<div class="mb-2 py-1 px-2 bg-white rounded border small">${residentShareHtml}</div>` : ''}
+                    <button type="button" 
+                            class="btn btn-outline-primary btn-block btn-sm btn-block-gl-drilldown font-weight-bold shadow-none"
+                            data-block="${frappe.utils.escape_html(b.block)}"
+                            data-costcenter="${frappe.utils.escape_html(b.cost_center)}"
+                            data-run="${frappe.utils.escape_html(data.run_id)}"
+                            data-month="${frappe.utils.escape_html(data.billing_month)}">
+                        🔍 GL Breakdown &raquo;
+                    </button>
+                </div>
             `);
         });
     }
@@ -948,6 +1207,7 @@ function openRunInvoicesModal(runId, billingMonth, startDate, endDate) {
 function renderRunInvoicesTable(data) {
     const $tableWrapper = $("#modal-run-invoices-table-wrapper");
     const $tbody = $("#run-invoices-tbody").empty();
+    const $cards = $("#run-invoices-cards").empty();
     const $total = $("#run-invoices-total-amount");
     const invoices = data.invoices || [];
 
@@ -959,8 +1219,14 @@ function renderRunInvoicesTable(data) {
                 </td>
             </tr>
         `);
+        $cards.append(`
+            <div class="text-center py-4 text-muted">
+                No submitted purchase invoices found.
+            </div>
+        `);
     } else {
         invoices.forEach(function (inv) {
+            // Desktop Table Row
             $tbody.append(`
                 <tr>
                     <td class="text-muted small">${inv.posting_date}</td>
@@ -980,6 +1246,29 @@ function renderRunInvoicesTable(data) {
                         </button>
                     </td>
                 </tr>
+            `);
+
+            // Mobile Card View
+            $cards.append(`
+                <div class="app-card mb-2 p-3 bg-white btn-view-purchase-invoice" data-invoice="${frappe.utils.escape_html(inv.name)}" role="button">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div class="d-flex align-items-center flex-grow-1 pr-2 text-truncate">
+                            <span class="app-card-icon mr-2">🧾</span>
+                            <div class="text-truncate">
+                                <div class="font-weight-bold text-dark text-truncate">${frappe.utils.escape_html(inv.supplier_name)}</div>
+                                <div class="small text-muted text-truncate">${frappe.utils.escape_html(inv.name)}${inv.bill_no && inv.bill_no !== '-' ? ` &bull; Ref: ${frappe.utils.escape_html(inv.bill_no)}` : ''}</div>
+                            </div>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <div class="font-weight-bold text-dark h6 mb-0">${inv.formatted_grand_total}</div>
+                            <div class="small text-muted">${inv.posting_date}</div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top small text-primary font-weight-bold">
+                        <span>Invoice Items &amp; Taxes</span>
+                        <span>View Details &raquo;</span>
+                    </div>
+                </div>
             `);
         });
     }
@@ -1041,6 +1330,7 @@ function openCompleteSocietyGlModal(runId, billingMonth, postingDate) {
 function renderCompleteSocietyGlTable(data) {
     const $tableWrapper = $("#modal-society-gl-table-wrapper");
     const $tbody = $("#complete-society-gl-tbody").empty();
+    const $cards = $("#complete-society-gl-cards").empty();
     const $total = $("#complete-society-gl-total");
     const entries = data.entries || [];
 
@@ -1052,8 +1342,14 @@ function renderCompleteSocietyGlTable(data) {
                 </td>
             </tr>
         `);
+        $cards.append(`
+            <div class="text-center py-4 text-muted">
+                No operating expense ledger entries found for this month across the society.
+            </div>
+        `);
     } else {
         entries.forEach((row) => {
+            // Desktop Table Row
             $tbody.append(`
                 <tr>
                     <td>
@@ -1062,6 +1358,25 @@ function renderCompleteSocietyGlTable(data) {
                     </td>
                     <td class="text-right font-weight-bold text-dark">${row.formatted_net_expense}</td>
                 </tr>
+            `);
+
+            // Mobile Ledger Card
+            $cards.append(`
+                <div class="app-card mb-2 p-3 bg-white border rounded shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="pr-2 text-truncate">
+                            <div class="font-weight-bold text-dark text-truncate" style="font-size: 0.9rem;">
+                                ${frappe.utils.escape_html(row.account_name || row.account)}
+                            </div>
+                            <div class="small text-muted text-truncate font-monospace" style="font-size: 0.75rem;">
+                                ${frappe.utils.escape_html(row.account)}
+                            </div>
+                        </div>
+                        <div class="text-right flex-shrink-0 font-weight-bold text-dark h6 mb-0">
+                            ${row.formatted_net_expense}
+                        </div>
+                    </div>
+                </div>
             `);
         });
     }
@@ -1122,6 +1437,7 @@ function openBlockGlModal(blockName, costCenter, runId, billingMonth) {
 function renderBlockGlTable(data) {
     const $tableWrapper = $("#modal-gl-table-wrapper");
     const $tbody = $("#gl-breakdown-tbody").empty();
+    const $cards = $("#gl-breakdown-cards").empty();
     const $totalAmount = $("#modal-gl-total-amount");
     const entries = data.entries || [];
 
@@ -1133,11 +1449,17 @@ function renderBlockGlTable(data) {
                 </td>
             </tr>
         `);
+        $cards.append(`
+            <div class="text-center py-4 text-muted">
+                No General Ledger expense entries found for Block ${frappe.utils.escape_html(data.block)} (${data.from_date} to ${data.to_date}).
+            </div>
+        `);
     } else {
         entries.forEach(function (row) {
             const badgeClass = row.root_type === "Expense" ? "badge-danger" : "badge-success";
             const netAmountClass = row.net_amount < 0 ? "text-success" : "text-dark font-weight-bold";
 
+            // Desktop Table Row
             $tbody.append(`
                 <tr>
                     <td>
@@ -1153,6 +1475,30 @@ function renderBlockGlTable(data) {
                     <td class="text-right text-muted">${row.formatted_credit}</td>
                     <td class="text-right ${netAmountClass}">${row.formatted_net_amount}</td>
                 </tr>
+            `);
+
+            // Mobile Ledger Card
+            $cards.append(`
+                <div class="app-card mb-2 p-3 bg-white border rounded shadow-sm">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div class="pr-2 text-truncate">
+                            <div class="font-weight-bold text-dark text-truncate" style="font-size: 0.9rem;">
+                                ${frappe.utils.escape_html(row.account_name || row.account)}
+                            </div>
+                            <div class="small text-muted text-truncate font-monospace" style="font-size: 0.75rem;">
+                                ${frappe.utils.escape_html(row.account)}
+                            </div>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <div class="font-weight-bold ${netAmountClass} h6 mb-0">${row.formatted_net_amount}</div>
+                            <span class="badge ${badgeClass} px-2 py-0 small">${frappe.utils.escape_html(row.root_type || "Expense")}</span>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top small text-muted">
+                        <span>Debit: <strong>${row.formatted_debit}</strong></span>
+                        <span>Credit: <strong>${row.formatted_credit}</strong></span>
+                    </div>
+                </div>
             `);
         });
     }
@@ -1303,6 +1649,7 @@ function refreshGrossCommonExpensesModal(fallbackStartDate, fallbackEndDate) {
 function renderGrossCommonExpensesTable(data) {
     const $tableWrapper = $("#modal-gross-common-table-wrapper");
     const $tbody = $("#gross-common-tbody").empty();
+    const $cards = $("#gross-common-cards").empty();
     const $grandTotal = $("#gross-common-grand-total");
     const $empty = $("#modal-gross-common-empty");
     const entries = data.entries || [];
@@ -1319,6 +1666,7 @@ function renderGrossCommonExpensesTable(data) {
             ? `<span class="badge badge-success px-1 py-0 ml-1 small">Income</span>` 
             : "";
 
+        // Desktop Table Row
         $tbody.append(`
             <tr>
                 <td>
@@ -1332,6 +1680,26 @@ function renderGrossCommonExpensesTable(data) {
                     ${row.formatted_gross_debit}
                 </td>
             </tr>
+        `);
+
+        // Mobile Ledger Card: Left = Expense Account, Right = Total Booked Amount (bold)
+        $cards.append(`
+            <div class="app-card mb-2 p-3 bg-white border rounded shadow-sm">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="pr-2 text-truncate">
+                        <div class="font-weight-bold text-dark text-truncate" style="font-size: 0.9rem;">
+                            ${frappe.utils.escape_html(row.account_name || row.account)}
+                            ${typeBadge}
+                        </div>
+                        <div class="small text-muted text-truncate font-monospace" style="font-size: 0.75rem;">
+                            ${frappe.utils.escape_html(row.account)}
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0 font-weight-bold text-dark h6 mb-0">
+                        ${row.formatted_gross_debit}
+                    </div>
+                </div>
+            </div>
         `);
     });
 
