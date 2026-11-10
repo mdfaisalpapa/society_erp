@@ -1,7 +1,7 @@
 (() => {
     "use strict";
 
-    if (!location.pathname.startsWith("/resident/")) return;
+    if (!location.pathname.startsWith("/resident")) return;
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
 
     const api = (method, args = {}) =>

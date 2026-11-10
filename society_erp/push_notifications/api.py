@@ -33,7 +33,7 @@ def _subscription_name(endpoint):
 def get_public_config():
     """Return only the public VAPID key; never expose the private key."""
     _require_login()
-    public_key, _, _ = _require_push_config()
+    public_key, _, _unused = _require_push_config()
     return {"public_key": public_key}
 
 
@@ -119,7 +119,7 @@ def remove_subscription(endpoint):
 def send_test_notification():
     """Send a test notification only to the caller's own registered devices."""
     _require_login()
-    _, private_key, subject = _require_push_config()
+    _unused_pub, private_key, subject = _require_push_config()
 
     subscriptions = frappe.get_all(
         "Push Subscription",
@@ -191,3 +191,17 @@ def service_worker():
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+@frappe.whitelist()
+def validate_vapid_setup():
+    """Diagnostic check to validate VAPID configuration and active subscriptions."""
+    public_key, private_key, subject = _require_push_config()
+    subs_count = frappe.db.count("Push Subscription", {"enabled": 1})
+    return {
+        "status": "configured",
+        "public_key": public_key,
+        "private_key_set": bool(private_key),
+        "subject": subject,
+        "active_subscriptions": subs_count
+    }
