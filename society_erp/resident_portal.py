@@ -170,7 +170,12 @@ def download_invoice_pdf(invoice_name):
     frappe.flags.ignore_print_permissions = True
 
     try:
-        pdf_bytes = frappe.get_print("Sales Invoice", invoice_name, "Standard", as_pdf=True)
+        # Check if a custom or preferred print format is available; fallback to 'Sales Invoice Modern'
+        print_format = (
+            frappe.db.get_value("Property Setter", {"doc_type": "Sales Invoice", "property": "default_print_format"}, "value")
+            or "Sales Invoice Modern"
+        )
+        pdf_bytes = frappe.get_print("Sales Invoice", invoice_name, print_format, as_pdf=True)
     finally:
         frappe.flags.ignore_permissions = False
         frappe.flags.ignore_print_permissions = False

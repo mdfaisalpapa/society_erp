@@ -37,3 +37,20 @@ def ensure_provisional_electorate_unique_index():
             "uniq_prov_member_pub_flat",
         )
 
+
+def ensure_push_subscription_endpoint_index():
+    """Ensure endpoint has a unique prefix index to prevent duplicate subscriptions per device."""
+    if frappe.db.exists("DocType", "Push Subscription"):
+        indexes = frappe.db.sql(
+            "SHOW INDEX FROM `tabPush Subscription` WHERE Key_name = 'idx_push_subscription_endpoint'",
+            as_dict=True,
+        )
+        if not indexes:
+            try:
+                frappe.db.sql(
+                    "CREATE UNIQUE INDEX idx_push_subscription_endpoint ON `tabPush Subscription` (endpoint(255))"
+                )
+            except Exception as e:
+                frappe.log_error("Error creating endpoint index on Push Subscription", str(e))
+
+

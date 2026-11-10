@@ -112,6 +112,7 @@ doctype_js = {
 after_migrate = [
     "society_erp.migrations.ensure_voting_participation_unique_index",
     "society_erp.migrations.ensure_provisional_electorate_unique_index",
+    "society_erp.migrations.ensure_push_subscription_endpoint_index",
 ]
 
 consensus_voter_providers = [
