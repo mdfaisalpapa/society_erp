@@ -1,5 +1,18 @@
 frappe.ready(function () {
  const api='society_erp.api.resident_family', $card=$('#family-form-card');
+
+ // Initialize Segmented Control Tab Switcher
+ $('#familySegmentedControl .segmented-btn').on('click', function(e) {
+   e.preventDefault();
+   const target = $(this).data('target');
+   if(!target) return;
+   $('#familySegmentedControl .segmented-btn').removeClass('active');
+   $(this).addClass('active');
+   $('.tab-pane').removeClass('show active');
+   $(target).addClass('show active');
+   $(`#familyNavTabs a[href="${target}"]`).tab('show');
+ });
+
  function resetForm(){ $('#family-form')[0].reset(); $('#family-member-id').val(''); $('#family-form-title').text('Add a family member'); $('#family-form-submit').text('Save member'); $('#family-proof-current').empty(); }
  function uploadProof(memberId, done){
    const file=$('#family-id-proof-file')[0].files[0];

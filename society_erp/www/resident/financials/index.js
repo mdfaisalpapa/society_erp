@@ -233,8 +233,9 @@ function renderFinancialTable(reportData) {
     }
 
     showEmptyState(false);
-    $("#report-table-wrapper").removeClass("d-none");
-    $("#report-cards-wrapper").removeClass("d-none");
+    // Ensure mutually exclusive responsive visibility: desktop table vs mobile cards
+    $("#report-table-wrapper").removeClass("d-none").addClass("d-none d-md-block");
+    $("#report-cards-wrapper").removeClass("d-none").addClass("d-block d-md-none");
 
     const activeCols = columns.filter(col => {
         const fieldname = typeof col === "object" ? col.fieldname : col;
@@ -1153,6 +1154,8 @@ function renderRunBlocksTable(data) {
     $("#modal-blocks-total-uds").text(data.total_run_uds.toLocaleString("en-IN", { minimumFractionDigits: 2 }));
     $("#modal-blocks-total-expense").text(data.formatted_total_run_expense || data.formatted_total_billed_amount || "₹ 0.00");
     $tableWrapper.removeClass("d-none");
+    $tableWrapper.find(".table-responsive").removeClass("d-none").addClass("d-none d-md-block");
+    $cards.removeClass("d-none").addClass("d-block d-md-none");
 }
 
 /**
@@ -1275,6 +1278,8 @@ function renderRunInvoicesTable(data) {
 
     $total.text(data.formatted_total_invoiced || "₹ 0.00");
     $tableWrapper.removeClass("d-none");
+    $tableWrapper.find(".table-responsive").removeClass("d-none").addClass("d-none d-md-block");
+    $cards.removeClass("d-none").addClass("d-block d-md-none");
 }
 
 /**
@@ -1383,6 +1388,8 @@ function renderCompleteSocietyGlTable(data) {
 
     $total.text(data.formatted_total_society_expense || "₹ 0.00");
     $tableWrapper.removeClass("d-none");
+    $tableWrapper.find(".table-responsive").removeClass("d-none").addClass("d-none d-md-block");
+    $cards.removeClass("d-none").addClass("d-block d-md-none");
 }
 
 /**
@@ -1505,6 +1512,8 @@ function renderBlockGlTable(data) {
 
     $totalAmount.text(data.formatted_total_expense || "₹ 0.00");
     $tableWrapper.removeClass("d-none");
+    $tableWrapper.find(".table-responsive").removeClass("d-none").addClass("d-none d-md-block");
+    $cards.removeClass("d-none").addClass("d-block d-md-none");
 }
 
 // Global active state tracking for Gross Common Expenses modal
@@ -1705,5 +1714,7 @@ function renderGrossCommonExpensesTable(data) {
 
     $grandTotal.text(data.formatted_grand_total_gross || "₹ 0.00");
     $tableWrapper.removeClass("d-none");
+    $tableWrapper.find(".table-responsive").removeClass("d-none").addClass("d-none d-md-block");
+    $cards.removeClass("d-none").addClass("d-block d-md-none");
 }
 

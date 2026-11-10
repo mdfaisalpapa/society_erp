@@ -295,15 +295,18 @@ frappe.ready(function() {
         let slot_id = $(this).data('slot');
         $('#history_slot_title').text(slot_id);
         let $tbody = $('#history-table-body').empty().append('<tr><td colspan="5" class="text-center">Loading...</td></tr>');
+        let $cards = $('#history-cards-body').empty().append('<div class="text-center py-3 text-muted">Loading...</div>');
 
         frappe.call({
             method: 'society_erp.vehicle_portal.get_parking_history',
             args: { slot_id: slot_id },
             callback: function(r) {
                 $tbody.empty();
+                $cards.empty();
                 if (r.message && r.message.length > 0) {
                     r.message.forEach(h => {
                         let statusIcon = h.status === 'Active' ? '🟢' : '⚪';
+                        // Desktop Table Row
                         $tbody.append(`
                             <tr>
                                 <td>${statusIcon} ${h.status}</td>
@@ -313,9 +316,26 @@ frappe.ready(function() {
                                 <td>${h.end_date || 'Present'}</td>
                             </tr>
                         `);
+                        // Mobile Card
+                        $cards.append(`
+                            <div class="card mb-2 p-3 bg-white border rounded shadow-sm">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <div>
+                                        <div class="font-weight-bold text-dark">${statusIcon} ${h.allocation_type}</div>
+                                        <small class="text-muted">Occupied by: Flat <strong>${h.occupied_by}</strong></small>
+                                    </div>
+                                    <span class="badge badge-${h.status === 'Active' ? 'success' : 'secondary'} px-2 py-1">${h.status}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center small text-muted pt-2 border-top mt-1">
+                                    <span>From: <strong>${h.start_date || 'Unknown'}</strong></span>
+                                    <span>To: <strong>${h.end_date || 'Present'}</strong></span>
+                                </div>
+                            </div>
+                        `);
                     });
                 } else {
                     $tbody.append('<tr><td colspan="5" class="text-center text-muted">No history found.</td></tr>');
+                    $cards.append('<div class="text-center py-4 text-muted">No history found.</div>');
                 }
             }
         });

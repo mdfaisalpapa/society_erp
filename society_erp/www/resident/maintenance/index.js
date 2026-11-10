@@ -60,31 +60,71 @@ frappe.ready(function () {
     $("#tickets-next").prop("disabled", currentStart + pageLength >= currentTotal);
 
     const tbody = $("#ticket-list").empty();
+    const cards = $("#ticket-cards-list").empty();
+
     if (!tickets.length) {
       tbody.append($("<tr>").append($("<td colspan='5'>").addClass("text-center text-muted py-4").text("No tickets found for this view.")));
+      cards.append(
+        $("<div>").addClass("text-center py-4 text-muted")
+          .append($("<div>").css("font-size", "2rem").text("🛠️"))
+          .append($("<div>").addClass("font-weight-bold mt-1").text("No maintenance tickets found"))
+          .append($("<small>").text("Click \"+ Raise New Ticket\" to report an issue."))
+      );
       return;
     }
 
     tickets.forEach(t => {
+      // 1. Desktop Table Row
       const idCell = $("<td>").append($("<strong>").text(t.name))
         .append($("<br>")).append($("<small>").addClass("text-muted").text((t.creation || "").slice(0, 10)));
       const desc = $("<td>").text(t.description || "");
       if (t.photo) desc.append($("<br>")).append($("<a>").attr({ href: t.photo, target: "_blank", rel: "noopener" }).text("View photo"));
-      const status = $("<td>").append($("<span>").addClass("badge badge-" +
-        (["Open", "Pending"].includes(t.status) ? "warning" :
-         ["Assigned", "In Progress"].includes(t.status) ? "info" : "success")).text(t.status || "Unknown"));
+      const statusBadge = (["Open", "Pending"].includes(t.status) ? "warning" :
+                           ["Assigned", "In Progress"].includes(t.status) ? "info" : "success");
+      const status = $("<td>").append($("<span>").addClass("badge badge-" + statusBadge).text(t.status || "Unknown"));
       const actions = $("<td>").append(makeButton("Details", "btn-outline-primary mr-1", { "data-ticket-view": t.name }));
       tbody.append($("<tr>").append(idCell, $("<td>").text(t.category || ""), desc, status, actions));
+
+      // 2. Mobile Card Stack Item
+      const card = $("<div>").addClass("card mb-2 p-3 bg-white border rounded shadow-sm");
+      const cardHeader = $("<div>").addClass("d-flex justify-content-between align-items-start mb-2");
+      const cardLeft = $("<div>").addClass("d-flex align-items-center flex-grow-1 pr-2 text-truncate")
+        .append($("<span>").addClass("app-card-icon mr-2").text("🛠️"))
+        .append(
+          $("<div>").addClass("text-truncate")
+            .append($("<div>").addClass("font-weight-bold text-dark text-truncate h6 mb-0").text(t.name))
+            .append($("<small>").addClass("text-muted").text(((t.creation || "").slice(0, 10)) + " • " + (t.category || "")))
+        );
+      const cardRight = $("<div>").addClass("text-right flex-shrink-0")
+        .append($("<span>").addClass("badge badge-" + statusBadge + " px-2 py-1").text(t.status || "Unknown"));
+      cardHeader.append(cardLeft, cardRight);
+
+      const cardBody = $("<p>").addClass("small text-muted mb-2 text-truncate").css({ "max-height": "40px", "overflow": "hidden" }).text(t.description || "");
+      card.append(cardHeader, cardBody);
+
+      if (t.photo) {
+        card.append(
+          $("<div>").addClass("small mb-2")
+            .append($("<a>").attr({ href: t.photo, target: "_blank", rel: "noopener" }).addClass("text-info font-weight-bold").text("📷 View Attachment"))
+        );
+      }
+
+      const cardFooter = $("<div>").addClass("pt-2 border-top")
+        .append(makeButton("🔍 View Ticket Details", "btn-outline-primary btn-block py-1", { "data-ticket-view": t.name }));
+      card.append(cardFooter);
+      cards.append(card);
     });
   }
 
   async function loadTickets() {
     $("#ticket-list").empty().append($("<tr>").append($("<td colspan='5'>").addClass("text-center").text("Loading tickets…")));
+    $("#ticket-cards-list").empty().append($("<div>").addClass("text-center py-4 text-muted").text("Loading tickets…"));
     try {
       const result = await call("get_tickets", { status: currentStatus, start: currentStart, page_length: pageLength });
       renderTickets(result);
     } catch (e) {
       $("#ticket-list").empty().append($("<tr>").append($("<td colspan='5'>").addClass("text-danger").text("Unable to load tickets. Please refresh or contact the Estate Office.")));
+      $("#ticket-cards-list").empty().append($("<div>").addClass("alert alert-danger m-2 text-center").text("Unable to load maintenance tickets."));
       alertMessage("Unable to load maintenance tickets.", "danger");
     }
   }

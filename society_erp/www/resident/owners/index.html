@@ -48,7 +48,8 @@
         <h4 class="mb-3 text-secondary">Ownership History</h4>
         <div class="card shadow-sm border-0">
             <div class="card-body p-0">
-                <div class="table-responsive">
+                <!-- Desktop Table View -->
+                <div class="table-responsive d-none d-md-block">
                     <table class="table table-hover mb-0">
                         <thead class="bg-light">
                             <tr>
@@ -74,8 +75,61 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Mobile Card Stack -->
+                <div class="d-block d-md-none p-2">
+                    {% for past in previous_owners %}
+                    <div class="card mb-2 p-3 bg-white border rounded shadow-sm">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div class="d-flex align-items-center flex-grow-1 pr-2 text-truncate">
+                                <span class="app-card-icon mr-2">🏛️</span>
+                                <div class="text-truncate">
+                                    <div class="font-weight-bold text-dark text-truncate h6 mb-0">{{ past.owner_name }}</div>
+                                    <small class="text-muted">ID: {{ past.name }}</small>
+                                </div>
+                            </div>
+                            <div class="text-right flex-shrink-0">
+                                <span class="badge badge-secondary px-2 py-1">Past Owner</span>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center small text-muted pt-2 border-top mt-1">
+                            <span>From: <strong>{{ past.start_date or 'Unknown' }}</strong></span>
+                            <span>To: <strong>{{ past.end_date or 'Present' }}</strong></span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <div style="font-size: 2rem;">📜</div>
+                        <div class="font-weight-bold mt-1">No previous ownership history</div>
+                        <small>No prior owners recorded for Flat {{ flat_number }}.</small>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     {% endif %}
 </div>
+
+<style>
+    .app-card-icon {
+        font-size: 1.4rem;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        border-radius: 10px;
+        flex-shrink: 0;
+    }
+    @media (max-width: 767px) {
+        .container {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+        }
+        h2 {
+            font-size: 1.25rem !important;
+        }
+    }
+</style>
 {% endblock %}

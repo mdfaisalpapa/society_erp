@@ -17,16 +17,23 @@
     </div>
 
     <div id="maintenance-alert" aria-live="polite"></div>
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-      <div class="btn-group mb-2" role="group" aria-label="Ticket status">
-        <button type="button" class="btn btn-outline-primary active ticket-tab" data-status="Active">Active</button>
-        <button type="button" class="btn btn-outline-primary ticket-tab" data-status="Resolved">Resolved / Closed</button>
-        <button type="button" class="btn btn-outline-primary ticket-tab" data-status="All">All Tickets</button>
+    <!-- Sticky Segmented Control Status Switcher -->
+    <div class="sticky-segmented-control-wrapper py-2 mb-3">
+      <div class="segmented-control font-weight-bold" id="ticketSegmentedControl" role="group" aria-label="Ticket status">
+        <button type="button" class="segmented-btn active ticket-tab" data-status="Active">Active</button>
+        <button type="button" class="segmented-btn ticket-tab" data-status="Resolved">Resolved / Closed</button>
+        <button type="button" class="segmented-btn ticket-tab" data-status="All">All Tickets</button>
       </div>
-      <div class="text-muted small" id="ticket-count"></div>
     </div>
 
-    <div class="table-responsive">
+    <!-- Compact Action Bar with Count -->
+    <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+      <span class="small font-weight-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">Tickets Overview</span>
+      <span class="badge badge-light border text-muted px-2 py-1" id="ticket-count">0 ticket(s)</span>
+    </div>
+
+    <!-- Desktop Table View -->
+    <div class="table-responsive d-none d-md-block">
       <table class="table table-bordered bg-white shadow-sm">
         <thead class="thead-light">
           <tr><th>Ticket ID / Date</th><th>Category</th><th>Description</th><th>Status</th><th>Actions</th></tr>
@@ -45,6 +52,47 @@
           {% endfor %}
         </tbody>
       </table>
+    </div>
+
+    <!-- Mobile Card Stack View -->
+    <div class="d-block d-md-none mb-3" id="ticket-cards-list">
+      {% for t in tickets %}
+      <div class="card mb-2 p-3 bg-white border rounded shadow-sm">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex align-items-center flex-grow-1 pr-2 text-truncate">
+            <span class="app-card-icon mr-2">🛠️</span>
+            <div class="text-truncate">
+              <div class="font-weight-bold text-dark text-truncate h6 mb-0">{{ t.name }}</div>
+              <small class="text-muted">{{ (t.creation or '')[:10] }} &bull; {{ t.category }}</small>
+            </div>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <span class="badge badge-{{ 'warning' if t.status in ['Open', 'Pending'] else 'info' if t.status in ['Assigned', 'In Progress'] else 'success' }} px-2 py-1">
+              {{ t.status }}
+            </span>
+          </div>
+        </div>
+        <p class="small text-muted mb-2 text-truncate" style="max-height: 40px; overflow: hidden;">
+          {{ t.description }}
+        </p>
+        {% if t.photo %}
+        <div class="small mb-2">
+          <a href="{{ t.photo }}" target="_blank" rel="noopener" class="text-info font-weight-bold">📷 View Attachment</a>
+        </div>
+        {% endif %}
+        <div class="pt-2 border-top">
+          <button class="btn btn-outline-primary btn-block btn-sm py-1" data-ticket-view="{{ t.name }}">
+            🔍 View Ticket Details
+          </button>
+        </div>
+      </div>
+      {% else %}
+      <div class="text-center py-4 text-muted">
+        <div style="font-size: 2rem;">🛠️</div>
+        <div class="font-weight-bold mt-1">No maintenance tickets found</div>
+        <small>Click "+ Raise New Ticket" to report any issue.</small>
+      </div>
+      {% endfor %}
     </div>
     <div class="d-flex justify-content-between align-items-center mb-4">
       <button class="btn btn-outline-secondary" id="tickets-prev" disabled>← Previous</button>
@@ -98,4 +146,117 @@
     </div>
   {% endif %}
 </div>
+
+<style>
+    /* Sticky Segmented Control */
+    .sticky-segmented-control-wrapper {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: #ffffff;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    .segmented-control {
+        display: flex;
+        background: #f1f5f9;
+        padding: 4px;
+        border-radius: 9999px;
+        gap: 4px;
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+    .segmented-btn {
+        flex: 1 1 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.45rem 0.75rem;
+        border: none;
+        background: transparent;
+        color: #64748b;
+        font-size: 0.88rem;
+        font-weight: 600;
+        border-radius: 9999px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        outline: none !important;
+        white-space: nowrap;
+    }
+    .segmented-btn:hover {
+        color: #1e293b;
+    }
+    .segmented-btn.active {
+        background: #ffffff;
+        color: #1b68b3;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    }
+
+    /* App Card Icon */
+    .app-card-icon {
+        font-size: 1.4rem;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        border-radius: 10px;
+        flex-shrink: 0;
+    }
+
+    /* Full-Screen Modal Bottom Sheets on Mobile */
+    @media (max-width: 767px) {
+        .maintenance-portal.container {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+        }
+        h2 {
+            font-size: 1.25rem !important;
+        }
+        .modal-dialog {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .modal-content {
+            height: 100vh !important;
+            max-height: 100vh !important;
+            border-radius: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            border: none !important;
+        }
+        .modal-header {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 1055 !important;
+            background: #ffffff !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 0.75rem 1rem !important;
+            flex-shrink: 0 !important;
+        }
+        .modal-body {
+            flex-grow: 1 !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            padding: 0.85rem !important;
+        }
+        .modal-footer {
+            position: sticky !important;
+            bottom: 0 !important;
+            z-index: 1055 !important;
+            background: #f8fafc !important;
+            border-top: 1px solid #e2e8f0 !important;
+            padding: 0.65rem 1rem !important;
+            flex-shrink: 0 !important;
+        }
+    }
+</style>
 {% endblock %}
