@@ -1281,6 +1281,10 @@ def get_financial_report(
         "from_date": from_date,
         "to_date": to_date,
         "periodicity": periodicity or "Yearly",
+        # Balance Sheet is a cumulative point-in-time statement that must include
+        # opening balances (accumulated values from inception up to the selected date).
+        # Profit and Loss is a period-based nominal statement (activity during the period).
+        "accumulated_values": 1 if report_name == "Balance Sheet" else 0,
     }
 
     if from_fy:
