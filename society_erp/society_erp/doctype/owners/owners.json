@@ -56,8 +56,7 @@
   {
    "fieldname": "email",
    "fieldtype": "Data",
-   "label": "Email",
-   "reqd": 1
+   "label": "Email"
   },
   {
    "fieldname": "telegram_chat_id",
@@ -135,7 +134,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-01 05:53:41.307351",
+ "modified": "2026-11-11 14:10:39.528077",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Owners",
