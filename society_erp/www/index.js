@@ -11,6 +11,7 @@ frappe.ready(function () {
 
     let statusData = {
         fully_updated: [],
+        duplicate_contact: [],
         missing_email: [],
         missing_mobile: [],
         missing_both: []
@@ -27,6 +28,7 @@ frappe.ready(function () {
 
         const categories = [
             { key: "fully_updated", container: "#table-container-fully-updated", badge: "#count-fully-updated" },
+            { key: "duplicate_contact", container: "#table-container-duplicate-contact", badge: "#count-duplicate-contact", isDuplicate: true },
             { key: "missing_email", container: "#table-container-missing-email", badge: "#count-missing-email" },
             { key: "missing_mobile", container: "#table-container-missing-mobile", badge: "#count-missing-mobile" },
             { key: "missing_both", container: "#table-container-missing-both", badge: "#count-missing-both" }
@@ -38,7 +40,8 @@ frappe.ready(function () {
                 ? list.filter(item => {
                     const flat = (item.flat_no || "").toLowerCase();
                     const name = (item.owner_name || "").toLowerCase();
-                    return flat.includes(query) || name.includes(query);
+                    const shared = (item.shared_flats ? item.shared_flats.join(" ") : "").toLowerCase();
+                    return flat.includes(query) || name.includes(query) || shared.includes(query);
                 })
                 : list;
 
@@ -63,9 +66,10 @@ frappe.ready(function () {
                         <thead>
                             <tr>
                                 <th style="width: 15%;">Flat No</th>
-                                <th style="width: 35%;">Owner Name</th>
+                                <th style="width: ${cat.isDuplicate ? '25%' : '35%'};">Owner Name</th>
                                 <th style="width: 25%;">Registered Email</th>
-                                <th style="width: 25%;">Registered Mobile</th>
+                                <th style="width: 20%;">Registered Mobile</th>
+                                ${cat.isDuplicate ? '<th style="width: 15%;">Shared With Flats</th>' : ''}
                             </tr>
                         </thead>
                         <tbody>
@@ -80,12 +84,20 @@ frappe.ready(function () {
                     ? `<code>${escapeHtml(item.masked_mobile)}</code>`
                     : `<span class="missing-tag">⚠️ Missing Mobile</span>`;
 
+                let sharedHtml = "";
+                if (cat.isDuplicate) {
+                    const flats = (item.shared_flats || []).map(f => `<span class="badge badge-light border mr-1 font-weight-normal">${escapeHtml(f)}</span>`).join("");
+                    const dupBadge = item.duplicate_type ? `<div class="text-info font-weight-bold" style="font-size: 0.72rem;">${escapeHtml(item.duplicate_type)}</div>` : "";
+                    sharedHtml = `<td>${dupBadge}<div>${flats}</div></td>`;
+                }
+
                 tableHtml += `
                     <tr>
                         <td><span class="flat-badge">${escapeHtml(item.flat_no)}</span></td>
                         <td class="font-weight-500">${escapeHtml(item.owner_name)}</td>
                         <td>${emailHtml}</td>
                         <td>${mobileHtml}</td>
+                        ${sharedHtml}
                     </tr>
                 `;
             });
@@ -107,6 +119,17 @@ frappe.ready(function () {
                     ? `<span class="text-dark small"><code>${escapeHtml(item.masked_mobile)}</code></span>`
                     : `<span class="missing-tag">⚠️ Missing</span>`;
 
+                let sharedMobileHtml = "";
+                if (cat.isDuplicate && item.shared_flats && item.shared_flats.length) {
+                    const flats = item.shared_flats.map(f => `<span class="badge badge-light border mr-1 font-weight-normal">${escapeHtml(f)}</span>`).join("");
+                    sharedMobileHtml = `
+                        <div class="mt-2 pt-1 border-top" style="font-size: 0.78rem;">
+                            <span class="text-info font-weight-bold d-block" style="font-size: 0.72rem;">${escapeHtml(item.duplicate_type || 'SHARED CONTACT')}</span>
+                            <span class="text-muted">Same contact also used for:</span> ${flats}
+                        </div>
+                    `;
+                }
+
                 cardsHtml += `
                     <div class="owner-card-item bg-white p-2 mb-2 rounded border">
                         <div class="d-flex justify-content-between align-items-center mb-1">
@@ -123,6 +146,7 @@ frappe.ready(function () {
                                 ${mobileHtml}
                             </div>
                         </div>
+                        ${sharedMobileHtml}
                     </div>
                 `;
             });

@@ -58,6 +58,11 @@
             </a>
           </li>
           <li class="nav-item">
+            <a class="nav-link font-weight-bold" id="tab-duplicate-contact" data-toggle="pill" href="#pane-duplicate-contact" role="tab" aria-controls="pane-duplicate-contact" aria-selected="false">
+              👥 Shared Mobile / Email <span class="badge badge-info ml-1" id="count-duplicate-contact">0</span>
+            </a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link font-weight-bold" id="tab-missing-email" data-toggle="pill" href="#pane-missing-email" role="tab" aria-controls="pane-missing-email" aria-selected="false">
               📧 Missing Email <span class="badge badge-warning ml-1 text-dark" id="count-missing-email">0</span>
             </a>
@@ -89,17 +94,22 @@
             <div id="table-container-fully-updated" class="status-list-container"></div>
           </div>
 
-          <!-- 2. Missing Email Pane -->
+          <!-- 2. Shared Contact / Multiple Flats Pane -->
+          <div class="tab-pane fade" id="pane-duplicate-contact" role="tabpanel" aria-labelledby="tab-duplicate-contact">
+            <div id="table-container-duplicate-contact" class="status-list-container"></div>
+          </div>
+
+          <!-- 3. Missing Email Pane -->
           <div class="tab-pane fade" id="pane-missing-email" role="tabpanel" aria-labelledby="tab-missing-email">
             <div id="table-container-missing-email" class="status-list-container"></div>
           </div>
 
-          <!-- 3. Missing Mobile Pane -->
+          <!-- 4. Missing Mobile Pane -->
           <div class="tab-pane fade" id="pane-missing-mobile" role="tabpanel" aria-labelledby="tab-missing-mobile">
             <div id="table-container-missing-mobile" class="status-list-container"></div>
           </div>
 
-          <!-- 4. Missing Both Pane -->
+          <!-- 5. Missing Both Pane -->
           <div class="tab-pane fade" id="pane-missing-both" role="tabpanel" aria-labelledby="tab-missing-both">
             <div id="table-container-missing-both" class="status-list-container"></div>
           </div>
