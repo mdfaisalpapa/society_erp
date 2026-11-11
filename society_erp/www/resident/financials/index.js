@@ -378,6 +378,8 @@ function renderFinancialTable(reportData) {
         } else {
             // Child Ledger Item Card
             const indentPadding = Math.max(0, (indentLevel - 1)) * 14;
+            const hasOpening = row.opening_balance !== undefined && row.opening_balance !== null;
+            const openingHtml = hasOpening ? `<div class="text-muted" style="font-size: 0.72rem;">Open: ${formatFinancialAmount(row.opening_balance, currency)}</div>` : '';
             const childCardHtml = `
                 <div class="ledger-child-card" style="padding-left: ${indentPadding + 6}px;">
                     <div class="flex-grow-1 pr-2">
@@ -387,7 +389,8 @@ function renderFinancialTable(reportData) {
                         ${row.acc_number ? `<small class="text-muted">#${frappe.utils.escape_html(row.acc_number)}</small>` : ''}
                     </div>
                     <div class="text-right flex-shrink-0 font-weight-bold ${textClass}" style="font-size: 0.88rem;">
-                        ${formattedAmount}
+                        <div>${formattedAmount}</div>
+                        ${openingHtml}
                     </div>
                 </div>
             `;

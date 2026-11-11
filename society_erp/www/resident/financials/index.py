@@ -1317,10 +1317,38 @@ def get_financial_report(
         or "INR"
     )
 
+    columns = list(report_data.get("columns", []))
+    result = list(report_data.get("result", []))
+
+    # For Balance Sheet: ensure an explicit "Opening Balance" column is exposed
+    # alongside the period balance and closing balance so users can see opening balances clearly.
+    if report_name == "Balance Sheet" and columns:
+        has_opening_col = any(
+            (c.get("fieldname") if isinstance(c, dict) else c) == "opening_balance"
+            for c in columns
+        )
+        if not has_opening_col:
+            # Insert opening_balance column right after the account identification columns
+            insert_idx = 1
+            for idx, c in enumerate(columns):
+                fname = c.get("fieldname") if isinstance(c, dict) else c
+                if fname in ("account", "acc_name", "acc_number", "currency"):
+                    insert_idx = idx + 1
+            columns.insert(
+                insert_idx,
+                {
+                    "fieldname": "opening_balance",
+                    "label": _("Opening Balance"),
+                    "fieldtype": "Currency",
+                    "options": "currency",
+                    "width": 150,
+                },
+            )
+
     return {
         "report_name": report_name,
-        "columns": report_data.get("columns", []),
-        "result": report_data.get("result", []),
+        "columns": columns,
+        "result": result,
         "chart": report_data.get("chart"),
         "report_summary": report_data.get("report_summary"),
         "company": company,
