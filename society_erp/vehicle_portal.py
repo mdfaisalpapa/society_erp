@@ -1,11 +1,13 @@
 import frappe
 from society_erp.resident_portal import get_verified_owner_records
+from society_erp.api.utils import portal_api
 
 @frappe.whitelist()
-def get_vehicles():
+@portal_api
+def get_vehicles(for_user=None):
     """List vehicles associated with the logged-in owner's verified flats."""
 
-    owners = get_verified_owner_records()
+    owners = get_verified_owner_records(user_override=for_user)
     owner_names = [o.name for o in owners]
     flats = sorted({o.flat for o in owners if o.flat})
 
@@ -36,15 +38,16 @@ def get_vehicles():
         limit_page_length=100,
     )
 
-    return {"vehicles": vehicles}
+    return {"vehicles": vehicles, "count": len(vehicles)}
 
 
 
 @frappe.whitelist()
-def get_vehicle_form_options(vehicle_type=None, make=None):
+@portal_api
+def get_vehicle_form_options(vehicle_type=None, make=None, for_user=None):
     """Return makes for a vehicle type and models for a selected make."""
 
-    get_verified_owner_records()
+    get_verified_owner_records(user_override=for_user)
 
     vehicle_types = ["Car", "Bike"]
 
@@ -107,6 +110,7 @@ def get_vehicle_form_options(vehicle_type=None, make=None):
 
 
 @frappe.whitelist()
+@portal_api
 def register_vehicle(
     flat,
     vehicle_type,
@@ -120,10 +124,11 @@ def register_vehicle(
     color=None,
     is_electric=0,
     remarks=None,
+    for_user=None,
 ):
     """Register a vehicle with required documents and flat-specific parking."""
 
-    owners = get_verified_owner_records()
+    owners = get_verified_owner_records(user_override=for_user)
     owner = next((o for o in owners if o.flat == flat), None)
 
     if not owner:
@@ -374,6 +379,7 @@ def get_parking_history(slot_id):
 # Add this to: society_erp/api/resident_portal.py
 
 @frappe.whitelist()
+@portal_api
 def delete_pending_vehicle(vehicle_id):
     """Deletes a vehicle record ONLY if it belongs to the active user AND is still Pending."""
     user = frappe.session.user
@@ -401,6 +407,7 @@ def delete_pending_vehicle(vehicle_id):
 
 
 @frappe.whitelist()
+@portal_api
 def disable_active_vehicle(vehicle_id):
     """Deactivates an approved vehicle by changing its status to Inactive."""
     user = frappe.session.user

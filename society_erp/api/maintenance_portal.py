@@ -6,6 +6,10 @@ from frappe import _
 from frappe.utils.file_manager import save_file
 
 
+from society_erp.api.utils import portal_api
+from society_erp.resident_portal import get_verified_owner_records
+
+
 ACTIVE_STATUSES = {"Open", "Assigned", "Pending", "In Progress"}
 RESOLVED_STATUSES = {"Resolved", "Closed"}
 MAX_DESCRIPTION = 5000
@@ -13,8 +17,14 @@ MAX_COMMENT = 3000
 MAX_FILE_BYTES = 5 * 1024 * 1024
 
 
-def _resident():
-    """Resolve the current login to one active owner or tenant record."""
+def _resident(for_user: str = None):
+    """Resolve the login or user_override to an active owner or tenant flat."""
+    if for_user:
+        owners = get_verified_owner_records(user_override=for_user)
+        if owners:
+            o = owners[0]
+            return {"flat": o.flat, "name": o.owner_name, "type": "Owner"}
+
     user = frappe.session.user
     if not user or user == "Guest":
         frappe.throw(_("Please log in to access maintenance tickets."), frappe.PermissionError)
@@ -92,8 +102,9 @@ def _ticket_dict(doc):
 
 
 @frappe.whitelist()
-def get_tickets(status="Active", start=0, page_length=10):
-    resident = _resident()
+@portal_api
+def get_tickets(status="Active", start=0, page_length=10, for_user=None):
+    resident = _resident(for_user=for_user)
     try:
         start = max(0, int(start))
         page_length = min(50, max(1, int(page_length)))
@@ -131,8 +142,9 @@ def get_tickets(status="Active", start=0, page_length=10):
 
 
 @frappe.whitelist()
-def create_ticket(category, description, photo_data=None, photo_name=None):
-    resident = _resident()
+@portal_api
+def create_ticket(category, description, photo_data=None, photo_name=None, for_user=None):
+    resident = _resident(for_user=for_user)
     category = (category or "").strip()
     description = (description or "").strip()
     if not category:
@@ -256,3 +268,16 @@ def add_photo(ticket_name, photo_data, photo_name=None):
         frappe.throw(_("Photos can only be added to active tickets."))
     _save_image(doc, photo_data, photo_name or "maintenance-photo.jpg")
     return {"message": _("Photo attached."), "ticket": _ticket_dict(doc)}
+
+
+@frappe.whitelist()
+@portal_api
+def get_committee_ticket_summary() -> dict:
+    """Return total open tickets breakdown across all blocks for committee members."""
+    open_count = frappe.db.count("Maintenance Ticket", filters={"status": ["in", ["Open", "Assigned", "Pending", "In Progress"]]})
+    resolved_count = frappe.db.count("Maintenance Ticket", filters={"status": ["in", ["Resolved", "Closed"]]})
+    return {
+        "open_tickets": open_count,
+        "resolved_tickets": resolved_count,
+        "total": open_count + resolved_count
+    }

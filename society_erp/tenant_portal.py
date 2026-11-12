@@ -4,6 +4,7 @@ from frappe.utils import validate_email_address
 
 # Import your core authentication function from the main file
 from society_erp.resident_portal import get_verified_owner_records
+from society_erp.api.utils import portal_api
 
 
 def _sync_flat_let_out_flag(flat):
@@ -20,11 +21,10 @@ def _sync_flat_let_out_flag(flat):
     )
 
 @frappe.whitelist()
-def get_tenants():
+@portal_api
+def get_tenants(for_user=None):
     """Fetch active and past tenants for the owner's flats."""
-    from society_erp.resident_portal import get_verified_owner_records
-    
-    owners = get_verified_owner_records()
+    owners = get_verified_owner_records(user_override=for_user)
     flats = [o.flat for o in owners if o.flat]
 
     if not flats:
@@ -40,14 +40,25 @@ def get_tenants():
         ],
         order_by="active desc, start_date desc"
     )
-    return {"tenants": tenants}
+    return {"tenants": tenants, "count": len(tenants)}
 
 @frappe.whitelist()
-def register_tenant(flat, tenant_name, relationship, mobile_no, email=None, start_date=None, rental_agreement=None, police_verification=None, id_proof=None, photo=None):
+@portal_api
+def register_tenant(
+    flat,
+    tenant_name,
+    relationship,
+    mobile_no,
+    email=None,
+    start_date=None,
+    rental_agreement=None,
+    police_verification=None,
+    id_proof=None,
+    photo=None,
+    for_user=None,
+):
     """Registers a new tenant with strict data validation and creates a user account."""
-    from society_erp.resident_portal import get_verified_owner_records
-    
-    owners = get_verified_owner_records()
+    owners = get_verified_owner_records(user_override=for_user)
     if not any(o.flat == flat for o in owners):
         frappe.throw("Not authorised for this flat.", frappe.PermissionError)
 
@@ -105,13 +116,12 @@ def register_tenant(flat, tenant_name, relationship, mobile_no, email=None, star
                 {"attached_to_doctype": "Tenants", "attached_to_name": doc.name, "attached_to_field": fieldname}
             )
 
-    return doc.name
+    return {"tenant": doc.name, "flat": flat, "status": doc.registration_status}
 @frappe.whitelist()
-def deactivate_tenant(tenant_id):
+@portal_api
+def deactivate_tenant(tenant_id, for_user=None):
     """Marks a tenant as inactive, sets the end date, and disables their user account."""
-    from society_erp.resident_portal import get_verified_owner_records
-    
-    owners = get_verified_owner_records()
+    owners = get_verified_owner_records(user_override=for_user)
     flats = [o.flat for o in owners]
     
     tenant = frappe.db.get_value("Tenants", tenant_id, ["flat", "active", "email"], as_dict=True)

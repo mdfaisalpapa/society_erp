@@ -11,11 +11,13 @@ VERIFIED_OWNER_STATUSES = (
 )
 
 
-def get_verified_owner_records():
-    """Return verified owner OR active tenant records linked to the current login securely."""
-    user = frappe.session.user
+def get_verified_owner_records(user_override=None):
+    """Return verified owner OR active tenant records linked to the current login securely.
+    Supports headless bot impersonation via user_override (email).
+    """
+    user = user_override or frappe.session.user
 
-    if user == "Guest":
+    if not user or user == "Guest":
         frappe.throw(_("Please log in to access the resident portal."), frappe.PermissionError)
 
     user_email = user.strip().lower()

@@ -1,0 +1,105 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:{channel}-{channel_user_id}",
+ "creation": "2026-11-12 04:10:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "channel",
+  "channel_user_id",
+  "resident_email",
+  "column_break_verify",
+  "verified",
+  "verification_otp",
+  "otp_expires_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "channel",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Channel",
+   "options": "Telegram\nWhatsApp",
+   "reqd": 1
+  },
+  {
+   "fieldname": "channel_user_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Channel User ID",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "resident_email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Resident Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "column_break_verify",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "verified",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Verified"
+  },
+  {
+   "fieldname": "verification_otp",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Verification OTP"
+  },
+  {
+   "fieldname": "otp_expires_at",
+   "fieldtype": "Datetime",
+   "label": "OTP Expires At"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-12 04:10:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Channel Identity",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 0,
+   "role": "Society Bot",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
