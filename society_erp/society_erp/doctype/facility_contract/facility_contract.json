@@ -1,0 +1,136 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:FC-{agency}-{MM}-{YY}",
+ "creation": "2026-11-13 03:10:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "contract_title",
+  "agency",
+  "status",
+  "column_break_dates",
+  "from_date",
+  "to_date",
+  "billing_frequency",
+  "section_break_quotas",
+  "quotas",
+  "section_break_terms",
+  "contract_terms",
+  "total_daily_quota"
+ ],
+ "fields": [
+  {
+   "fieldname": "contract_title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Contract Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "agency",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Facility Agency",
+   "options": "Facility Agency",
+   "reqd": 1
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Active\nExpired\nTerminated\nDraft"
+  },
+  {
+   "fieldname": "column_break_dates",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "From Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "To Date",
+   "reqd": 1
+  },
+  {
+   "default": "Monthly",
+   "fieldname": "billing_frequency",
+   "fieldtype": "Select",
+   "label": "Billing Frequency",
+   "options": "Monthly\nFortnightly\nWeekly"
+  },
+  {
+   "fieldname": "section_break_quotas",
+   "fieldtype": "Section Break",
+   "label": "Headcount Deployment Quotas"
+  },
+  {
+   "fieldname": "quotas",
+   "fieldtype": "Table",
+   "label": "Shift-wise Headcount Quotas",
+   "options": "Facility Contract Quota"
+  },
+  {
+   "fieldname": "total_daily_quota",
+   "fieldtype": "Int",
+   "label": "Total Daily Required Headcount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_terms",
+   "fieldtype": "Section Break",
+   "label": "Terms & SLA"
+  },
+  {
+   "fieldname": "contract_terms",
+   "fieldtype": "Text Editor",
+   "label": "Terms & Penalty Clause"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-13 03:10:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society ERP",
+ "name": "Facility Contract",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

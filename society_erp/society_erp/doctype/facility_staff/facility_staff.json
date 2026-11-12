@@ -1,0 +1,192 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "FS-.YYYY.-.#####",
+ "creation": "2026-11-13 03:10:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "full_name",
+  "agency",
+  "role",
+  "status",
+  "column_break_contact",
+  "contact_number",
+  "emergency_contact_number",
+  "gate_assigned",
+  "photo",
+  "section_break_verification",
+  "rfid_badge_id",
+  "government_id_type",
+  "government_id_number",
+  "column_break_police",
+  "police_verification_status",
+  "police_verification_document",
+  "joining_date",
+  "section_break_blacklist",
+  "blacklisted_reason",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "full_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Full Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "agency",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Facility Agency",
+   "options": "Facility Agency",
+   "reqd": 1
+  },
+  {
+   "default": "Security Guard",
+   "fieldname": "role",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Role",
+   "options": "Security Supervisor\nSecurity Guard\nLady Security Guard\nHousekeeping Supervisor\nHousekeeping Staff\nGardener\nElectrician\nPlumber\nSTP/WTP Operator\nOther",
+   "reqd": 1
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Active\nInactive\nOn Leave\nBlacklisted"
+  },
+  {
+   "fieldname": "column_break_contact",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "contact_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Contact Number"
+  },
+  {
+   "fieldname": "emergency_contact_number",
+   "fieldtype": "Data",
+   "label": "Emergency Contact Number"
+  },
+  {
+   "default": "All Gates",
+   "fieldname": "gate_assigned",
+   "fieldtype": "Select",
+   "label": "Assigned Gate / Area",
+   "options": "All Gates\nMain Gate\nBack Gate\nTower Concierge\nBasement Parking\nClubhouse"
+  },
+  {
+   "fieldname": "photo",
+   "fieldtype": "Attach Image",
+   "label": "Staff Photo"
+  },
+  {
+   "fieldname": "section_break_verification",
+   "fieldtype": "Section Break",
+   "label": "Identification & Police Verification"
+  },
+  {
+   "fieldname": "rfid_badge_id",
+   "fieldtype": "Data",
+   "label": "RFID / Scanner Badge ID",
+   "unique": 0
+  },
+  {
+   "default": "Aadhaar",
+   "fieldname": "government_id_type",
+   "fieldtype": "Select",
+   "label": "Government ID Type",
+   "options": "Aadhaar\nVoter ID\nDriving License\nPAN Card\nPassport"
+  },
+  {
+   "fieldname": "government_id_number",
+   "fieldtype": "Data",
+   "label": "Government ID Number"
+  },
+  {
+   "fieldname": "column_break_police",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "police_verification_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Police Verification Status",
+   "options": "Verified\nPending\nNot Applicable\nRejected"
+  },
+  {
+   "fieldname": "police_verification_document",
+   "fieldtype": "Attach",
+   "label": "Police Verification Certificate"
+  },
+  {
+   "fieldname": "joining_date",
+   "fieldtype": "Date",
+   "label": "Joining Date at Society"
+  },
+  {
+   "fieldname": "section_break_blacklist",
+   "fieldtype": "Section Break",
+   "label": "Security Alerts & Notes"
+  },
+  {
+   "depends_on": "eval:doc.status=='Blacklisted'",
+   "fieldname": "blacklisted_reason",
+   "fieldtype": "Small Text",
+   "label": "Reason for Blacklisting"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text",
+   "label": "General Notes"
+  }
+ ],
+ "image_field": "photo",
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-13 03:10:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society ERP",
+ "name": "Facility Staff",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "full_name, contact_number, rfid_badge_id, agency, role",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "full_name",
+ "track_changes": 1
+}

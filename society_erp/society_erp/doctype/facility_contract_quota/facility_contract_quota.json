@@ -1,0 +1,56 @@
+{
+ "actions": [],
+ "creation": "2026-11-13 03:10:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "role",
+  "shift",
+  "required_count",
+  "rate_per_shift"
+ ],
+ "fields": [
+  {
+   "fieldname": "role",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Role",
+   "options": "Security Supervisor\nSecurity Guard\nLady Security Guard\nHousekeeping Supervisor\nHousekeeping Staff\nGardener\nElectrician\nPlumber\nSTP/WTP Operator\nOther",
+   "reqd": 1
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Shift",
+   "options": "Facility Shift",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "required_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Required Headcount",
+   "reqd": 1
+  },
+  {
+   "fieldname": "rate_per_shift",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Rate per Shift/Day"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-13 03:10:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society ERP",
+ "name": "Facility Contract Quota",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
