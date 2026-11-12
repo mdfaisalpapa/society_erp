@@ -509,6 +509,7 @@ def get_committee_data(module_type="all"):
         "resolutions_pending": res_pending_count,
         "facility_on_duty": frappe.db.count("Facility Staff Attendance", {"attendance_date": nowdate(), "status": "Present", "out_time": ("is", "not set")}),
         "facility_staff_total": frappe.db.count("Facility Staff", {"status": "Active"}),
+        "facility_staff_pending": frappe.db.count("Facility Staff", {"approval_status": "Pending"}),
     }
 
     return data
@@ -542,6 +543,7 @@ def update_item_status(doctype, docname, action, remarks=None):
         "Society Notice",
         "Facility Booking",
         "Resident Classified",
+        "Facility Staff",
     }
     if doctype not in allowed_doctypes:
         frappe.throw(_("Invalid DocType."))
@@ -641,6 +643,17 @@ def update_item_status(doctype, docname, action, remarks=None):
             doc.approval_date = today()
         if remarks:
             doc.committee_remarks = f"{doc.committee_remarks or ''}\n[{today()}] {comm_name}: {remarks}".strip()
+
+    elif doctype == "Facility Staff":
+        if action in ("Approved", "Rejected"):
+            doc.approval_status = action
+            doc.approved_by = user
+            doc.approval_date = today()
+            doc.status = "Active" if action == "Approved" else "Inactive"
+            if action == "Rejected" and remarks:
+                doc.rejection_remarks = remarks
+            elif action == "Approved":
+                doc.rejection_remarks = None
 
     doc.save(ignore_permissions=True)
     frappe.db.commit()

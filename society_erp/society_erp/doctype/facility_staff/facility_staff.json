@@ -10,11 +10,16 @@
   "agency",
   "role",
   "status",
+  "approval_status",
   "column_break_contact",
   "contact_number",
   "emergency_contact_number",
   "gate_assigned",
   "photo",
+  "section_break_approval",
+  "approved_by",
+  "approval_date",
+  "rejection_remarks",
   "section_break_verification",
   "rfid_badge_id",
   "government_id_type",
@@ -61,6 +66,14 @@
    "options": "Active\nInactive\nOn Leave\nBlacklisted"
   },
   {
+   "default": "Approved",
+   "fieldname": "approval_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Committee Approval Status",
+   "options": "Approved\nPending\nRejected"
+  },
+  {
    "fieldname": "column_break_contact",
    "fieldtype": "Column Break"
   },
@@ -88,6 +101,29 @@
    "label": "Staff Photo"
   },
   {
+   "fieldname": "section_break_approval",
+   "fieldtype": "Section Break",
+   "label": "Committee Review & Approval"
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "Reviewed / Approved By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approval_date",
+   "fieldtype": "Date",
+   "label": "Approval Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rejection_remarks",
+   "fieldtype": "Small Text",
+   "label": "Rejection Remarks"
+  },
+  {
    "fieldname": "section_break_verification",
    "fieldtype": "Section Break",
    "label": "Identification & Police Verification"
@@ -95,8 +131,7 @@
   {
    "fieldname": "rfid_badge_id",
    "fieldtype": "Data",
-   "label": "RFID / Scanner Badge ID",
-   "unique": 0
+   "label": "RFID / Scanner Badge ID"
   },
   {
    "default": "Aadhaar",
@@ -152,7 +187,7 @@
  "image_field": "photo",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-13 03:10:00.000000",
+ "modified": "2026-11-13 03:57:00.000000",
  "modified_by": "Administrator",
  "module": "Society ERP",
  "name": "Facility Staff",
@@ -181,9 +216,21 @@
    "role": "Society Committee",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Facility Agency Manager",
+   "share": 0,
+   "write": 1
   }
  ],
- "search_fields": "full_name, contact_number, rfid_badge_id, agency, role",
+ "search_fields": "full_name, contact_number, rfid_badge_id, agency, role, approval_status",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

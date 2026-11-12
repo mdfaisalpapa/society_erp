@@ -10,6 +10,7 @@
   "supplier",
   "service_types",
   "contract_status",
+  "portal_user",
   "column_break_contact",
   "primary_contact_person",
   "primary_phone",
@@ -48,6 +49,13 @@
    "in_list_view": 1,
    "label": "Contract Status",
    "options": "Active\nExpired\nTerminated\nUnder Review"
+  },
+  {
+   "fieldname": "portal_user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Authorized Agency Portal User",
+   "options": "User"
   },
   {
    "fieldname": "column_break_contact",
@@ -92,7 +100,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-13 03:10:00.000000",
+ "modified": "2026-11-13 03:57:00.000000",
  "modified_by": "Administrator",
  "module": "Society ERP",
  "name": "Facility Agency",
@@ -121,6 +129,18 @@
    "role": "Society Committee",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Facility Agency Manager",
+   "share": 0,
+   "write": 0
   }
  ],
  "sort_field": "modified",

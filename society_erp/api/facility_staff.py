@@ -111,8 +111,12 @@ def get_daily_roster(date: str = None, agency: str = None, shift: str = None) ->
     all_staff = frappe.get_all(
         "Facility Staff",
         filters=filters,
-        fields=["name", "full_name", "agency", "role", "contact_number", "gate_assigned", "photo", "police_verification_status", "rfid_badge_id"],
-        order_by="role asc, full_name asc"
+        fields=[
+            "name", "full_name", "agency", "role", "contact_number",
+            "gate_assigned", "photo", "police_verification_status",
+            "rfid_badge_id", "approval_status", "status"
+        ],
+        order_by="approval_status desc, role asc, full_name asc"
     )
 
     # Get today's attendances
@@ -149,6 +153,7 @@ def get_daily_roster(date: str = None, agency: str = None, shift: str = None) ->
             "rfid_badge_id": s.rfid_badge_id,
             "attendance_id": att.name if att else None,
             "status": att.status if att else "Not Marked",
+            "approval_status": s.approval_status or "Approved",
             "is_on_duty": is_on_duty,
             "in_time": str(att.in_time) if att and att.in_time else None,
             "out_time": str(att.out_time) if att and att.out_time else None,
@@ -162,6 +167,7 @@ def get_daily_roster(date: str = None, agency: str = None, shift: str = None) ->
         "total_active_staff": total_count,
         "present_count": present_count,
         "on_duty_count": sum(1 for r in roster if r["is_on_duty"]),
+        "pending_approval_count": sum(1 for r in roster if r.get("approval_status") == "Pending"),
         "roster": roster
     }
 
@@ -248,4 +254,96 @@ def get_on_duty_security_summary() -> dict:
         "guards": guards,
         "summary_text": summary_text
     }
+
+
+@frappe.whitelist()
+def onboard_facility_staff(
+    full_name: str,
+    agency: str,
+    role: str,
+    contact_number: str = None,
+    gate_assigned: str = "All Gates",
+    government_id_type: str = "Aadhaar",
+    government_id_number: str = None,
+    police_verification_status: str = "Pending",
+    notes: str = None
+) -> dict:
+    """
+    Called by Agency Manager (or Committee) to onboard a new staff member.
+    If called by Agency Manager: automatically enters with approval_status='Pending'.
+    If called by System Manager / Committee: enters as 'Approved'.
+    """
+    user = frappe.session.user
+    roles = frappe.get_roles(user)
+    is_admin = "System Manager" in roles or "Society Committee" in roles or "Society Committee Member" in roles or user == "Administrator" or frappe.db.exists("Committee Member", {"member_name": user, "status": "Active"})
+
+    if not is_admin:
+        # Verify user is the authorized agency manager for this agency
+        authorized_agency = frappe.db.get_value("Facility Agency", {"portal_user": user}, "agency_name")
+        if not authorized_agency or authorized_agency != agency:
+            frappe.throw(_("Unauthorized: You can only onboard staff for your assigned agency ({0})").format(authorized_agency or "None"))
+
+    doc = frappe.get_doc({
+        "doctype": "Facility Staff",
+        "full_name": full_name.strip(),
+        "agency": agency,
+        "role": role,
+        "contact_number": contact_number,
+        "gate_assigned": gate_assigned,
+        "government_id_type": government_id_type,
+        "government_id_number": government_id_number,
+        "police_verification_status": police_verification_status,
+        "approval_status": "Approved" if is_admin else "Pending",
+        "status": "Active" if is_admin else "Inactive",
+        "approved_by": user if is_admin else None,
+        "approval_date": nowdate() if is_admin else None,
+        "notes": notes
+    })
+    doc.insert(ignore_permissions=True)
+
+    status_msg = _("Staff {0} ({1}) onboarded and activated.").format(doc.full_name, doc.name) if is_admin else _("Staff {0} ({1}) submitted for Committee Approval.").format(doc.full_name, doc.name)
+
+    return {
+        "status": "success",
+        "staff_id": doc.name,
+        "approval_status": doc.approval_status,
+        "message": status_msg
+    }
+
+
+@frappe.whitelist()
+def review_facility_staff(staff_id: str, action: str, remarks: str = None) -> dict:
+    """
+    Committee action to Approve or Reject agency-onboarded staff.
+    action: 'Approved' or 'Rejected'
+    """
+    user = frappe.session.user
+    roles = frappe.get_roles(user)
+    if not ("System Manager" in roles or "Society Committee" in roles or "Society Committee Member" in roles or user == "Administrator" or frappe.db.exists("Committee Member", {"member_name": user, "status": "Active"})):
+        frappe.throw(_("Unauthorized: Only Committee Members or System Managers can approve staff."))
+
+    if not staff_id or not frappe.db.exists("Facility Staff", staff_id):
+        frappe.throw(_("Staff record not found: {0}").format(staff_id))
+
+    doc = frappe.get_doc("Facility Staff", staff_id)
+    doc.approval_status = action
+    doc.approved_by = user
+    doc.approval_date = nowdate()
+
+    if action == "Approved":
+        doc.status = "Active"
+        doc.rejection_remarks = None
+    else:
+        doc.status = "Inactive"
+        doc.rejection_remarks = remarks
+
+    doc.save(ignore_permissions=True)
+
+    return {
+        "status": "success",
+        "staff_id": doc.name,
+        "approval_status": doc.approval_status,
+        "message": _("Staff {0} has been {1}.").format(doc.full_name, action)
+    }
+
 

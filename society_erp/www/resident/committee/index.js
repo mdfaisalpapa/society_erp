@@ -1173,9 +1173,14 @@ frappe.ready(function () {
                 <div class="d-flex justify-content-between align-items-center flex-wrap">
                     <div>
                         <h6 class="font-weight-bold text-dark mb-1">🛡️ Today's Security & Facility Deployment</h6>
-                        <small class="text-muted">Real-time gate check-ins and verified agency personnel</small>
+                        <small class="text-muted">Real-time gate check-ins and agency personnel compliance</small>
                     </div>
-                    <div class="mt-2 mt-md-0">
+                    <div class="mt-2 mt-md-0 d-flex align-items-center">
+                        ${items.filter(s => s.approval_status === "Pending").length > 0 ? `
+                            <span class="badge badge-warning text-dark px-2 py-1 mr-2 font-weight-bold">
+                                ⏳ ${items.filter(s => s.approval_status === "Pending").length} Pending Approval
+                            </span>
+                        ` : ''}
                         <span class="badge badge-success px-2 py-1 mr-1">
                             ${items.filter(s => s.is_on_duty).length} On Duty
                         </span>
@@ -1189,10 +1194,11 @@ frappe.ready(function () {
         `;
 
         items.forEach(st => {
+            const isPendingApproval = st.approval_status === "Pending";
             const isOnDuty = st.is_on_duty;
-            const borderCol = isOnDuty ? '#28a745' : '#6c757d';
-            const badgeCol = isOnDuty ? 'badge-success' : 'badge-secondary';
-            const statusTxt = isOnDuty ? '🟢 On Duty' : (st.in_time ? '🔴 Checked Out' : '⚪ Not Clocked In');
+            const borderCol = isPendingApproval ? '#ffc107' : (isOnDuty ? '#28a745' : '#6c757d');
+            const badgeCol = isPendingApproval ? 'badge-warning text-dark' : (isOnDuty ? 'badge-success' : 'badge-secondary');
+            const statusTxt = isPendingApproval ? '⏳ Awaiting Approval' : (isOnDuty ? '🟢 On Duty' : (st.in_time ? '🔴 Checked Out' : '⚪ Not Clocked In'));
 
             html += `
                 <div class="col-12 col-md-6 col-lg-4 mb-3">
@@ -1221,9 +1227,18 @@ frappe.ready(function () {
                         <div class="pt-2 border-top d-flex justify-content-between align-items-center">
                             <span class="small text-muted">ID: <code>${escapeHtml(st.staff_id)}</code></span>
                             <div>
-                                <button type="button" class="btn btn-sm ${isOnDuty ? 'btn-outline-danger' : 'btn-outline-success'} py-1 px-2 btn-punch-staff" data-staff-id="${escapeHtml(st.staff_id)}" data-action="${isOnDuty ? 'out' : 'in'}">
-                                    ${isOnDuty ? '⏹️ Punch Out' : '▶️ Punch In'}
-                                </button>
+                                ${isPendingApproval ? `
+                                    <button type="button" class="btn btn-sm btn-success py-1 px-2 btn-action mr-1" data-doctype="Facility Staff" data-docname="${st.staff_id}" data-action="Approved" data-title="Approve Staff Member ${escapeHtml(st.full_name)}">
+                                        ✅ Approve
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 btn-action" data-doctype="Facility Staff" data-docname="${st.staff_id}" data-action="Rejected" data-title="Reject Staff Member ${escapeHtml(st.full_name)}" data-show-remarks="1">
+                                        ❌ Reject
+                                    </button>
+                                ` : `
+                                    <button type="button" class="btn btn-sm ${isOnDuty ? 'btn-outline-danger' : 'btn-outline-success'} py-1 px-2 btn-punch-staff" data-staff-id="${escapeHtml(st.staff_id)}" data-action="${isOnDuty ? 'out' : 'in'}">
+                                        ${isOnDuty ? '⏹️ Punch Out' : '▶️ Punch In'}
+                                    </button>
+                                `}
                             </div>
                         </div>
                     </div>
