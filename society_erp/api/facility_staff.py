@@ -99,14 +99,22 @@ def punch_attendance(
 
 
 @frappe.whitelist()
-def get_daily_roster(date: str = None, agency: str = None, shift: str = None) -> dict:
+def get_daily_roster(date: str = None, agency: str = None, shift: str = None, include_pending: bool = True) -> dict:
     """
     Returns today's deployment roster with real-time punch status for each staff member.
     """
     target_date = date or nowdate()
-    filters = {"status": "Active"}
+    filters = {}
     if agency:
         filters["agency"] = agency
+    
+    if not include_pending:
+        filters["status"] = "Active"
+        filters["approval_status"] = "Approved"
+    else:
+        # Include Active staff OR staff Pending approval
+        filters["status"] = ["in", ["Active", "Inactive"]]
+        filters["approval_status"] = ["in", ["Approved", "Pending"]]
 
     all_staff = frappe.get_all(
         "Facility Staff",

@@ -1,0 +1,193 @@
+{% extends "templates/web.html" %}
+
+{% block navbar %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
+{% block page_content %}
+<div class="container my-4 agency-portal-root">
+    {% if access_denied %}
+        <div class="alert alert-danger shadow-sm py-4 text-center">
+            <h4 class="alert-heading font-weight-bold mb-2">🚫 Access Restricted</h4>
+            <p class="mb-3">
+                This portal is exclusively accessible to authorized <strong>Facility Agency Managers / Supervisors</strong>.
+            </p>
+            <a href="/" class="btn btn-outline-danger">🔙 Return to Home</a>
+        </div>
+    {% else %}
+        <!-- Top Agency Header -->
+        <div class="card mb-4 border-0 shadow-sm bg-dark text-white p-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <div>
+                    <span class="badge badge-warning text-dark font-weight-bold px-2 py-1 mb-2">Agency Operations Portal</span>
+                    <h3 class="font-weight-bold mb-1">{{ agency_name }}</h3>
+                    <p class="small text-muted mb-0">Supervisor: <strong>{{ frappe.session.user }}</strong> &bull; Date: <strong>{{ today_date }}</strong></p>
+                </div>
+                <div class="mt-3 mt-md-0 d-flex gap-2">
+                    <button type="button" class="btn btn-success font-weight-bold shadow-sm" id="btn-open-onboard-modal">
+                        ➕ Onboard New Staff
+                    </button>
+                    {% if is_standalone %}
+                    <button type="button" class="btn btn-outline-light ml-2" onclick="window.close(); if(window.Telegram && window.Telegram.WebApp){ window.Telegram.WebApp.close(); }">
+                        ✕ Close
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Banner -->
+        <div id="agency-alert" class="alert d-none shadow-sm mb-4"></div>
+
+        <!-- Metric KPI Cards -->
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="card border-0 shadow-sm p-3 bg-white" style="border-left: 5px solid #28a745 !important;">
+                    <div class="text-muted small font-weight-bold text-uppercase">Currently On Duty</div>
+                    <div class="h2 font-weight-bold text-success my-1" id="stat-on-duty">0</div>
+                    <small class="text-muted">Security & Housekeeping checked-in</small>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card border-0 shadow-sm p-3 bg-white" style="border-left: 5px solid #ffc107 !important;">
+                    <div class="text-muted small font-weight-bold text-uppercase">Awaiting Committee Approval</div>
+                    <div class="h2 font-weight-bold text-warning my-1" id="stat-pending">0</div>
+                    <small class="text-muted">New staff submitted to Society AoA</small>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card border-0 shadow-sm p-3 bg-white" style="border-left: 5px solid #17a2b8 !important;">
+                    <div class="text-muted small font-weight-bold text-uppercase">Total Active Roster</div>
+                    <div class="h2 font-weight-bold text-info my-1" id="stat-total">0</div>
+                    <small class="text-muted">Verified & approved personnel</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Roster & Attendance Control Section -->
+        <div class="card border-0 shadow-sm p-3 bg-white mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                <div>
+                    <h5 class="font-weight-bold mb-0 text-dark">📋 Staff Roster & Gate Punch Control</h5>
+                    <small class="text-muted">Record Punch-In / Punch-Out for shifts</small>
+                </div>
+                <div class="mt-2 mt-md-0">
+                    <input type="text" class="form-control form-control-sm" id="agency-search" placeholder="🔍 Search staff by name, role, gate…">
+                </div>
+            </div>
+
+            <div id="agency-roster-container">
+                <div class="text-center py-5 text-muted">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="mt-2">Loading agency roster…</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Onboard Staff -->
+        <div class="modal fade" id="modal-onboard-staff" tabindex="-1" role="dialog" aria-labelledby="modalOnboardTitle" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-dark text-white align-items-center">
+                        <h5 class="modal-title font-weight-bold" id="modalOnboardTitle">
+                            ➕ Onboard New Agency Staff
+                        </h5>
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <form id="form-onboard-staff">
+                        <div class="modal-body p-4">
+                            <div class="alert alert-info small py-2 mb-3">
+                                ℹ️ Staff submitted here will be routed to the <strong>AoA Managing Committee</strong> for physical / document approval before they can be assigned gate shifts.
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="staff-full-name" class="font-weight-bold small text-dark">Full Name *</label>
+                                <input type="text" class="form-control" id="staff-full-name" placeholder="e.g. Suresh Kumar" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 form-group mb-3">
+                                    <label for="staff-role" class="font-weight-bold small text-dark">Role / Designation *</label>
+                                    <select class="form-control" id="staff-role" required>
+                                        <option value="Security Guard">Security Guard</option>
+                                        <option value="Security Supervisor">Security Supervisor</option>
+                                        <option value="Lady Security Guard">Lady Security Guard</option>
+                                        <option value="Housekeeping Staff">Housekeeping Staff</option>
+                                        <option value="Housekeeping Supervisor">Housekeeping Supervisor</option>
+                                        <option value="Gardener">Gardener</option>
+                                        <option value="Electrician">Electrician</option>
+                                        <option value="Plumber">Plumber</option>
+                                        <option value="STP/WTP Operator">STP/WTP Operator</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 form-group mb-3">
+                                    <label for="staff-contact" class="font-weight-bold small text-dark">Mobile Number *</label>
+                                    <input type="tel" class="form-control" id="staff-contact" placeholder="10-digit mobile" maxlength="10" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 form-group mb-3">
+                                    <label for="staff-gate" class="font-weight-bold small text-dark">Default Gate / Post</label>
+                                    <select class="form-control" id="staff-gate">
+                                        <option value="Main Gate">Main Gate</option>
+                                        <option value="Back Gate">Back Gate</option>
+                                        <option value="Tower Concierge">Tower Concierge</option>
+                                        <option value="Basement Parking">Basement Parking</option>
+                                        <option value="Clubhouse">Clubhouse</option>
+                                        <option value="All Gates">All Gates</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 form-group mb-3">
+                                    <label for="staff-police" class="font-weight-bold small text-dark">Police Verification</label>
+                                    <select class="form-control" id="staff-police">
+                                        <option value="Verified">Verified</option>
+                                        <option value="Pending" selected>Pending Verification</option>
+                                        <option value="Not Applicable">Not Applicable</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 form-group mb-3">
+                                    <label for="staff-id-type" class="font-weight-bold small text-dark">Govt ID Type</label>
+                                    <select class="form-control" id="staff-id-type">
+                                        <option value="Aadhaar">Aadhaar Card</option>
+                                        <option value="Voter ID">Voter ID</option>
+                                        <option value="Driving License">Driving License</option>
+                                        <option value="Passport">Passport</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 form-group mb-3">
+                                    <label for="staff-id-number" class="font-weight-bold small text-dark">Govt ID Number</label>
+                                    <input type="text" class="form-control" id="staff-id-number" placeholder="e.g. 12-digit Aadhaar">
+                                </div>
+                            </div>
+                            <div class="form-group mb-2">
+                                <label for="staff-notes" class="font-weight-bold small text-dark">Experience & Notes</label>
+                                <textarea class="form-control" id="staff-notes" rows="2" placeholder="Prior experience, certifications, etc."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light border-top">
+                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary btn-sm px-4 font-weight-bold" id="btn-submit-onboard">
+                                Submit for Committee Approval
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="/agency/index.js"></script>
+{% endblock %}

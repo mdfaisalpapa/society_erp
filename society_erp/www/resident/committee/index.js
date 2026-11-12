@@ -1235,9 +1235,9 @@ frappe.ready(function () {
                                         ❌ Reject
                                     </button>
                                 ` : `
-                                    <button type="button" class="btn btn-sm ${isOnDuty ? 'btn-outline-danger' : 'btn-outline-success'} py-1 px-2 btn-punch-staff" data-staff-id="${escapeHtml(st.staff_id)}" data-action="${isOnDuty ? 'out' : 'in'}">
-                                        ${isOnDuty ? '⏹️ Punch Out' : '▶️ Punch In'}
-                                    </button>
+                                    <span class="badge ${isOnDuty ? 'badge-success' : 'badge-light border'} py-1 px-2">
+                                        ${isOnDuty ? '🟢 On Duty' : '⚪ Off Duty'}
+                                    </span>
                                 `}
                             </div>
                         </div>
