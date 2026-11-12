@@ -12,7 +12,8 @@
   "facility",
   "resident",
   "booking_date",
-  "status"
+  "status",
+  "remarks"
  ],
  "fields": [
   {
@@ -47,10 +48,17 @@
    "label": "Booking Date"
   },
   {
+   "default": "Pending Approval",
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Status",
-   "options": "Confirmed\nCancelled"
+   "options": "Pending Approval\nApproved\nConfirmed\nRejected\nCancelled"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks / Notes"
   }
  ],
  "grid_page_length": 50,

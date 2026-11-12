@@ -1,0 +1,38 @@
+/* Global accessibility improvements for Frappe confirmation dialogs */
+.modal-dialog:has(.frappe-confirm-message),
+.modal:has(.frappe-confirm-message) .modal-dialog {
+    height: auto !important;
+    max-height: 90vh !important;
+    margin: 1.75rem auto !important;
+    max-width: 500px !important;
+    width: 92vw !important;
+}
+
+.modal-dialog:has(.frappe-confirm-message) .modal-content,
+.modal:has(.frappe-confirm-message) .modal-content {
+    height: auto !important;
+    max-height: none !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important;
+}
+
+.modal-dialog:has(.frappe-confirm-message) .modal-body,
+.modal:has(.frappe-confirm-message) .modal-body {
+    padding: 1.25rem !important;
+    font-size: 1rem !important;
+}
+
+.modal-dialog:has(.frappe-confirm-message) .modal-footer,
+.modal:has(.frappe-confirm-message) .modal-footer {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 0.5rem !important;
+    padding: 0.75rem 1.25rem !important;
+    border-top: 1px solid #e9ecef !important;
+    margin-top: 0 !important;
+}
+
+.modal-dialog:has(.frappe-confirm-message) .modal-footer .btn,
+.modal:has(.frappe-confirm-message) .modal-footer .btn {
+    min-width: 80px !important;
+}

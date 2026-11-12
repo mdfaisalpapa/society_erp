@@ -36,7 +36,7 @@ def get_context(context):
     bookings = frappe.get_all(
         "Facility Booking",
         filters={"resident": flat},
-        fields=["name", "facility", "resident", "booking_date", "status", "creation"],
+        fields=["name", "facility", "resident", "booking_date", "status", "remarks", "creation"],
         order_by="booking_date desc, creation desc",
         limit_page_length=50,
     )
@@ -49,7 +49,7 @@ def get_context(context):
     # Also fetch upcoming confirmed bookings for calendar awareness
     upcoming_bookings = frappe.get_all(
         "Facility Booking",
-        filters={"booking_date": [">=", today()], "status": "Confirmed"},
+        filters={"booking_date": [">=", today()], "status": ["in", ["Confirmed", "Approved"]]},
         fields=["facility", "booking_date", "resident"],
         order_by="booking_date asc",
         limit_page_length=20,
@@ -83,25 +83,37 @@ def book_facility(facility, booking_date):
         {
             "facility": facility,
             "booking_date": booking_date,
-            "status": "Confirmed",
+            "status": ["in", ["Confirmed", "Approved"]],
         },
     )
     if existing:
         frappe.throw(_("Facility '{0}' is already booked on {1}. Please select another date.").format(facility, format_date(booking_date, "dd-MM-yyyy")))
+
+    # Check if this resident already has a pending request for the same facility and date
+    already_requested = frappe.db.exists(
+        "Facility Booking",
+        {
+            "facility": facility,
+            "resident": flat,
+            "booking_date": booking_date,
+            "status": "Pending Approval",
+        },
+    )
+    if already_requested:
+        frappe.throw(_("You already have a pending booking request for {0} on {1}.").format(facility, format_date(booking_date, "dd-MM-yyyy")))
 
     doc = frappe.get_doc({
         "doctype": "Facility Booking",
         "facility": facility,
         "resident": flat,
         "booking_date": booking_date,
-        "status": "Confirmed",
+        "status": "Pending Approval",
     })
     doc.insert(ignore_permissions=True)
-    doc.submit()
 
     return {
         "status": "success",
-        "message": _("Facility booking confirmed successfully!"),
+        "message": _("Facility booking request submitted! It will be reviewed and approved by the Managing Committee."),
         "booking_id": doc.name,
     }
 

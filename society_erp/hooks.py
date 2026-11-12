@@ -99,6 +99,9 @@ web_include_js = [
     "/assets/society_erp/js/login_redirect.js",
     "/assets/society_erp/js/push_registration.js",
 ]
+web_include_css = [
+    "/assets/society_erp/css/society_erp.css",
+]
 
 # Inject routing flag during authentication
 on_login = "society_erp.hooks_override.redirect_after_login"

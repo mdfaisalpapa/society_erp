@@ -10,8 +10,9 @@
         border-radius: 6px;
         font-weight: 600;
     }
-    .status-confirmed { background-color: #d1e7dd; color: #0f5132; }
-    .status-cancelled { background-color: #f8d7da; color: #842029; }
+    .status-confirmed, .status-approved { background-color: #d1e7dd; color: #0f5132; }
+    .status-pending { background-color: #fff3cd; color: #664d03; }
+    .status-rejected, .status-cancelled { background-color: #f8d7da; color: #842029; }
 </style>
 {% endblock %}
 
@@ -75,14 +76,21 @@
                                         <span>{{ b.formatted_booking_date }}</span>
                                     </td>
                                     <td>
-                                        {% if b.status == 'Confirmed' %}
-                                            <span class="booking-status status-confirmed">Confirmed</span>
+                                        {% if b.status in ['Confirmed', 'Approved'] %}
+                                            <span class="booking-status status-approved">Approved</span>
+                                        {% elif b.status == 'Pending Approval' %}
+                                            <span class="booking-status status-pending">Pending Committee Approval</span>
+                                        {% elif b.status == 'Rejected' %}
+                                            <span class="booking-status status-rejected">Rejected</span>
                                         {% else %}
                                             <span class="booking-status status-cancelled">Cancelled</span>
                                         {% endif %}
+                                        {% if b.remarks %}
+                                        <div class="small text-muted mt-1">{{ b.remarks }}</div>
+                                        {% endif %}
                                     </td>
                                     <td>
-                                        {% if b.status == 'Confirmed' %}
+                                        {% if b.status in ['Confirmed', 'Approved', 'Pending Approval'] %}
                                         <button class="btn btn-sm btn-outline-danger" onclick="cancelBooking('{{ b.name }}')">
                                             Cancel
                                         </button>
@@ -177,7 +185,7 @@
                     </div>
 
                     <div class="alert alert-info py-2 px-3 small mb-0">
-                        By submitting, you agree to adhere to the society amenity usage rules and timings.
+                        ℹ️ Hall reservations require Managing Committee verification & approval. You will receive updates once reviewed.
                     </div>
                 </div>
                 <div class="modal-footer">

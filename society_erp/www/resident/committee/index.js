@@ -31,6 +31,7 @@ frappe.ready(function () {
         tickets: [],
         notices: [],
         resolutions: [],
+        facility_bookings: [],
         counts: {}
     };
 
@@ -86,6 +87,7 @@ frappe.ready(function () {
         if (module === "family") return item.registration_status === "Pending";
         if (module === "pets") return item.approval_status === "Pending";
         if (module === "tickets") return item.status === "Open" || item.status === "Assigned";
+        if (module === "facility_bookings") return item.status === "Pending Approval";
         if (module === "resolutions") return item.user_status === "Pending" && (item.status === "Circulated" || item.status === "Draft");
         return false;
     }
@@ -97,6 +99,7 @@ frappe.ready(function () {
         $("#badge-family").text(counts.family_pending || 0);
         $("#badge-pets").text(counts.pets_pending || 0);
         $("#badge-tickets").text(counts.tickets_open || 0);
+        $("#badge-facility_bookings").text(counts.facility_bookings_pending || 0);
         $("#badge-resolutions").text(counts.resolutions_pending || 0);
     }
 
@@ -675,6 +678,89 @@ frappe.ready(function () {
         $cont.html(tableHtml + cardsHtml);
     }
 
+    function renderFacilityBookings(items) {
+        const $cont = $("#container-facility_bookings").empty();
+        if (!items || !items.length) {
+            $cont.html(`<div class="text-center py-4 text-muted small">No facility booking requests found.</div>`);
+            return;
+        }
+
+        // 1. Desktop Table
+        let tableHtml = `
+            <div class="d-none d-md-block table-responsive mb-4">
+                <table class="table table-hover bg-white border rounded">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Flat</th>
+                            <th>Facility</th>
+                            <th>Date of Booking</th>
+                            <th>Status</th>
+                            <th>Notes</th>
+                            <th class="text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        // 2. Mobile Cards
+        let cardsHtml = `<div class="d-md-none">`;
+
+        items.forEach(b => {
+            const isPending = b.status === "Pending Approval";
+            let borderClass = isPending ? "border-pending" : (b.status === "Confirmed" || b.status === "Approved" ? "border-approved" : "border-rejected");
+
+            tableHtml += `
+                <tr class="${isPending ? 'table-warning-row' : ''}">
+                    <td><span class="comm-flat-badge">${escapeHtml(b.resident)}</span></td>
+                    <td><strong>${escapeHtml(b.facility)}</strong></td>
+                    <td>${escapeHtml(b.formatted_booking_date || b.booking_date)}</td>
+                    <td>${getStatusBadge(b.status)}</td>
+                    <td class="small text-muted">${escapeHtml(b.remarks || '-')}</td>
+                    <td class="text-right">
+                        ${isPending ? `
+                            <button type="button" class="btn btn-sm btn-success py-1 px-2 btn-action" data-doctype="Facility Booking" data-docname="${b.name}" data-action="Approved" data-title="Approve Booking for ${escapeHtml(b.resident)}" data-show-remarks="1">
+                                ✅ Approve
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger py-1 px-2 btn-action" data-doctype="Facility Booking" data-docname="${b.name}" data-action="Rejected" data-title="Reject Booking for ${escapeHtml(b.resident)}" data-show-remarks="1">
+                                ❌ Reject
+                            </button>
+                        ` : `<span class="text-muted small">${escapeHtml(b.status)}</span>`}
+                    </td>
+                </tr>
+            `;
+
+            cardsHtml += `
+                <div class="card p-3 mb-3 comm-card-item ${borderClass}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <span class="comm-flat-badge mr-2">${escapeHtml(b.resident)}</span>
+                            <span class="font-weight-bold text-dark">${escapeHtml(b.facility)}</span>
+                        </div>
+                        ${getStatusBadge(b.status)}
+                    </div>
+                    <div class="small text-muted mb-2">
+                        📅 <strong>Date:</strong> ${escapeHtml(b.formatted_booking_date || b.booking_date)}
+                    </div>
+                    ${b.remarks ? `<div class="small text-secondary mb-2 bg-light p-2 rounded">${escapeHtml(b.remarks)}</div>` : ''}
+                    ${isPending ? `
+                        <div class="d-flex pt-2 border-top">
+                            <button type="button" class="btn btn-success btn-sm flex-grow-1 mr-2 font-weight-bold btn-action" data-doctype="Facility Booking" data-docname="${b.name}" data-action="Approved" data-title="Approve Booking for ${escapeHtml(b.resident)}" data-show-remarks="1">
+                                ✅ Approve
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm flex-grow-1 font-weight-bold btn-action" data-doctype="Facility Booking" data-docname="${b.name}" data-action="Rejected" data-title="Reject Booking for ${escapeHtml(b.resident)}" data-show-remarks="1">
+                                ❌ Reject
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+
+        tableHtml += `</tbody></table></div>`;
+        cardsHtml += `</div>`;
+        $cont.html(tableHtml + cardsHtml);
+    }
+
     function renderNotices(items) {
         const $cont = $("#container-notices").empty();
         if (!items || !items.length) {
@@ -914,6 +1000,7 @@ frappe.ready(function () {
         renderFamily(filterList(committeeData.family, "family", ["parent_flat", "member_name", "mobile_no", "relationship"]));
         renderPets(filterList(committeeData.pets, "pets", ["flat", "parent", "pet_name", "license_no"]));
         renderTickets(filterList(committeeData.tickets, "tickets", ["name", "resident", "category", "description", "priority_level"]));
+        renderFacilityBookings(filterList(committeeData.facility_bookings, "facility_bookings", ["facility", "resident", "name", "remarks"]));
         renderNotices(filterList(committeeData.notices, "notices", ["title", "content"]));
         
         // Filter resolutions with dedicated filter options (All, Pending My Vote, Signed by Me, Declined by Me, Passed, Rejected)

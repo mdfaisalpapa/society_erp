@@ -72,6 +72,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link font-weight-bold" id="tab-facility_bookings" data-toggle="pill" href="#pane-facility_bookings" role="tab" data-module="facility_bookings">
+                            <span class="tab-icon">🏛️</span><span class="tab-label">Hall Bookings</span> <span class="badge badge-warning ml-1" id="badge-facility_bookings">{{ counts.facility_bookings_pending }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link font-weight-bold" id="tab-notices" data-toggle="pill" href="#pane-notices" role="tab" data-module="notices">
                             <span class="tab-icon">📋</span><span class="tab-label">Notices</span>
                         </a>
@@ -171,6 +176,11 @@
             <!-- 7. Notices Pane -->
             <div class="tab-pane fade" id="pane-notices" role="tabpanel">
                 <div id="container-notices"></div>
+            </div>
+
+            <!-- 7b. Facility Bookings Pane -->
+            <div class="tab-pane fade" id="pane-facility_bookings" role="tabpanel">
+                <div id="container-facility_bookings"></div>
             </div>
 
             <!-- 8. Board Resolutions Pane -->
@@ -465,7 +475,7 @@
     border-left: 5px solid #dc3545 !important;
 }
 
-/* Mobile Modal Bottom Sheet */
+/* Mobile Modal Bottom Sheet - Full content modals get bottom-sheet, compact confirmation modals stay fit-content */
 @media (max-width: 767px) {
     .container.committee-portal-root {
         padding-left: 10px !important;
@@ -473,12 +483,22 @@
     }
     .modal-dialog {
         width: 100vw !important;
-        height: 100vh !important;
         margin: 0 !important;
         max-width: none !important;
     }
-    .modal-content {
-        height: 100% !important;
+    #modal-action-confirm .modal-dialog {
+        margin: auto !important;
+        width: 92vw !important;
+        max-width: 450px !important;
+    }
+    #modal-action-confirm .modal-content {
+        height: auto !important;
+        border-radius: 12px !important;
+    }
+    #modal-post-notice .modal-content,
+    #modal-post-resolution .modal-content,
+    #modal-resolution-vote .modal-content {
+        height: 100vh !important;
         border-radius: 0 !important;
     }
     .modal-header {
@@ -487,6 +507,24 @@
         z-index: 1050;
         background: #fff;
     }
+}
+
+/* Frappe Confirm Dialog accessible button styling */
+.modal.fade:has(.frappe-confirm-message) .modal-dialog,
+.modal[aria-modal="true"]:has(.frappe-confirm-message) .modal-dialog,
+.modal-dialog:has(.frappe-confirm-message) {
+    height: auto !important;
+    max-height: 90vh !important;
+    margin: 1.75rem auto !important;
+}
+.modal-dialog:has(.frappe-confirm-message) .modal-content {
+    height: auto !important;
+    max-height: none !important;
+}
+.modal-dialog:has(.frappe-confirm-message) .modal-footer {
+    display: flex !important;
+    padding: 0.75rem 1.25rem !important;
+    border-top: 1px solid #e9ecef !important;
 }
 </style>
 {% endblock %}

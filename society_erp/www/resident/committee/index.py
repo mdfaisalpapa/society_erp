@@ -108,6 +108,9 @@ def get_context(context):
         "notices_active": frappe.db.count(
             "Society Notice", {"is_active": 1}
         ),
+        "facility_bookings_pending": frappe.db.count(
+            "Facility Booking", {"status": "Pending Approval"}
+        ),
         "resolutions_pending": 0,
     }
 
@@ -395,6 +398,27 @@ def get_committee_data(module_type="all"):
         )
         data["resolutions"] = resolutions
 
+    # 9. Facility Bookings (Community Hall)
+    if module_type in ("all", "facility_bookings"):
+        bookings = frappe.get_all(
+            "Facility Booking",
+            fields=[
+                "name",
+                "facility",
+                "resident",
+                "booking_date",
+                "status",
+                "remarks",
+                "creation",
+            ],
+            order_by="booking_date desc, creation desc",
+            limit_page_length=100,
+        )
+        for b in bookings:
+            b["formatted_booking_date"] = format_date(b.booking_date, "dd-MM-yyyy") if b.booking_date else ""
+        bookings.sort(key=lambda x: (0 if x.get("status") == "Pending Approval" else 1, str(x.get("booking_date"))))
+        data["facility_bookings"] = bookings
+
     # Counts summary
     res_pending_count = 0
     if comm_member_name:
@@ -411,6 +435,7 @@ def get_committee_data(module_type="all"):
         "family_pending": frappe.db.count("Family Members", {"registration_status": "Pending"}),
         "tickets_open": frappe.db.count("Maintenance Ticket", {"status": "Open"}),
         "notices_active": frappe.db.count("Society Notice", {"is_active": 1}),
+        "facility_bookings_pending": frappe.db.count("Facility Booking", {"status": "Pending Approval"}),
         "resolutions_pending": res_pending_count,
     }
 
@@ -443,6 +468,7 @@ def update_item_status(doctype, docname, action, remarks=None):
         "Family Members",
         "Maintenance Ticket",
         "Society Notice",
+        "Facility Booking",
     }
     if doctype not in allowed_doctypes:
         frappe.throw(_("Invalid DocType."))
@@ -506,6 +532,26 @@ def update_item_status(doctype, docname, action, remarks=None):
             frappe.delete_doc(doctype, docname, ignore_permissions=True)
             frappe.db.commit()
             return {"status": "success", "message": _("Notice deleted.")}
+
+    elif doctype == "Facility Booking":
+        if action in ("Approved", "Confirmed"):
+            # Check if date is already booked by another confirmed booking
+            conflict = frappe.db.exists(
+                "Facility Booking",
+                {
+                    "facility": doc.facility,
+                    "booking_date": doc.booking_date,
+                    "status": ["in", ["Confirmed", "Approved"]],
+                    "name": ["!=", doc.name],
+                },
+            )
+            if conflict:
+                frappe.throw(_("Facility '{0}' is already booked and approved for another resident on {1}.").format(doc.facility, format_date(doc.booking_date, "dd-MM-yyyy")))
+            doc.status = "Confirmed"
+        elif action in ("Rejected", "Cancelled"):
+            doc.status = action
+        if remarks:
+            doc.remarks = f"{doc.remarks or ''}\n[{today()}] {comm_name}: {remarks}".strip()
 
     doc.save(ignore_permissions=True)
     frappe.db.commit()
