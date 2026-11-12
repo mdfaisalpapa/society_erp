@@ -99,8 +99,21 @@
                             <input type="text" id="committee-search-input" class="form-control border-left-0" placeholder="Search by Flat No, Resident Name, Vehicle No, or Keyword…" autocomplete="off">
                         </div>
                     </div>
-                    <div class="col-12 col-md-6 d-flex justify-content-md-end align-items-center">
-                        <div class="custom-control custom-switch mr-3">
+                    <div class="col-12 col-md-6 d-flex justify-content-md-end align-items-center flex-wrap">
+                        <!-- Resolution Status Filter (Visible when on resolutions tab) -->
+                        <div id="filter-resolutions-group" class="d-none mr-3 mb-1 mb-md-0">
+                            <select id="select-resolution-filter" class="form-control form-control-sm font-weight-bold" style="width: auto; min-width: 140px;">
+                                <option value="all">All Resolutions</option>
+                                <option value="pending_vote" selected>⏳ Pending My Vote</option>
+                                <option value="my_signed">✅ Signed by Me</option>
+                                <option value="my_declined">❌ Declined by Me</option>
+                                <option value="passed">🏆 Passed</option>
+                                <option value="rejected">🚫 Rejected</option>
+                            </select>
+                        </div>
+
+                        <!-- Standard Pending Only Switch for Approval Workflows -->
+                        <div class="custom-control custom-switch mr-3 mb-1 mb-md-0" id="filter-pending-switch-group">
                             <input type="checkbox" class="custom-control-input" id="switch-pending-only" checked>
                             <label class="custom-control-label small font-weight-bold text-muted" for="switch-pending-only">Pending Approvals Only</label>
                         </div>
@@ -310,31 +323,17 @@
                             </div>
                         </div>
 
-                        <!-- Voting Actions Section -->
+                        <!-- Direct Action Buttons (Sign with confirmation / Decline with prompt) -->
                         <div class="border-top pt-3 mt-3">
-                            <div class="form-group mb-3">
-                                <label class="font-weight-bold small text-dark">Your Decision *</label>
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-outline-success font-weight-bold flex-fill py-2 btn-vote-choice active" data-action="Signed">
-                                        ✅ Sign (Accept Resolution)
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger font-weight-bold flex-fill py-2 ml-2 btn-vote-choice" data-action="Declined">
-                                        ❌ Decline (Reject Resolution)
-                                    </button>
-                                </div>
+                            <label class="font-weight-bold small text-dark mb-2">Record Your Response:</label>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-success font-weight-bold flex-fill py-2 shadow-sm mr-2" id="btn-modal-direct-sign">
+                                    ✅ Sign & Accept Resolution
+                                </button>
+                                <button type="button" class="btn btn-outline-danger font-weight-bold flex-fill py-2" id="btn-modal-direct-decline">
+                                    ❌ Decline Resolution…
+                                </button>
                             </div>
-
-                            <div class="form-group mb-3 d-none" id="vote-decline-reason-group">
-                                <label for="vote-decline-reason" class="font-weight-bold small text-danger">Reason for Declining *</label>
-                                <textarea class="form-control" id="vote-decline-reason" rows="3" placeholder="Please state your reason for declining this resolution..."></textarea>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-end mt-4">
-                            <button type="button" class="btn btn-light border mr-2" data-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary font-weight-bold" id="btn-submit-vote">
-                                Submit Decision
-                            </button>
                         </div>
                     </div>
                 </div>

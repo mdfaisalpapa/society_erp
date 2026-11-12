@@ -7,6 +7,9 @@ frappe.ready(function () {
     const $panes = $("#committeeTabPanes");
     const $searchInput = $("#committee-search-input");
     const $switchPending = $("#switch-pending-only");
+    const $selectResolutionFilter = $("#select-resolution-filter");
+    const $filterResGroup = $("#filter-resolutions-group");
+    const $filterPendingSwitchGroup = $("#filter-pending-switch-group");
     const $alert = $("#committee-alert");
 
     // Modal elements
@@ -872,7 +875,32 @@ frappe.ready(function () {
         renderPets(filterList(committeeData.pets, "pets", ["flat", "parent", "pet_name", "license_no"]));
         renderTickets(filterList(committeeData.tickets, "tickets", ["name", "resident", "category", "description", "priority_level"]));
         renderNotices(filterList(committeeData.notices, "notices", ["title", "content"]));
-        renderResolutions(filterList(committeeData.resolutions, "resolutions", ["name", "resolution_title", "resolution_text", "status"]));
+        
+        // Filter resolutions with dedicated filter options (All, Pending My Vote, Signed by Me, Declined by Me, Passed, Rejected)
+        const resFilterVal = $selectResolutionFilter.val() || "all";
+        const filteredResolutions = (committeeData.resolutions || []).filter(item => {
+            if (resFilterVal === "pending_vote" && !(item.user_status === "Pending" && (item.status === "Circulated" || item.status === "Draft"))) {
+                return false;
+            }
+            if (resFilterVal === "my_signed" && item.user_status !== "Signed") {
+                return false;
+            }
+            if (resFilterVal === "my_declined" && item.user_status !== "Declined") {
+                return false;
+            }
+            if (resFilterVal === "passed" && item.status !== "Passed") {
+                return false;
+            }
+            if (resFilterVal === "rejected" && item.status !== "Rejected") {
+                return false;
+            }
+            if (!query) return true;
+            return ["name", "resolution_title", "resolution_text", "status"].some(f => {
+                const val = (item[f] || "").toString().toLowerCase();
+                return val.includes(query);
+            });
+        });
+        renderResolutions(filteredResolutions);
     }
 
     // --- Data Fetching ---
@@ -916,7 +944,20 @@ frappe.ready(function () {
     });
 
     $switchPending.on("change", applyFilterAndRender);
+    $selectResolutionFilter.on("change", applyFilterAndRender);
     $("#btn-refresh-data").on("click", loadCommitteeData);
+
+    // Dynamic Filter switcher when switching tabs
+    $('a[data-toggle="pill"]').on("shown.bs.tab", function (e) {
+        const targetTab = $(e.target).data("module");
+        if (targetTab === "resolutions") {
+            $filterResGroup.removeClass("d-none");
+            $filterPendingSwitchGroup.addClass("d-none");
+        } else {
+            $filterResGroup.addClass("d-none");
+            $filterPendingSwitchGroup.removeClass("d-none");
+        }
+    });
 
     // --- Action Confirm Modal Handler ---
     $(document).on("click", ".btn-action", function (e) {
@@ -1127,65 +1168,82 @@ frappe.ready(function () {
             $otherContainer.html(`<span class="small text-muted font-italic">All signatories have responded!</span>`);
         }
 
-        selectedVoteAction = "Signed";
-        $(".btn-vote-choice").removeClass("active");
-        $('.btn-vote-choice[data-action="Signed"]').addClass("active");
-
         $voteModal.modal("show");
     });
 
-    // Choice toggling
-    $(".btn-vote-choice").on("click", function () {
-        $(".btn-vote-choice").removeClass("active");
-        $(this).addClass("active");
-        selectedVoteAction = $(this).data("action");
-
-        if (selectedVoteAction === "Declined") {
-            $("#vote-decline-reason-group").removeClass("d-none");
-        } else {
-            $("#vote-decline-reason-group").addClass("d-none");
-        }
-    });
-
-    // Submit Vote
-    $("#btn-submit-vote").on("click", function () {
+    // Helper: Execute voting call
+    function executeResolutionVote(action, reason, $triggerBtn) {
         if (!activeVoteDocname) return;
 
-        const reason = $("#vote-decline-reason").val().trim();
-        if (selectedVoteAction === "Declined" && !reason) {
-            frappe.msgprint({
-                title: __("Reason Required"),
-                message: __("Please specify your reason for declining this resolution."),
-                indicator: "orange"
-            });
-            return;
+        const origBtnText = $triggerBtn ? $triggerBtn.html() : "";
+        if ($triggerBtn) {
+            $triggerBtn.prop("disabled", true).html("Recording…");
         }
-
-        const $btn = $(this);
-        const origText = $btn.html();
-        $btn.prop("disabled", true).html("Recording Vote…");
 
         frappe.call({
             method: "society_erp.www.resident.committee.index.respond_board_resolution",
             args: {
                 docname: activeVoteDocname,
-                action: selectedVoteAction,
-                rejection_reason: reason
+                action: action,
+                rejection_reason: reason || null
             },
             callback: function (r) {
-                $btn.prop("disabled", false).html(origText);
+                if ($triggerBtn) $triggerBtn.prop("disabled", false).html(origBtnText);
                 $voteModal.modal("hide");
                 if (r && r.message && r.message.status === "success") {
-                    showAlert(r.message.message || "Your vote has been recorded.", "success");
+                    showAlert(r.message.message || "Your response has been recorded.", "success");
                     loadCommitteeData();
                 }
             },
             error: function (err) {
-                $btn.prop("disabled", false).html(origText);
+                if ($triggerBtn) $triggerBtn.prop("disabled", false).html(origBtnText);
                 const errMsg = err && err.message ? err.message : "Failed to record response.";
                 frappe.msgprint({ title: __("Error"), message: errMsg, indicator: "red" });
             }
         });
+    }
+
+    // Direct Action 1: Sign with Confirmation Dialog
+    $("#btn-modal-direct-sign").on("click", function () {
+        if (!activeVoteDocname) return;
+        const $btn = $(this);
+        const resTitle = $("#vote-res-title").text();
+
+        frappe.confirm(
+            `Are you sure you want to sign and accept resolution <strong>${escapeHtml(resTitle)} (${escapeHtml(activeVoteDocname)})</strong>?`,
+            function () {
+                executeResolutionVote("Signed", null, $btn);
+            }
+        );
+    });
+
+    // Direct Action 2: Decline with Reason Popup
+    $("#btn-modal-direct-decline").on("click", function () {
+        if (!activeVoteDocname) return;
+        const $btn = $(this);
+        const resTitle = $("#vote-res-title").text();
+
+        frappe.prompt(
+            [
+                {
+                    label: __("Reason for Declining"),
+                    fieldname: "decline_reason",
+                    fieldtype: "Small Text",
+                    reqd: 1,
+                    description: __("Please specify why you are declining this resolution.")
+                }
+            ],
+            function (values) {
+                const reason = (values.decline_reason || "").trim();
+                if (!reason) {
+                    frappe.msgprint({ title: __("Required"), message: __("Reason is required to decline."), indicator: "orange" });
+                    return;
+                }
+                executeResolutionVote("Declined", reason, $btn);
+            },
+            __(`Decline Resolution: ${escapeHtml(activeVoteDocname)}`),
+            __("Confirm Decline")
+        );
     });
 
     // Publish Passed Resolution to Notice Board Handler
