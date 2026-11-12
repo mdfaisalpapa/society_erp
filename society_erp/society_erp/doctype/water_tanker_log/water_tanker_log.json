@@ -1,0 +1,182 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:WTK-{YYYY}-{MM}-{DD}-{###}",
+ "creation": "2026-11-13 05:20:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "delivery_date",
+  "delivery_time",
+  "supplier",
+  "delivery_challan_no",
+  "section_tanker_details",
+  "vehicle_number",
+  "capacity_kl",
+  "cost_per_tanker",
+  "column_break_dest",
+  "target_block",
+  "target_sump",
+  "received_by_staff",
+  "water_quality_check",
+  "section_proof",
+  "challan_photo",
+  "tanker_photo",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "default": "Today",
+   "fieldname": "delivery_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Delivery Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "delivery_time",
+   "fieldtype": "Time",
+   "label": "Time of Arrival"
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Water Supplier / Agency"
+  },
+  {
+   "fieldname": "delivery_challan_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Delivery Challan / Slip No"
+  },
+  {
+   "fieldname": "section_tanker_details",
+   "fieldtype": "Section Break",
+   "label": "Tanker Capacity & Vehicle Info"
+  },
+  {
+   "fieldname": "vehicle_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Tanker Vehicle / Reg No",
+   "reqd": 1
+  },
+  {
+   "default": "36.0",
+   "fieldname": "capacity_kl",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Load Capacity (kL / Kiloliters)",
+   "precision": "1",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "cost_per_tanker",
+   "fieldtype": "Currency",
+   "label": "Cost / Rate per Tanker"
+  },
+  {
+   "fieldname": "column_break_dest",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "target_block",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Discharged to Block",
+   "options": "Block"
+  },
+  {
+   "default": "Domestic Sump",
+   "fieldname": "target_sump",
+   "fieldtype": "Select",
+   "label": "Target Sump",
+   "options": "Domestic Sump\nCentral Raw Water Sump\nFlush Sump"
+  },
+  {
+   "fieldname": "received_by_staff",
+   "fieldtype": "Link",
+   "label": "Verified & Received By (Staff)",
+   "options": "Facility Staff"
+  },
+  {
+   "default": "Clear & Odorless",
+   "fieldname": "water_quality_check",
+   "fieldtype": "Select",
+   "label": "Water Quality Check",
+   "options": "Clear & Odorless\nTDS Checked (Acceptable)\nSlightly Turbid\nRejected"
+  },
+  {
+   "fieldname": "section_proof",
+   "fieldtype": "Section Break",
+   "label": "Photographic Proof"
+  },
+  {
+   "fieldname": "challan_photo",
+   "fieldtype": "Attach Image",
+   "label": "Delivery Challan Photo"
+  },
+  {
+   "fieldname": "tanker_photo",
+   "fieldtype": "Attach Image",
+   "label": "Tanker Decanting Photo"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks / Delivery Notes"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-13 05:20:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society ERP",
+ "name": "Water Tanker Log",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Facility Agency Manager",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

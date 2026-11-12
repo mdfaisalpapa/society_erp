@@ -1392,14 +1392,82 @@ frappe.ready(function () {
                                 ✅ Sump Levels Normal
                             </span>
                         `}
-                        <span class="badge badge-primary px-2 py-1">
+                        <span class="badge badge-primary px-2 py-1 mr-2">
                             ⏱️ Total Pump Run: ${summary.total_domestic_run_hours + summary.total_flush_run_hours} hrs
+                        </span>
+                        <span class="badge badge-info px-2 py-1">
+                            🚚 Tankers Today: ${summary.tanker_count || 0} (${summary.total_tanker_kl || 0} kL)
                         </span>
                     </div>
                 </div>
             </div>
-            <div class="row">
         `;
+
+        // Water Tankers Section
+        if (summary.tankers && summary.tankers.length > 0) {
+            html += `
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-white font-weight-bold d-flex justify-content-between align-items-center">
+                        <span>🚚 External Water Tanker Deliveries Today (${summary.date})</span>
+                        <span class="badge badge-primary font-weight-bold">${summary.total_tanker_kl} kL Total Inflow</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Vehicle Number</th>
+                                        <th>Capacity</th>
+                                        <th>Target Sump & Block</th>
+                                        <th>Vendor / Challan</th>
+                                        <th>Proofs</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            summary.tankers.forEach(t => {
+                const targetDisplay = t.target_block 
+                    ? `<strong>${t.target_sump}</strong> (Block ${t.target_block})` 
+                    : `<strong>${t.target_sump}</strong>`;
+
+                const challanLink = t.challan_photo 
+                    ? `<a href="${t.challan_photo}" target="_blank" class="badge badge-light border text-primary mr-1">📄 Challan Slip</a>` 
+                    : '<span class="text-muted small">No Challan</span>';
+
+                const photoLink = t.tanker_photo 
+                    ? `<a href="${t.tanker_photo}" target="_blank" class="badge badge-light border text-success">📷 Tanker Photo</a>` 
+                    : '';
+
+                html += `
+                    <tr>
+                        <td>
+                            <strong class="text-dark">${escapeHtml(t.vehicle_number)}</strong>
+                            <div class="small text-muted font-italic">${t.delivery_time ? t.delivery_time.substring(0, 5) : ''}</div>
+                        </td>
+                        <td>
+                            <span class="badge badge-info font-weight-bold px-2 py-1" style="font-size: 0.9rem;">${t.capacity_kl} kL</span>
+                        </td>
+                        <td>${targetDisplay}</td>
+                        <td>
+                            <div>${escapeHtml(t.supplier || 'Private Vendor')}</div>
+                            <small class="text-muted font-family-monospace">${t.delivery_challan_no ? 'Challan: ' + escapeHtml(t.delivery_challan_no) : ''}</small>
+                        </td>
+                        <td>
+                            ${challanLink} ${photoLink}
+                        </td>
+                    </tr>
+                `;
+            });
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        html += `<div class="row">`;
 
         summary.blocks.forEach(b => {
             const hasData = b.has_reading;

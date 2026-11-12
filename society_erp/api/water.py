@@ -172,6 +172,18 @@ def get_daily_water_summary(date: str = None) -> dict:
 
     lines.append(f"\n⏱️ Total Pump Run Hours Today: *{round(total_domestic_hours + total_flush_hours, 1)} hrs*")
 
+    # Add Water Tanker Deliveries for today
+    tankers = frappe.get_all(
+        "Water Tanker Log",
+        filters={"delivery_date": target_date},
+        fields=["name", "delivery_time", "supplier", "vehicle_number", "capacity_kl", "target_block", "target_sump", "challan_photo", "tanker_photo", "cost_per_tanker"]
+    )
+    total_tanker_kl = sum(float(t.capacity_kl or 0) for t in tankers)
+    total_tanker_cost = sum(float(t.cost_per_tanker or 0) for t in tankers)
+
+    if tankers:
+        lines.append(f"\n🚚 *Water Tanker Inflow:* {len(tankers)} tankers ({round(total_tanker_kl, 1)} kL total)")
+
     return {
         "date": target_date,
         "blocks": block_data,
@@ -179,5 +191,67 @@ def get_daily_water_summary(date: str = None) -> dict:
         "total_domestic_run_hours": round(total_domestic_hours, 2),
         "total_flush_run_hours": round(total_flush_hours, 2),
         "low_alert_blocks": low_alert_blocks,
+        "tankers": tankers,
+        "tanker_count": len(tankers),
+        "total_tanker_kl": round(total_tanker_kl, 1),
+        "total_tanker_cost": round(total_tanker_cost, 2),
         "summary_text": "\n".join(lines)
     }
+
+
+@frappe.whitelist()
+def log_water_tanker(
+    delivery_date: str = None,
+    vehicle_number: str = None,
+    capacity_kl: float = 36.0,
+    target_sump: str = "Domestic Sump",
+    target_block: str = None,
+    supplier: str = None,
+    delivery_challan_no: str = None,
+    cost_per_tanker: float = None,
+    challan_photo: str = None,
+    tanker_photo: str = None,
+    water_quality_check: str = "Clear & Odorless",
+    remarks: str = None
+) -> dict:
+    """
+    Records private water tanker deliveries hired due to poor borewell yields.
+    """
+    if not delivery_date:
+        delivery_date = nowdate()
+
+    if not vehicle_number:
+        frappe.throw(_("Vehicle number is required"))
+
+    doc = frappe.get_doc({
+        "doctype": "Water Tanker Log",
+        "delivery_date": delivery_date,
+        "delivery_time": nowtime(),
+        "supplier": supplier or "Private Water Vendor",
+        "delivery_challan_no": delivery_challan_no,
+        "vehicle_number": vehicle_number.strip().upper(),
+        "capacity_kl": float(capacity_kl or 36.0),
+        "cost_per_tanker": float(cost_per_tanker or 0.0),
+        "target_block": target_block if target_block else None,
+        "target_sump": target_sump or "Domestic Sump",
+        "water_quality_check": water_quality_check or "Acceptable",
+        "challan_photo": challan_photo,
+        "tanker_photo": tanker_photo,
+        "remarks": remarks
+    })
+
+    # Link staff if logged by an agency or security user
+    if frappe.session.user != "Administrator":
+        staff = frappe.db.get_value("Facility Staff", {"user": frappe.session.user}, "name")
+        if staff:
+            doc.received_by_staff = staff
+
+    doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {
+        "success": True,
+        "message": f"Water Tanker {doc.vehicle_number} ({doc.capacity_kl} kL) logged successfully.",
+        "tanker_log_id": doc.name
+    }
+

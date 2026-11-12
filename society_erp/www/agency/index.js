@@ -27,6 +27,84 @@ frappe.ready(function() {
         $('#modal-water-log').modal('show');
     });
 
+    // Open Water Tanker Log Modal
+    $('#btn-open-tanker-modal').on('click', function() {
+        $('#form-tanker-log')[0].reset();
+        $('#modal-tanker-log').modal('show');
+    });
+
+    // Submit Water Tanker Log
+    $('#form-tanker-log').on('submit', function(e) {
+        e.preventDefault();
+        const btn = $('#btn-submit-tanker-log');
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
+
+        const vehicleNo = $('#tanker-vehicle-no').val().trim().toUpperCase();
+        const capacityKl = $('#tanker-capacity').val();
+        const targetSump = $('#tanker-target-sump').val();
+        const targetBlock = $('#tanker-target-block').val();
+        const supplier = $('#tanker-supplier').val().trim();
+        const challanNo = $('#tanker-challan-no').val().trim();
+        const remarks = $('#tanker-remarks').val().trim();
+
+        const challanFileInput = document.getElementById('tanker-challan-photo');
+        const vehicleFileInput = document.getElementById('tanker-vehicle-photo');
+
+        async function uploadIfPresent(fileInput) {
+            if (fileInput.files && fileInput.files[0]) {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('is_private', 0);
+                formData.append('folder', 'Home');
+                const resp = await fetch('/api/method/upload_file', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token }
+                });
+                const d = await resp.json();
+                return d.message ? d.message.file_url : null;
+            }
+            return null;
+        }
+
+        (async () => {
+            try {
+                const challanPhotoUrl = await uploadIfPresent(challanFileInput);
+                const vehiclePhotoUrl = await uploadIfPresent(vehicleFileInput);
+
+                frappe.call({
+                    method: 'society_erp.api.water.log_water_tanker',
+                    args: {
+                        vehicle_number: vehicleNo,
+                        capacity_kl: capacityKl,
+                        target_sump: targetSump,
+                        target_block: targetBlock,
+                        supplier: supplier,
+                        delivery_challan_no: challanNo,
+                        challan_photo: challanPhotoUrl,
+                        tanker_photo: vehiclePhotoUrl,
+                        remarks: remarks
+                    },
+                    callback: function(r) {
+                        btn.prop('disabled', false).text('🚚 Save Tanker Delivery');
+                        if (r.message && r.message.success) {
+                            $('#modal-tanker-log').modal('hide');
+                            showAlert('success', '🚚 ' + r.message.message);
+                        } else {
+                            frappe.msgprint(__('Failed to save tanker delivery: ' + (r.message ? r.message.message : 'Unknown error')));
+                        }
+                    },
+                    error: function() {
+                        btn.prop('disabled', false).text('🚚 Save Tanker Delivery');
+                    }
+                });
+            } catch (err) {
+                btn.prop('disabled', false).text('🚚 Save Tanker Delivery');
+                frappe.msgprint(__('Error uploading tanker photo: ' + err));
+            }
+        })();
+    });
+
     // Submit Water Log
     $('#form-water-log').on('submit', function(e) {
         e.preventDefault();
