@@ -1644,6 +1644,16 @@ frappe.ready(function () {
                             frappe.show_alert({ message: __("Contact details revealed & logged."), indicator: "green" }, 4);
                         }
                     },
+                    error: function (err) {
+                        $btn.prop("disabled", false).text(origText);
+                        const errMsg = err && err.message ? err.message : "Failed to unmask contact.";
+                        frappe.msgprint({ title: __("Error"), message: errMsg, indicator: "red" });
+                    }
+                });
+            }
+        );
+    });
+
     // --- Emergency SOS Switch & Management Handlers ---
     $(document).on("change", "#switch-emergency-sos-toggle", function () {
         const isChecked = $(this).is(":checked");
