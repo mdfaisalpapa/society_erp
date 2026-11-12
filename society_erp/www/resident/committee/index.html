@@ -24,6 +24,7 @@
     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">✕ Close</button>
 {% else %}
     <a href="/resident" class="btn btn-outline-danger">🔙 Return to Resident Portal</a>
+{% endif %}
         </div>
     {% else %}
         {% if is_standalone %}
@@ -76,7 +77,6 @@
                 <a href="/resident" class="btn btn-outline-secondary btn-sm">
                     🔙 Back to Resident Portal
                 </a>
-{% endif %}
             </div>
         </div>
         {% endif %}
