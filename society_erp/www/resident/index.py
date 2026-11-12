@@ -126,9 +126,11 @@ def get_context(context):
     enable_sos = frappe.db.get_single_value("Society ERP Settings", "enable_emergency_sos")
     context.enable_emergency_sos = bool(int(enable_sos)) if enable_sos is not None else True
 
-    # Portal Tiles master configuration
+    # Portal Tiles master configuration (separate for residents & committee)
     from society_erp.www.resident.settings.index import get_tile_settings
-    context.tiles = get_tile_settings()
+    tile_cfg = get_tile_settings()
+    context.resident_tiles = tile_cfg.get("residents", {})
+    context.committee_tiles = tile_cfg.get("committee", {})
 
     return context
 

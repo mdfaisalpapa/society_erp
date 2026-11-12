@@ -13,8 +13,8 @@
     }
     .tile-icon-box {
         font-size: 1.8rem;
-        width: 48px;
-        height: 48px;
+        width: 46px;
+        height: 46px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -22,10 +22,10 @@
         border-radius: 10px;
         flex-shrink: 0;
     }
-    .badge-pill-role {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: 6px;
+    .role-toggle-box {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 8px 12px;
     }
 </style>
 {% endblock %}
@@ -58,8 +58,8 @@
     <div class="card shadow-sm border-primary">
         <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center flex-wrap">
             <div>
-                <h5 class="mb-1 font-weight-bold">🛡️ Master Portal Feature Switchboard</h5>
-                <small class="text-white-50">Visible exclusively to <strong>System Managers</strong>. Turn any tile ON or OFF for residents and committee members.</small>
+                <h5 class="mb-1 font-weight-bold">🛡️ Master Role-Based Feature Switchboard</h5>
+                <small class="text-white-50">Visible exclusively to <strong>System Managers</strong>. Independently enable or disable features for Residents and Committee Members.</small>
             </div>
             <span class="badge badge-light text-primary font-weight-bold px-3 py-2 mt-2 mt-md-0">
                 System Manager Mode
@@ -67,29 +67,67 @@
         </div>
         <div class="card-body bg-light">
             <div class="alert alert-info py-2 small mb-3">
-                💡 <strong>How it works:</strong> Toggling a feature OFF instantly hides its tile on the Resident Portal and disables direct access for residents or committee members.
+                💡 <strong>Role-Based Controls:</strong> Each feature tile has separate toggles for <strong>Residents</strong> and <strong>Committee Members</strong>. Toggling a switch OFF instantly hides the respective tile or approval tab.
             </div>
 
             <div class="row">
                 {% for tile in portal_tiles %}
                 <div class="col-12 col-md-6 col-lg-4 mb-3">
-                    <div class="card h-100 shadow-sm border tile-switch-card p-3 d-flex flex-column justify-content-between bg-white" style="border-left: 4px solid {% if tile.enabled %}#198754{% else %}#dc3545{% endif %} !important;">
+                    <div class="card h-100 shadow-sm border tile-switch-card p-3 d-flex flex-column justify-content-between bg-white">
                         <div>
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <span class="tile-icon-box">{{ tile.icon }}</span>
-                                <div class="custom-control custom-switch" style="transform: scale(1.25); transform-origin: right center;">
-                                    <input type="checkbox" class="custom-control-input tile-toggle-switch" id="switch-tile-{{ tile.id }}" data-tile="{{ tile.id }}" {% if tile.enabled %}checked{% endif %}>
-                                    <label class="custom-control-label cursor-pointer" for="switch-tile-{{ tile.id }}"></label>
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="tile-icon-box mr-2">{{ tile.icon }}</span>
+                                <div>
+                                    <h6 class="font-weight-bold text-dark mb-0">{{ tile.title }}</h6>
+                                    {% if tile.note %}
+                                    <small class="text-primary font-weight-bold" style="font-size: 0.7rem;">{{ tile.note }}</small>
+                                    {% endif %}
                                 </div>
                             </div>
-                            <h6 class="font-weight-bold text-dark mb-1">{{ tile.title }}</h6>
-                            <p class="small text-muted mb-2">{{ tile.desc }}</p>
-                        </div>
-                        <div class="pt-2 border-top d-flex justify-content-between align-items-center">
-                            <span class="badge badge-secondary badge-pill-role">{{ tile.restricted_to }}</span>
-                            <span class="small font-weight-bold status-label-{{ tile.id }} {% if tile.enabled %}text-success{% else %}text-danger{% endif %}">
-                                {% if tile.enabled %}Active{% else %}Hidden{% endif %}
-                            </span>
+                            <p class="small text-muted mb-3">{{ tile.desc }}</p>
+
+                            <!-- Dual Role Toggles: Residents & Committee -->
+                            <div class="role-toggle-group">
+                                <!-- 1. Resident Toggle -->
+                                {% if tile.applies_to_resident %}
+                                <div class="role-toggle-box d-flex justify-content-between align-items-center mb-2 border">
+                                    <div>
+                                        <span class="small font-weight-bold text-dark">👥 Residents</span>
+                                        <div class="small status-label-residents-{{ tile.id }} {% if tile.enabled_resident %}text-success{% else %}text-danger{% endif %}" style="font-size: 0.72rem;">
+                                            {% if tile.enabled_resident %}Enabled{% else %}Disabled{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="custom-control custom-switch" style="transform: scale(1.15); transform-origin: right center;">
+                                        <input type="checkbox" class="custom-control-input tile-role-toggle" 
+                                            id="switch-res-{{ tile.id }}" 
+                                            data-tile="{{ tile.id }}" 
+                                            data-role="residents" 
+                                            {% if tile.enabled_resident %}checked{% endif %}>
+                                        <label class="custom-control-label cursor-pointer" for="switch-res-{{ tile.id }}"></label>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- 2. Committee Member Toggle -->
+                                {% if tile.applies_to_committee %}
+                                <div class="role-toggle-box d-flex justify-content-between align-items-center border">
+                                    <div>
+                                        <span class="small font-weight-bold text-dark">🏛️ Committee Members</span>
+                                        <div class="small status-label-committee-{{ tile.id }} {% if tile.enabled_committee %}text-success{% else %}text-danger{% endif %}" style="font-size: 0.72rem;">
+                                            {% if tile.enabled_committee %}Enabled{% else %}Disabled{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="custom-control custom-switch" style="transform: scale(1.15); transform-origin: right center;">
+                                        <input type="checkbox" class="custom-control-input tile-role-toggle" 
+                                            id="switch-comm-{{ tile.id }}" 
+                                            data-tile="{{ tile.id }}" 
+                                            data-role="committee" 
+                                            {% if tile.enabled_committee %}checked{% endif %}>
+                                        <label class="custom-control-label cursor-pointer" for="switch-comm-{{ tile.id }}"></label>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -102,11 +140,12 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    $(".tile-toggle-switch").on("change", function () {
+    $(".tile-role-toggle").on("change", function () {
         const switchInput = $(this);
         const tileId = switchInput.data("tile");
+        const targetRole = switchInput.data("role");
         const isChecked = switchInput.is(":checked");
-        const label = $(".status-label-" + tileId);
+        const label = $(".status-label-" + targetRole + "-" + tileId);
         
         label.text("Updating…");
 
@@ -114,13 +153,13 @@ document.addEventListener("DOMContentLoaded", function () {
             method: "society_erp.www.resident.settings.index.save_tile_toggle",
             args: {
                 tile_id: tileId,
+                target_role: targetRole,
                 enabled: isChecked ? 1 : 0
             },
             callback: function (r) {
                 if (r && r.message && r.message.status === "success") {
-                    label.attr("class", "small font-weight-bold status-label-" + tileId + " " + (isChecked ? "text-success" : "text-danger"))
-                         .text(isChecked ? "Active" : "Hidden");
-                    switchInput.closest(".tile-switch-card").css("border-left-color", isChecked ? "#198754" : "#dc3545");
+                    label.attr("class", "small status-label-" + targetRole + "-" + tileId + " " + (isChecked ? "text-success" : "text-danger"))
+                         .text(isChecked ? "Enabled" : "Disabled");
                     frappe.show_alert({
                         message: __(r.message.message),
                         indicator: isChecked ? "green" : "orange"
@@ -129,7 +168,7 @@ document.addEventListener("DOMContentLoaded", function () {
             },
             error: function () {
                 switchInput.prop("checked", !isChecked);
-                label.text(!isChecked ? "Active" : "Hidden");
+                label.text(!isChecked ? "Enabled" : "Disabled");
             }
         });
     });
