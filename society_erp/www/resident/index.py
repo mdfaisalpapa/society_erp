@@ -15,6 +15,12 @@ def get_context(context):
 
     user = frappe.session.user
     user_email = user.strip().lower()
+    user_roles = frappe.get_roles(user)
+
+    # 1.1 Redirect Agency Managers directly to Agency Portal
+    if "Facility Agency Manager" in user_roles and "Flat Owner" not in user_roles:
+        frappe.local.flags.redirect_location = "/agency"
+        raise frappe.Redirect
 
     # 2. Identify the logged-in resident.
     # Check active tenants first, matching the resident dashboard logic.
