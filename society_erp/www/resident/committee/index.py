@@ -3,6 +3,31 @@ from frappe import _
 from frappe.utils import format_date, get_datetime, nowdate, today
 
 
+def mask_phone_number(phone):
+    """Masks phone number showing only prefix and last 3-4 digits e.g., +91 98****1234"""
+    if not phone:
+        return ""
+    p = str(phone).strip()
+    if len(p) <= 4:
+        return "****"
+    if len(p) <= 7:
+        return p[:2] + "****" + p[-2:]
+    return p[:4] + "****" + p[-4:]
+
+
+def mask_email_address(email):
+    """Masks email address e.g., fa****@gmail.com"""
+    if not email or "@" not in email:
+        return ""
+    parts = email.strip().split("@")
+    user, domain = parts[0], parts[1]
+    if len(user) <= 2:
+        masked_user = user[0] + "*"
+    else:
+        masked_user = user[:2] + "****"
+    return f"{masked_user}@{domain}"
+
+
 def check_committee_access(user=None):
     """
     Verifies that the session user is an authorized Committee Member
@@ -142,6 +167,11 @@ def get_committee_data(module_type="all"):
             order_by="creation desc",
             limit_page_length=150,
         )
+        for t in tenants:
+            t["raw_mobile_no"] = t.get("mobile_no")
+            t["raw_email"] = t.get("email")
+            t["mobile_no"] = mask_phone_number(t.get("mobile_no"))
+            t["email"] = mask_email_address(t.get("email"))
         # Sort pending first in Python
         tenants.sort(key=lambda x: (0 if x.get("registration_status") == "Pending" else 1, str(x.get("flat"))))
         data["tenants"] = tenants
@@ -243,6 +273,9 @@ def get_committee_data(module_type="all"):
             order_by="creation desc",
             limit_page_length=200,
         )
+        for f in family:
+            f["raw_mobile_no"] = f.get("mobile_no")
+            f["mobile_no"] = mask_phone_number(f.get("mobile_no"))
         family.sort(key=lambda x: (0 if x.get("registration_status") == "Pending" else 1, str(x.get("parent_flat"))))
         data["family"] = family
 
@@ -714,4 +747,53 @@ def publish_resolution_to_notice_board(docname):
         "status": "success",
         "message": _("Board Resolution successfully published to Society Notice Board! (Notice ID: {0})").format(notice_doc.name),
         "notice_id": notice_doc.name,
+    }
+
+
+@frappe.whitelist()
+def reveal_contact_details(doctype, docname):
+    """
+    Whitelisted API to audit and temporarily reveal full contact details (Phone/Email)
+    for a specific person/record in compliance with DPDP Act.
+    Logs access into 'Committee Access Log'.
+    """
+    has_access, member_info = check_committee_access()
+    if not has_access:
+        frappe.throw(_("Permission Denied: Only AoA Committee Members can reveal contact details."), frappe.PermissionError)
+
+    if doctype not in ("Tenants", "Family Members", "Owners"):
+        frappe.throw(_("Invalid target DocType."))
+
+    doc = frappe.get_doc(doctype, docname)
+
+    target_flat = doc.get("flat") or doc.get("parent_flat") or "-"
+    target_person = doc.get("tenant_name") or doc.get("member_name") or doc.get("owner_name") or "-"
+    mobile_no = doc.get("mobile_no") or ""
+    email = doc.get("email") or ""
+
+    # Record Access in Committee Access Log
+    user = frappe.session.user
+    comm_desc = f"{member_info.get('owner_name', '')} ({member_info.get('flat', '')})"
+
+    log = frappe.new_doc("Committee Access Log")
+    log.accessed_by = user
+    log.accessed_by_name = member_info.get("owner_name") or user
+    log.committee_member_name = comm_desc
+    log.action_type = "Reveal Contact Details"
+    log.target_doctype = doctype
+    log.target_docname = docname
+    log.target_flat = target_flat
+    log.target_person_name = target_person
+    log.timestamp = frappe.utils.now_datetime()
+    log.ip_address = frappe.local.request_ip if hasattr(frappe.local, "request_ip") else None
+    log.insert(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "docname": docname,
+        "mobile_no": mobile_no,
+        "email": email,
+        "person_name": target_person,
+        "message": _("Contact details unmasked and logged for audit compliance.")
     }

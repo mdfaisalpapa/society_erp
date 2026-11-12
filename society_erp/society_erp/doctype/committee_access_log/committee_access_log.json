@@ -1,0 +1,123 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-11-12 14:07:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "accessed_by",
+  "accessed_by_name",
+  "committee_member_name",
+  "action_type",
+  "target_doctype",
+  "target_docname",
+  "target_flat",
+  "target_person_name",
+  "timestamp",
+  "ip_address"
+ ],
+ "fields": [
+  {
+   "fieldname": "accessed_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Accessed By (User)",
+   "options": "User",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "accessed_by_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Member Full Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "committee_member_name",
+   "fieldtype": "Data",
+   "label": "Committee Member Designation / Flat",
+   "read_only": 1
+  },
+  {
+   "fieldname": "action_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Action Type",
+   "options": "Reveal Contact Details\nView Confidential Document",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "target_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Target DocType",
+   "options": "DocType",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "target_docname",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Target Record",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "target_flat",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Flat",
+   "read_only": 1
+  },
+  {
+   "fieldname": "target_person_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Person Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "timestamp",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ip_address",
+   "fieldtype": "Data",
+   "label": "IP Address",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-12 14:07:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Committee Access Log",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "timestamp",
+ "sort_order": "DESC",
+ "states": []
+}

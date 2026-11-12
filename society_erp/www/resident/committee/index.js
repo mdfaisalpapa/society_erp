@@ -140,8 +140,15 @@ frappe.ready(function () {
                     <td><span class="comm-flat-badge">${escapeHtml(t.flat)}</span></td>
                     <td class="font-weight-bold text-dark">${escapeHtml(t.tenant_name)}</td>
                     <td class="small">
-                        <div>📞 ${escapeHtml(t.mobile_no || '-')}</div>
-                        <div>✉️ ${escapeHtml(t.email || '-')}</div>
+                        <div class="contact-box" data-doctype="Tenants" data-docname="${t.name}">
+                            <div>📞 <span class="contact-phone">${escapeHtml(t.mobile_no || '-')}</span></div>
+                            <div>✉️ <span class="contact-email">${escapeHtml(t.email || '-')}</span></div>
+                            ${t.mobile_no && t.mobile_no.includes('*') ? `
+                                <button type="button" class="btn btn-link btn-sm p-0 font-weight-bold text-primary btn-reveal-contact" style="font-size: 0.72rem;" data-doctype="Tenants" data-docname="${t.name}">
+                                    👁️ Unmask Contact
+                                </button>
+                            ` : ''}
+                        </div>
                     </td>
                     <td class="small text-muted">${formatDate(t.start_date)} to ${formatDate(t.end_date)}</td>
                     <td>${docsHtml}</td>
@@ -167,8 +174,16 @@ frappe.ready(function () {
                         ${getStatusBadge(t.registration_status)}
                     </div>
                     <div class="h6 font-weight-bold text-dark mb-1">${escapeHtml(t.tenant_name)}</div>
-                    <div class="small text-muted mb-2">
-                        <div>📞 ${escapeHtml(t.mobile_no || '-')} &bull; ✉️ ${escapeHtml(t.email || '-')}</div>
+                    <div class="small text-muted mb-2 contact-box" data-doctype="Tenants" data-docname="${t.name}">
+                        <div>
+                            📞 <span class="contact-phone">${escapeHtml(t.mobile_no || '-')}</span> &bull; 
+                            ✉️ <span class="contact-email">${escapeHtml(t.email || '-')}</span>
+                            ${t.mobile_no && t.mobile_no.includes('*') ? `
+                                <button type="button" class="btn btn-link btn-sm p-0 ml-1 font-weight-bold text-primary btn-reveal-contact" style="font-size: 0.75rem;" data-doctype="Tenants" data-docname="${t.name}">
+                                    👁️ Unmask
+                                </button>
+                            ` : ''}
+                        </div>
                         <div>📅 Period: ${formatDate(t.start_date)} to ${formatDate(t.end_date)}</div>
                     </div>
                     <div class="mb-3">
@@ -412,7 +427,18 @@ frappe.ready(function () {
                     <td><span class="comm-flat-badge">${escapeHtml(f.parent_flat)}</span></td>
                     <td class="font-weight-bold text-dark">${escapeHtml(f.member_name)}</td>
                     <td><span class="badge badge-light border">${escapeHtml(f.relationship || 'Family')}</span></td>
-                    <td class="small">📞 ${escapeHtml(f.mobile_no || '-')}</td>
+                    <td class="small">
+                        <div class="contact-box" data-doctype="Family Members" data-docname="${f.name}">
+                            📞 <span class="contact-phone">${escapeHtml(f.mobile_no || '-')}</span>
+                            ${f.mobile_no && f.mobile_no.includes('*') ? `
+                                <div>
+                                    <button type="button" class="btn btn-link btn-sm p-0 font-weight-bold text-primary btn-reveal-contact" style="font-size: 0.72rem;" data-doctype="Family Members" data-docname="${f.name}">
+                                        👁️ Unmask
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </td>
                     <td>${docLink}</td>
                     <td>${getStatusBadge(f.registration_status)}</td>
                     <td class="text-right">
@@ -435,8 +461,16 @@ frappe.ready(function () {
                         ${getStatusBadge(f.registration_status)}
                     </div>
                     <div class="h6 font-weight-bold text-dark mb-1">${escapeHtml(f.member_name)}</div>
-                    <div class="small text-muted mb-2">
-                        <div>👥 Relationship: <strong>${escapeHtml(f.relationship || 'Family')}</strong> &bull; 📞 ${escapeHtml(f.mobile_no || '-')}</div>
+                    <div class="small text-muted mb-2 contact-box" data-doctype="Family Members" data-docname="${f.name}">
+                        <div>
+                            👥 Relationship: <strong>${escapeHtml(f.relationship || 'Family')}</strong> &bull; 
+                            📞 <span class="contact-phone">${escapeHtml(f.mobile_no || '-')}</span>
+                            ${f.mobile_no && f.mobile_no.includes('*') ? `
+                                <button type="button" class="btn btn-link btn-sm p-0 ml-1 font-weight-bold text-primary btn-reveal-contact" style="font-size: 0.75rem;" data-doctype="Family Members" data-docname="${f.name}">
+                                    👁️ Unmask
+                                </button>
+                            ` : ''}
+                        </div>
                         <div class="mt-1">Document: ${docLink}</div>
                     </div>
                     ${isPend ? `
@@ -1273,6 +1307,50 @@ frappe.ready(function () {
                     error: function (err) {
                         $btn.prop("disabled", false).html(origText);
                         const errMsg = err && err.message ? err.message : "Failed to publish resolution to Notice Board.";
+                        frappe.msgprint({ title: __("Error"), message: errMsg, indicator: "red" });
+                    }
+                });
+            }
+        );
+    });
+
+    // --- DPDP Act Unmasking & Audit Handler ---
+    $(document).on("click", ".btn-reveal-contact", function () {
+        const $btn = $(this);
+        const doctype = $btn.data("doctype");
+        const docname = $btn.data("docname");
+        const $box = $btn.closest(".contact-box");
+
+        frappe.confirm(
+            `In accordance with DPDP Act & Society Privacy Policy, viewing unmasked contact details is audited.<br><br>Do you wish to log access and reveal contact details for <strong>${escapeHtml(docname)}</strong>?`,
+            function () {
+                const origText = $btn.text();
+                $btn.prop("disabled", true).text("Unmasking…");
+
+                frappe.call({
+                    method: "society_erp.www.resident.committee.index.reveal_contact_details",
+                    args: { doctype: doctype, docname: docname },
+                    callback: function (r) {
+                        $btn.prop("disabled", false);
+                        if (r && r.message && r.message.status === "success") {
+                            const res = r.message;
+                            if (res.mobile_no) {
+                                $box.find(".contact-phone").text(res.mobile_no);
+                            }
+                            if (res.email) {
+                                $box.find(".contact-email").text(res.email);
+                            }
+                            $btn.replaceWith(`
+                                <span class="badge badge-warning text-dark font-weight-normal py-0 px-1" title="Access logged in Committee Access Log" style="font-size: 0.68rem;">
+                                    🔓 Unmasked (Logged)
+                                </span>
+                            `);
+                            frappe.show_alert({ message: __("Contact details revealed & logged."), indicator: "green" }, 4);
+                        }
+                    },
+                    error: function (err) {
+                        $btn.prop("disabled", false).text(origText);
+                        const errMsg = err && err.message ? err.message : "Failed to unmask contact.";
                         frappe.msgprint({ title: __("Error"), message: errMsg, indicator: "red" });
                     }
                 });
