@@ -1,0 +1,257 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:FIR-{agency}-{YYYY}-{MM}",
+ "creation": "2026-11-13 03:21:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "agency",
+  "contract",
+  "billing_month",
+  "billing_year",
+  "status",
+  "column_break_dates",
+  "from_date",
+  "to_date",
+  "total_calendar_days",
+  "section_break_summary",
+  "contracted_daily_quota",
+  "expected_man_days",
+  "actual_present_man_days",
+  "shortage_man_days",
+  "total_overtime_hours",
+  "column_break_financials",
+  "contract_monthly_amount",
+  "penalty_per_shortage_day",
+  "shortage_deduction_amount",
+  "other_deductions",
+  "overtime_payout_amount",
+  "net_approved_payable",
+  "section_break_review",
+  "submitted_invoice_amount",
+  "invoice_number",
+  "invoice_file",
+  "verified_by_committee",
+  "approval_date",
+  "approval_remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "agency",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Facility Agency",
+   "options": "Facility Agency",
+   "reqd": 1
+  },
+  {
+   "fieldname": "contract",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Facility Contract",
+   "options": "Facility Contract",
+   "reqd": 1
+  },
+  {
+   "default": "November",
+   "fieldname": "billing_month",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Billing Month",
+   "options": "January\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember",
+   "reqd": 1
+  },
+  {
+   "default": "2026",
+   "fieldname": "billing_year",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Billing Year",
+   "reqd": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nCalculated\nCommittee Verified\nApproved For Payment\nRejected"
+  },
+  {
+   "fieldname": "column_break_dates",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "total_calendar_days",
+   "fieldtype": "Int",
+   "label": "Total Calendar Days",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_summary",
+   "fieldtype": "Section Break",
+   "label": "Attendance & Quota Rollup"
+  },
+  {
+   "fieldname": "contracted_daily_quota",
+   "fieldtype": "Int",
+   "label": "Contracted Daily Headcount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "expected_man_days",
+   "fieldtype": "Int",
+   "label": "Expected Man-Days (Quota x Days)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "actual_present_man_days",
+   "fieldtype": "Int",
+   "label": "Actual Present Man-Days",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shortage_man_days",
+   "fieldtype": "Int",
+   "label": "Shortage Man-Days",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_overtime_hours",
+   "fieldtype": "Float",
+   "label": "Total Overtime Hours",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_financials",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "contract_monthly_amount",
+   "fieldtype": "Currency",
+   "label": "Contract Base Monthly Value"
+  },
+  {
+   "default": "0",
+   "fieldname": "penalty_per_shortage_day",
+   "fieldtype": "Currency",
+   "label": "Penalty Rate per Shortage Day"
+  },
+  {
+   "default": "0",
+   "fieldname": "shortage_deduction_amount",
+   "fieldtype": "Currency",
+   "label": "Shortage Deduction Amount",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "other_deductions",
+   "fieldtype": "Currency",
+   "label": "Other SLA Deductions / Penalties"
+  },
+  {
+   "default": "0",
+   "fieldname": "overtime_payout_amount",
+   "fieldtype": "Currency",
+   "label": "Overtime Payout Amount"
+  },
+  {
+   "default": "0",
+   "fieldname": "net_approved_payable",
+   "fieldtype": "Currency",
+   "label": "Net Approved Payable Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_review",
+   "fieldtype": "Section Break",
+   "label": "Agency Submission & Sign-off"
+  },
+  {
+   "fieldname": "submitted_invoice_amount",
+   "fieldtype": "Currency",
+   "label": "Agency Claimed Invoice Amount"
+  },
+  {
+   "fieldname": "invoice_number",
+   "fieldtype": "Data",
+   "label": "Agency Invoice Number"
+  },
+  {
+   "fieldname": "invoice_file",
+   "fieldtype": "Attach",
+   "label": "Agency Invoice Document (PDF)"
+  },
+  {
+   "fieldname": "verified_by_committee",
+   "fieldtype": "Link",
+   "label": "Verified By Committee Member",
+   "options": "User"
+  },
+  {
+   "fieldname": "approval_date",
+   "fieldtype": "Date",
+   "label": "Approval Date"
+  },
+  {
+   "fieldname": "approval_remarks",
+   "fieldtype": "Small Text",
+   "label": "Approval / Verification Remarks"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-13 03:21:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society ERP",
+ "name": "Facility Invoice Reconciliation",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "agency, contract, billing_month, billing_year, status",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
