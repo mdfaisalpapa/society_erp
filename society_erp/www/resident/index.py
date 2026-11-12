@@ -129,8 +129,16 @@ def get_context(context):
     # Portal Tiles master configuration (separate for residents & committee)
     from society_erp.www.resident.settings.index import get_tile_settings
     tile_cfg = get_tile_settings()
-    context.resident_tiles = tile_cfg.get("residents", {})
-    context.committee_tiles = tile_cfg.get("committee", {})
+    res_tiles = tile_cfg.get("residents", {})
+    comm_tiles = tile_cfg.get("committee", {})
+
+    context.resident_tiles = res_tiles
+    context.committee_tiles = comm_tiles
+
+    # Active tile permissions for this specific logged-in user
+    # If the user is a Committee Member, use committee permissions; else use resident permissions
+    user_active_tiles = comm_tiles if is_committee_member else res_tiles
+    context.tiles = user_active_tiles
 
     return context
 

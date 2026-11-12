@@ -5,72 +5,30 @@ from frappe import _
 # Master list of all controllable tiles on the resident portal
 ALL_PORTAL_TILES = [
     {
-        "id": "committee",
-        "title": "AoA Committee Portal Tile",
-        "icon": "🏛️",
-        "desc": "Main entrance tile to AoA Managing Committee member dashboard",
-        "default_resident": 0, # Residents don't see this anyway
-        "default_committee": 1,
-        "applies_to_resident": False,
-        "applies_to_committee": True,
-        "note": "Only applicable to Committee Members"
-    },
-    {
-        "id": "profile",
-        "title": "Flat Details & Profile",
-        "icon": "👤",
-        "desc": "Property specifications, UDS, EB service & Tax numbers",
-        "default_resident": 1,
-        "default_committee": 1,
-        "applies_to_resident": True,
-        "applies_to_committee": False,
-    },
-    {
-        "id": "owners",
-        "title": "Owner Details",
-        "icon": "📜",
-        "desc": "Flat ownership records, registered owner names and contacts",
-        "default_resident": 1,
-        "default_committee": 1,
-        "applies_to_resident": True,
-        "applies_to_committee": False,
-        "note": "Owners / Co-owners"
-    },
-    {
-        "id": "dues",
-        "title": "Check Dues & Invoices",
-        "icon": "📊",
-        "desc": "Maintenance charges, invoices, receipts and dues ledger",
-        "default_resident": 1,
-        "default_committee": 1,
-        "applies_to_resident": True,
-        "applies_to_committee": False,
-    },
-    {
-        "id": "financials",
-        "title": "Society Financials",
-        "icon": "📈",
-        "desc": "Audited Profit & Loss statement and Balance Sheet",
-        "default_resident": 1,
-        "default_committee": 1,
-        "applies_to_resident": True,
-        "applies_to_committee": False,
-    },
-    {
-        "id": "tenants",
-        "title": "Tenant Management",
-        "icon": "🏠",
-        "desc": "Resident lease registration / Committee tenant approval queue",
-        "default_resident": 1,
-        "default_committee": 1,
-        "applies_to_resident": True,
-        "applies_to_committee": True,
-    },
-    {
         "id": "book_facility",
         "title": "Book Facility & Amenities",
         "icon": "🏛️",
-        "desc": "Resident hall booking / Committee hall booking approval queue",
+        "desc": "Community Hall & club facility shift booking",
+        "default_resident": 1,
+        "default_committee": 1,
+        "applies_to_resident": True,
+        "applies_to_committee": True,
+    },
+    {
+        "id": "classifieds",
+        "title": "Resident Classifieds",
+        "icon": "📢",
+        "desc": "Community marketplace for rentals, used items & services",
+        "default_resident": 1,
+        "default_committee": 1,
+        "applies_to_resident": True,
+        "applies_to_committee": True,
+    },
+    {
+        "id": "emergency",
+        "title": "Emergency SOS & Contacts",
+        "icon": "🚨",
+        "desc": "Main Gate security, manager, police & ambulance quick dial",
         "default_resident": 1,
         "default_committee": 1,
         "applies_to_resident": True,
@@ -84,13 +42,13 @@ ALL_PORTAL_TILES = [
         "default_resident": 1,
         "default_committee": 1,
         "applies_to_resident": True,
-        "applies_to_committee": False,
+        "applies_to_committee": True,
     },
     {
         "id": "maintenance",
         "title": "Maintenance Tickets",
         "icon": "🛠️",
-        "desc": "Resident ticket creation / Committee maintenance oversight",
+        "desc": "Raise and track tickets for flat and common issues",
         "default_resident": 1,
         "default_committee": 1,
         "applies_to_resident": True,
@@ -100,17 +58,49 @@ ALL_PORTAL_TILES = [
         "id": "vehicles",
         "title": "Vehicles & Parking",
         "icon": "🚗",
-        "desc": "Resident vehicle registrations / Committee sticker approvals",
+        "desc": "Manage vehicles, parking allocations & stickers",
         "default_resident": 1,
         "default_committee": 1,
         "applies_to_resident": True,
         "applies_to_committee": True,
     },
     {
+        "id": "work_permits",
+        "title": "Work Permits",
+        "icon": "👷",
+        "desc": "Contractor interior and repair permit passes",
+        "default_resident": 1,
+        "default_committee": 1,
+        "applies_to_resident": True,
+        "applies_to_committee": True,
+        "note": "Owners / Committee"
+    },
+    {
+        "id": "tenants",
+        "title": "Tenant Management",
+        "icon": "🏠",
+        "desc": "Register leases, tenants & agreements",
+        "default_resident": 1,
+        "default_committee": 1,
+        "applies_to_resident": True,
+        "applies_to_committee": True,
+        "note": "Owners / Committee"
+    },
+    {
         "id": "family",
         "title": "Family Members",
         "icon": "👨‍👩‍👧‍👦",
-        "desc": "Resident family records / Committee ID proof verification queue",
+        "desc": "Register family members and upload ID proofs",
+        "default_resident": 1,
+        "default_committee": 1,
+        "applies_to_resident": True,
+        "applies_to_committee": True,
+    },
+    {
+        "id": "pets",
+        "title": "Resident Pets",
+        "icon": "🐾",
+        "desc": "Pet registrations and vaccination records",
         "default_resident": 1,
         "default_committee": 1,
         "applies_to_resident": True,
@@ -120,17 +110,7 @@ ALL_PORTAL_TILES = [
         "id": "staff",
         "title": "Domestic Staff",
         "icon": "🧹",
-        "desc": "Maid, driver & cook registration, attendance & reviews",
-        "default_resident": 1,
-        "default_committee": 1,
-        "applies_to_resident": True,
-        "applies_to_committee": False,
-    },
-    {
-        "id": "pets",
-        "title": "Resident Pets",
-        "icon": "🐾",
-        "desc": "Resident pet records / Committee pet licensing approvals",
+        "desc": "Maids, drivers & cooks gate attendance & reviews",
         "default_resident": 1,
         "default_committee": 1,
         "applies_to_resident": True,
@@ -140,17 +120,7 @@ ALL_PORTAL_TILES = [
         "id": "notices",
         "title": "Notice Board",
         "icon": "📋",
-        "desc": "Resident notice board viewing / Committee notice publishing",
-        "default_resident": 1,
-        "default_committee": 1,
-        "applies_to_resident": True,
-        "applies_to_committee": True,
-    },
-    {
-        "id": "classifieds",
-        "title": "Resident Classifieds",
-        "icon": "📢",
-        "desc": "Resident ad marketplace / Committee classified ad approvals",
+        "desc": "Official circulars, general announcements & resolutions",
         "default_resident": 1,
         "default_committee": 1,
         "applies_to_resident": True,
@@ -164,27 +134,48 @@ ALL_PORTAL_TILES = [
         "default_resident": 1,
         "default_committee": 1,
         "applies_to_resident": True,
-        "applies_to_committee": False,
+        "applies_to_committee": True,
     },
     {
-        "id": "work_permits",
-        "title": "Work Permits",
-        "icon": "👷",
-        "desc": "Resident contractor permits / Committee permit approval queue",
+        "id": "dues",
+        "title": "Check Dues & Invoices",
+        "icon": "📊",
+        "desc": "Maintenance charges, invoices, receipts and dues ledger",
         "default_resident": 1,
         "default_committee": 1,
         "applies_to_resident": True,
         "applies_to_committee": True,
     },
     {
-        "id": "emergency",
-        "title": "Emergency SOS & Contacts",
-        "icon": "🚨",
-        "desc": "Resident SOS quick-dial / Committee SOS directory manager",
+        "id": "financials",
+        "title": "Society Financials",
+        "icon": "📈",
+        "desc": "Audited Profit & Loss statement and Balance Sheet",
         "default_resident": 1,
         "default_committee": 1,
         "applies_to_resident": True,
         "applies_to_committee": True,
+    },
+    {
+        "id": "profile",
+        "title": "Flat Details & Profile",
+        "icon": "👤",
+        "desc": "Property specifications, UDS, EB service & Tax numbers",
+        "default_resident": 1,
+        "default_committee": 1,
+        "applies_to_resident": True,
+        "applies_to_committee": True,
+    },
+    {
+        "id": "owners",
+        "title": "Owner Details",
+        "icon": "📜",
+        "desc": "Flat ownership records, registered owner names and contacts",
+        "default_resident": 1,
+        "default_committee": 1,
+        "applies_to_resident": True,
+        "applies_to_committee": True,
+        "note": "Owners / Committee"
     }
 ]
 
@@ -193,8 +184,8 @@ def get_tile_settings():
     """
     Returns separate dictionaries for residents and committee members:
     {
-        "residents": { "tenants": True/False, ... },
-        "committee": { "tenants": True/False, ... }
+        "residents": { "book_facility": True/False, ... },
+        "committee": { "book_facility": True/False, ... }
     }
     """
     val = frappe.db.get_single_value("Society ERP Settings", "enabled_portal_tiles")
@@ -211,8 +202,6 @@ def get_tile_settings():
     for tile in ALL_PORTAL_TILES:
         tid = tile["id"]
 
-        # Support both new granular format {"residents": {...}, "committee": {...}}
-        # and fallback for legacy flat format {"tenants": 1, ...}
         if "residents" in settings and isinstance(settings["residents"], dict):
             res_val = settings["residents"].get(tid, tile.get("default_resident", 1))
         else:
@@ -285,7 +274,6 @@ def save_tile_toggle(tile_id, target_role, enabled):
             settings = {}
 
     if "residents" not in settings or not isinstance(settings["residents"], dict):
-        # Migrate old format if present
         old_data = dict(settings)
         settings = {
             "residents": dict(old_data),

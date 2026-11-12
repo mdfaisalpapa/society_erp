@@ -1084,32 +1084,8 @@ frappe.ready(function () {
     // --- 9. Emergency SOS & Contacts Settings Module ---
     function renderEmergency(items) {
         const $cont = $("#container-emergency").empty();
-        const isEnabled = committeeData.enable_emergency_sos;
 
         let html = `
-            <div class="card mb-4 shadow-sm border-0 bg-white">
-                <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap">
-                    <div>
-                        <div class="d-flex align-items-center mb-1">
-                            <span style="font-size: 1.5rem;" class="mr-2">🚨</span>
-                            <h5 class="font-weight-bold mb-0 text-dark">Resident Emergency SOS Feature Switch</h5>
-                        </div>
-                        <p class="text-muted small mb-0">
-                            When enabled, the <strong>🚨 Emergency SOS</strong> tile and quick-dial contact directory are visible to all residents on the Resident Portal.
-                        </p>
-                    </div>
-                    <div class="mt-3 mt-md-0 d-flex align-items-center">
-                        <span class="mr-3 font-weight-bold ${isEnabled ? 'text-success' : 'text-danger'}" id="emergency-status-label">
-                            ${isEnabled ? '✅ Enabled for Residents' : '⛔ Disabled (Hidden from Residents)'}
-                        </span>
-                        <div class="custom-control custom-switch" style="transform: scale(1.3); transform-origin: right center;">
-                            <input type="checkbox" class="custom-control-input" id="switch-emergency-sos-toggle" ${isEnabled ? 'checked' : ''}>
-                            <label class="custom-control-label cursor-pointer" for="switch-emergency-sos-toggle"></label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
                 <div>
                     <h6 class="font-weight-bold text-dark mb-0">📞 Emergency & Duty Contact Directory (${(items || []).length} Contacts)</h6>
@@ -1662,35 +1638,7 @@ frappe.ready(function () {
         );
     });
 
-    // --- Emergency SOS Switch & Management Handlers ---
-    $(document).on("change", "#switch-emergency-sos-toggle", function () {
-        const isChecked = $(this).is(":checked");
-        const $label = $("#emergency-status-label");
-        
-        $label.text(isChecked ? "Updating…" : "Updating…");
-
-        frappe.call({
-            method: "society_erp.www.resident.committee.index.toggle_emergency_sos_feature",
-            args: { enabled: isChecked ? 1 : 0 },
-            callback: function (r) {
-                if (r && r.message && r.message.status === "success") {
-                    committeeData.enable_emergency_sos = isChecked;
-                    $label.attr("class", isChecked ? "mr-3 font-weight-bold text-success" : "mr-3 font-weight-bold text-danger")
-                          .text(isChecked ? "✅ Enabled for Residents" : "⛔ Disabled (Hidden from Residents)");
-                    frappe.show_alert({
-                        message: __(r.message.message),
-                        indicator: isChecked ? "green" : "orange"
-                    }, 5);
-                }
-            },
-            error: function () {
-                // Revert
-                $("#switch-emergency-sos-toggle").prop("checked", !isChecked);
-                $label.text(!isChecked ? "✅ Enabled for Residents" : "⛔ Disabled (Hidden from Residents)");
-            }
-        });
-    });
-
+    // --- Emergency SOS Management Handlers ---
     $(document).on("click", "#btn-add-emergency-contact", function () {
         $("#form-emergency-contact")[0].reset();
         $("#emergency-contact-name").val("");
