@@ -5,7 +5,7 @@ from frappe import _
 from frappe.utils.file_manager import save_file
 
 DOCTYPE = "Family Members"
-MAX_UPLOAD_SIZE = 5 * 1024 * 1024
+MAX_UPLOAD_SIZE = 1 * 1024 * 1024
 ALLOWED_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
 
 def _relationship_options():
@@ -209,7 +209,7 @@ def upload_id_proof(member_id):
     if not content:
         frappe.throw(_("The uploaded file is empty."))
     if len(content) > MAX_UPLOAD_SIZE:
-        frappe.throw(_("The ID proof file must be 5 MB or smaller."))
+        frappe.throw(_("The ID proof file must be 1 MB or smaller."))
     if not _has_field("id_proof_document"):
         frappe.throw(_("The ID Proof Document field is missing from Family Members."))
 

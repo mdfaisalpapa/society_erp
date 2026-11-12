@@ -108,20 +108,20 @@
                     <h6 class="mb-3">📄 Required Documents</h6>
                     
                     <div class="form-group">
-                        <label>Tenant Photo <span class="text-danger">*</span></label>
+                        <label>Tenant Photo <span class="text-danger">*</span> <small class="text-muted">(Max 1 MB)</small></label>
                         <input type="file" class="form-control-file" id="photo" accept="image/*" required>
                     </div>
                     <div class="form-group">
-                        <label>ID Proof (Passport / Voter ID / DL / Masked Aadhaar) <span class="text-danger">*</span></label>
+                        <label>ID Proof (Passport / Voter ID / DL / Masked Aadhaar) <span class="text-danger">*</span> <small class="text-muted">(Max 1 MB)</small></label>
                         <input type="file" class="form-control-file" id="id_proof" accept="image/*,.pdf" required>
-                        <small class="form-text text-muted">Statutory Notice (Aadhaar Act): If submitting Aadhaar, please ensure the first 8 digits are masked, showing only the last 4 digits.</small>
+                        <small class="form-text text-muted">Statutory Notice (Aadhaar Act): If submitting Aadhaar, please ensure the first 8 digits are masked, showing only the last 4 digits. Maximum size 1 MB.</small>
                     </div>
                     <div class="form-group">
-                        <label>Rental Agreement <span class="text-danger">*</span></label>
+                        <label>Rental Agreement <span class="text-danger">*</span> <small class="text-muted">(Max 1 MB)</small></label>
                         <input type="file" class="form-control-file" id="rental_agreement" accept="image/*,.pdf" required>
                     </div>
                     <div class="form-group">
-                        <label>Police Verification</label>
+                        <label>Police Verification <small class="text-muted">(Max 1 MB)</small></label>
                         <input type="file" class="form-control-file" id="police_verification" accept="image/*,.pdf">
                     </div>
 
@@ -135,9 +135,18 @@
 <script>
 frappe.ready(function() {
     
-    // 1. Resilient AJAX Upload (Replaces flaky fetch API)
+    // 1. Resilient AJAX Upload with 1MB Validation
     function upload_file(file) {
         return new Promise((resolve, reject) => {
+            if (file && file.size > 1 * 1024 * 1024) {
+                frappe.msgprint({
+                    title: "File Too Large",
+                    indicator: "red",
+                    message: `File <strong>${file.name}</strong> exceeds the <strong>1 MB</strong> limit. Please upload a smaller file.`
+                });
+                return reject(new Error("File size exceeds 1 MB limit"));
+            }
+
             let formData = new FormData();
             formData.append("file", file, file.name);
             formData.append("is_private", 1); 

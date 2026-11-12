@@ -202,6 +202,9 @@ frappe.ready(function () {
     button.prop("disabled", true).text("Submitting…");
     try {
       const file = $("#ticket_photo")[0].files[0];
+      if (file && file.size > 1024 * 1024) {
+        throw new Error("Attached photo exceeds maximum allowed size of 1 MB.");
+      }
       const photo = await fileToBase64(file);
       const result = await call("create_ticket", {
         category: $("#ticket_category").val(),

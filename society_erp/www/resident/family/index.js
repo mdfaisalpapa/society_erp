@@ -19,7 +19,7 @@ frappe.ready(function () {
    if(!file){ done(); return; }
    const ext=(file.name.split('.').pop()||'').toLowerCase();
    if(!['pdf','jpg','jpeg','png'].includes(ext)){ frappe.msgprint(__('Choose a PDF, JPG or PNG file.')); done('invalid'); return; }
-   if(file.size>5*1024*1024){ frappe.msgprint(__('The ID proof file must be 5 MB or smaller.')); done('invalid'); return; }
+   if(file.size>1024*1024){ frappe.msgprint(__('The ID proof file must be 1 MB or smaller.')); done('invalid'); return; }
    const fd=new FormData(); fd.append('file',file); fd.append('member_id',memberId);
    fetch('/api/method/'+api+'.upload_id_proof',{method:'POST',body:fd,headers:{'X-Frappe-CSRF-Token':frappe.csrf_token},credentials:'same-origin'})
     .then(async r=>{const data=await r.json(); if(!r.ok||data.exc||!data.message||!data.message.file_url) throw new Error((data._server_messages||[]).join(' ')||'Upload failed'); return data;})

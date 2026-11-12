@@ -121,9 +121,18 @@ frappe.ready(function() {
         }
     });
 
-    // Helper: Natively upload file to Frappe using jQuery AJAX (Most resilient for Web Portals)
+    // Helper: Natively upload file to Frappe using jQuery AJAX (Most resilient for Web Portals) with 1MB Validation
     function upload_file(file) {
         return new Promise((resolve, reject) => {
+            if (file && file.size > 1 * 1024 * 1024) {
+                frappe.msgprint({
+                    title: 'File Too Large',
+                    message: `File <b>${file.name}</b> exceeds the <b>1 MB</b> limit. Please upload a smaller file.`,
+                    indicator: 'red'
+                });
+                return reject(new Error('File exceeds 1 MB'));
+            }
+
             let formData = new FormData();
             formData.append("file", file, file.name);
             formData.append("is_private", 1); 

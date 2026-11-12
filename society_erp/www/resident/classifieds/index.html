@@ -260,7 +260,7 @@
                     <div class="row">
                         <div class="col-md-6 form-group mb-3">
                             <label class="form-label font-weight-bold">Category *</label>
-                            <select name="category" class="form-control form-select" required>
+                            <select name="category" id="adCategorySelect" class="form-control form-select" required>
                                 <option value="Rent / Lease">Rent / Lease</option>
                                 <option value="Buy & Sell Used Items" selected>Buy & Sell Used Items</option>
                                 <option value="Services Offered">Services Offered</option>
@@ -270,12 +270,8 @@
                         </div>
                         <div class="col-md-6 form-group mb-3">
                             <label class="form-label font-weight-bold">Listing Type *</label>
-                            <select name="listing_type" class="form-control form-select" required>
-                                <option value="Sell Item" selected>Sell Item</option>
-                                <option value="Rent Flat/Room">Rent Flat/Room</option>
-                                <option value="Offer Service">Offer Service</option>
-                                <option value="Looking to Buy/Rent">Looking to Buy/Rent</option>
-                                <option value="Others">Others</option>
+                            <select name="listing_type" id="adListingTypeSelect" class="form-control form-select" required>
+                                <!-- Populated dynamically based on category -->
                             </select>
                         </div>
                     </div>
@@ -293,6 +289,12 @@
                             <label class="form-label font-weight-bold">Contact Phone</label>
                             <input type="text" name="contact_phone" class="form-control" value="{{ resident_info.mobile_no or '' }}">
                         </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label font-weight-bold">Upload Photo (Optional, Max 1 MB)</label>
+                        <input type="file" name="ad_photo" id="ad_photo" class="form-control-file" accept="image/jpeg,image/png,image/webp">
+                        <small class="text-muted">Maximum file size: 1 MB. JPG, PNG or WEBP only.</small>
                     </div>
 
                     <div class="form-group mb-3">
@@ -334,16 +336,123 @@ function closeAd(adId) {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
+    const categorySelect = document.getElementById("adCategorySelect");
+    const listingTypeSelect = document.getElementById("adListingTypeSelect");
+
+    const categoryMapping = {
+        "Rent / Lease": [
+            "Rent Flat (Full Unit)",
+            "Rent Room / Bed Space",
+            "Parking Slot for Rent",
+            "Commercial / Office Space",
+            "Looking to Rent Flat"
+        ],
+        "Buy & Sell Used Items": [
+            "Furniture (Sofa, Bed, Table)",
+            "Electronics & Appliances",
+            "Kitchen & Home Decor",
+            "Bicycle / Two-Wheeler",
+            "Books, Toys & Baby Items",
+            "Looking to Buy Used Item"
+        ],
+        "Services Offered": [
+            "Home Tutors & Tuition",
+            "Home Baking & Catering",
+            "Yoga & Fitness Training",
+            "Childcare & Babysitting",
+            "Plumbing / Electric / Repair",
+            "Tailoring & Alterations",
+            "Other Resident Service"
+        ],
+        "Lost & Found": [
+            "Lost Item",
+            "Found Item",
+            "Lost Pet Alert"
+        ],
+        "Others": [
+            "Community Initiative / Hobby",
+            "Carpool / Ride Sharing",
+            "General Notice / Request"
+        ]
+    };
+
+    function updateListingTypes() {
+        if (!categorySelect || !listingTypeSelect) return;
+        const cat = categorySelect.value;
+        const options = categoryMapping[cat] || ["General Listing"];
+        listingTypeSelect.innerHTML = "";
+        options.forEach(opt => {
+            const el = document.createElement("option");
+            el.value = opt;
+            el.innerText = opt;
+            listingTypeSelect.appendChild(el);
+        });
+    }
+
+    if (categorySelect) {
+        categorySelect.addEventListener("change", updateListingTypes);
+        updateListingTypes();
+    }
+
+    // 1 MB File Upload validation for photo
+    const photoInput = document.getElementById("ad_photo");
+    if (photoInput) {
+        photoInput.addEventListener("change", function() {
+            if (this.files && this.files[0]) {
+                const maxBytes = 1 * 1024 * 1024; // 1 MB
+                if (this.files[0].size > maxBytes) {
+                    frappe.msgprint({
+                        title: "File Too Large",
+                        indicator: "red",
+                        message: "The uploaded file size exceeds <strong>1 MB</strong>. Please upload a smaller image."
+                    });
+                    this.value = "";
+                }
+            }
+        });
+    }
+
     const form = document.getElementById("adForm");
     if (!form) return;
 
-    form.addEventListener("submit", function(e) {
+    form.addEventListener("submit", async function(e) {
         e.preventDefault();
         const btn = document.getElementById("btnSubmitAd");
         btn.disabled = true;
         btn.innerText = "Submitting...";
 
         const formData = new FormData(form);
+
+        // Upload photo if present
+        let imageUrl = null;
+        if (photoInput && photoInput.files && photoInput.files[0]) {
+            const file = photoInput.files[0];
+            if (file.size > 1 * 1024 * 1024) {
+                btn.disabled = false;
+                btn.innerText = "Submit for Approval";
+                frappe.msgprint("File size cannot exceed 1 MB.");
+                return;
+            }
+            try {
+                const uploadData = new FormData();
+                uploadData.append("file", file);
+                uploadData.append("is_private", 0);
+                const resp = await fetch("/api/method/upload_file", {
+                    method: "POST",
+                    body: uploadData,
+                    headers: {
+                        "X-Frappe-CSRF-Token": frappe.csrf_token || ""
+                    }
+                });
+                const resJson = await resp.json();
+                if (resJson && resJson.message && resJson.message.file_url) {
+                    imageUrl = resJson.message.file_url;
+                }
+            } catch (err) {
+                console.error("Image upload failed", err);
+            }
+        }
+
         const data = {
             title: formData.get("title"),
             category: formData.get("category"),
@@ -351,7 +460,8 @@ document.addEventListener("DOMContentLoaded", function() {
             price: formData.get("price"),
             contact_person: formData.get("contact_person"),
             contact_phone: formData.get("contact_phone"),
-            description: formData.get("description")
+            description: formData.get("description"),
+            image: imageUrl
         };
 
         frappe.call({

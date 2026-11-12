@@ -71,7 +71,7 @@ def get_context(context):
 
 
 @frappe.whitelist()
-def post_classified(title, category, listing_type, price=None, description=None, contact_person=None, contact_phone=None):
+def post_classified(title, category, listing_type, price=None, description=None, contact_person=None, contact_phone=None, image=None):
     if frappe.session.user == "Guest":
         frappe.throw(_("Please login to post a classified."), frappe.PermissionError)
 
@@ -95,6 +95,7 @@ def post_classified(title, category, listing_type, price=None, description=None,
         "resident": flat,
         "contact_person": (contact_person or res_info.get("resident_name") or "").strip(),
         "contact_phone": (contact_phone or res_info.get("mobile_no") or "").strip(),
+        "image": image,
         "approval_status": "Pending Approval",
         "status": "Active",
         "description": description.strip(),
