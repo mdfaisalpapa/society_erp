@@ -90,6 +90,13 @@
    "fieldtype": "Link",
    "label": "Tenant Reference",
    "options": "Tenants"
+  },
+  {
+   "fieldname": "approval_status",
+   "fieldtype": "Select",
+   "label": "Approval Status",
+   "options": "Pending\nApproved\nRejected",
+   "default": "Pending"
   }
  ],
  "grid_page_length": 50,

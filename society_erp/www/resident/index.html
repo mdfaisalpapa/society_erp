@@ -21,6 +21,21 @@
 
         <!-- Modules Grid (3 tiles/row on mobile, 4 tiles/row on desktop) -->
         <div class="row mt-4 portal-grid">
+
+            <!-- 0. AoA Committee Portal (RESTRICTED TO COMMITTEE MEMBERS) -->
+            {% if is_committee_member %}
+            <div class="col-4 col-md-3 mb-4">
+                <a href="/resident/committee" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover border-danger" style="background: linear-gradient(180deg, #fff9f9 0%, #fff 100%);">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">🏛️</h1>
+                            <h5 class="card-title mt-3 font-weight-bold text-danger">Committee</h5>
+                            <p class="text-muted small portal-desc mb-0">Approvals & Notices</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endif %}
             
             <!-- 1. Flat & Profile Details (Common) -->
             <div class="col-4 col-md-3 mb-4">

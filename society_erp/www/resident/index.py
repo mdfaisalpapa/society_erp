@@ -41,7 +41,7 @@ def get_context(context):
             filters={"active": 1},
             fields=[
                 "name", "flat", "owner_name",
-                "mobile_no", "email"
+                "mobile_no", "email", "is_aoa_member"
             ],
             order_by="flat asc",
         )
@@ -74,6 +74,17 @@ def get_context(context):
     context.is_tenant = bool(tenant)
     context.is_owner = bool(owner)
     context.not_a_resident = False
+
+    # Check if the resident is an authorized Committee Member (is_aoa_member = 1) or System Manager
+    is_committee_member = False
+    if owner and owner.get("is_aoa_member"):
+        is_committee_member = True
+    elif "System Manager" in frappe.get_roles(user) or user == "Administrator":
+        is_committee_member = True
+    elif frappe.db.get_value("Owners", {"email": user_email, "active": 1, "is_aoa_member": 1}):
+        is_committee_member = True
+
+    context.is_committee_member = is_committee_member
 
     # 4. Fetch registered owner details for this flat.
     registered_owner = frappe.db.get_value(

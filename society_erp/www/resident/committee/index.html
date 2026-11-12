@@ -1,0 +1,348 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-4 committee-portal-root">
+    {% if access_denied %}
+        <div class="alert alert-danger shadow-sm py-4 text-center">
+            <h4 class="alert-heading font-weight-bold mb-2">🚫 Access Restricted</h4>
+            <p class="mb-3">
+                This portal is exclusively accessible to authorized <strong>AoA Managing Committee Members</strong> (Owners with Committee authorization).
+            </p>
+            <a href="/resident" class="btn btn-outline-danger">🔙 Return to Resident Portal</a>
+        </div>
+    {% else %}
+        <!-- Header & Committee Member Banner -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+            <div>
+                <div class="d-flex align-items-center">
+                    <span class="badge badge-warning text-dark px-2 py-1 mr-2 font-weight-bold" style="font-size: 0.85rem;">
+                        AoA Committee
+                    </span>
+                    <h2 class="mb-0 font-weight-bold text-dark">🏛️ Committee Member Portal</h2>
+                </div>
+                <p class="text-muted small mt-1 mb-0">
+                    Welcome, <strong>{{ committee_member.owner_name }}</strong> &bull; Flat: <strong>{{ committee_member.flat }}</strong> &bull; Kendriya Vihar Chennai Phase III
+                </p>
+            </div>
+            <div class="mt-2 mt-md-0 d-flex">
+                <button type="button" class="btn btn-primary btn-sm mr-2 shadow-sm font-weight-bold" id="btn-open-notice-modal">
+                    📢 Post Society Notice
+                </button>
+                <a href="/resident" class="btn btn-outline-secondary btn-sm">
+                    🔙 Resident Portal
+                </a>
+            </div>
+        </div>
+
+        <!-- Sticky Segmented Control / Pill Navigation -->
+        <div class="committee-sticky-nav mb-3">
+            <div class="d-flex align-items-center justify-content-between flex-wrap py-2 border-bottom bg-white">
+                <ul class="nav nav-pills committee-nav-pills" id="committeeTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active font-weight-bold" id="tab-tenants" data-toggle="pill" href="#pane-tenants" role="tab" data-module="tenants">
+                            <span class="tab-icon">🏠</span><span class="tab-label">Tenants</span> <span class="badge badge-warning ml-1" id="badge-tenants">{{ counts.tenants_pending }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link font-weight-bold" id="tab-vehicles" data-toggle="pill" href="#pane-vehicles" role="tab" data-module="vehicles">
+                            <span class="tab-icon">🚗</span><span class="tab-label">Vehicles</span> <span class="badge badge-warning ml-1" id="badge-vehicles">{{ counts.vehicles_pending }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link font-weight-bold" id="tab-work_permits" data-toggle="pill" href="#pane-work_permits" role="tab" data-module="work_permits">
+                            <span class="tab-icon">👷</span><span class="tab-label">Permits</span> <span class="badge badge-warning ml-1" id="badge-permits">{{ counts.permits_pending }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link font-weight-bold" id="tab-family" data-toggle="pill" href="#pane-family" role="tab" data-module="family">
+                            <span class="tab-icon">👨‍👩‍👦</span><span class="tab-label">Family</span> <span class="badge badge-warning ml-1" id="badge-family">{{ counts.family_pending }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link font-weight-bold" id="tab-pets" data-toggle="pill" href="#pane-pets" role="tab" data-module="pets">
+                            <span class="tab-icon">🐾</span><span class="tab-label">Pets</span> <span class="badge badge-warning ml-1" id="badge-pets">{{ counts.pets_pending }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link font-weight-bold" id="tab-tickets" data-toggle="pill" href="#pane-tickets" role="tab" data-module="tickets">
+                            <span class="tab-icon">🛠️</span><span class="tab-label">Tickets</span> <span class="badge badge-danger ml-1" id="badge-tickets">{{ counts.tickets_open }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link font-weight-bold" id="tab-notices" data-toggle="pill" href="#pane-notices" role="tab" data-module="notices">
+                            <span class="tab-icon">📋</span><span class="tab-label">Notices</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <button class="btn btn-outline-secondary btn-sm ml-auto d-md-none mt-2" type="button" data-toggle="collapse" data-target="#committeeFilterCollapse" aria-expanded="false" aria-controls="committeeFilterCollapse">
+                    ⚙️ Search & Filters
+                </button>
+            </div>
+
+            <!-- Compact Action & Search Bar (collapsible on mobile) -->
+            <div class="collapse d-md-block mt-2" id="committeeFilterCollapse">
+                <div class="row align-items-center">
+                    <div class="col-12 col-md-6 mb-2 mb-md-0">
+                        <div class="input-group input-group-sm">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text bg-white border-right-0">🔍</span>
+                            </div>
+                            <input type="text" id="committee-search-input" class="form-control border-left-0" placeholder="Search by Flat No, Resident Name, Vehicle No, or Keyword…" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 d-flex justify-content-md-end align-items-center">
+                        <div class="custom-control custom-switch mr-3">
+                            <input type="checkbox" class="custom-control-input" id="switch-pending-only" checked>
+                            <label class="custom-control-label small font-weight-bold text-muted" for="switch-pending-only">Pending Approvals Only</label>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-light border py-1 px-2" id="btn-refresh-data" title="Refresh records">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Global Alert Area -->
+        <div id="committee-alert" class="alert d-none small mb-3" role="alert"></div>
+
+        <!-- Loading State -->
+        <div id="committee-loading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading records…</span>
+            </div>
+            <p class="text-muted mt-2 small">Loading committee approval workflows…</p>
+        </div>
+
+        <!-- Tab Content Panes -->
+        <div class="tab-content d-none" id="committeeTabPanes">
+            <!-- 1. Tenants Pane -->
+            <div class="tab-pane fade show active" id="pane-tenants" role="tabpanel">
+                <div id="container-tenants"></div>
+            </div>
+
+            <!-- 2. Vehicles Pane -->
+            <div class="tab-pane fade" id="pane-vehicles" role="tabpanel">
+                <div id="container-vehicles"></div>
+            </div>
+
+            <!-- 3. Work Permits Pane -->
+            <div class="tab-pane fade" id="pane-work_permits" role="tabpanel">
+                <div id="container-work_permits"></div>
+            </div>
+
+            <!-- 4. Family Members Pane -->
+            <div class="tab-pane fade" id="pane-family" role="tabpanel">
+                <div id="container-family"></div>
+            </div>
+
+            <!-- 5. Pets Pane -->
+            <div class="tab-pane fade" id="pane-pets" role="tabpanel">
+                <div id="container-pets"></div>
+            </div>
+
+            <!-- 6. Maintenance Tickets Pane -->
+            <div class="tab-pane fade" id="pane-tickets" role="tabpanel">
+                <div id="container-tickets"></div>
+            </div>
+
+            <!-- 7. Notices Pane -->
+            <div class="tab-pane fade" id="pane-notices" role="tabpanel">
+                <div id="container-notices"></div>
+            </div>
+        </div>
+
+        <!-- MODAL 1: Post Society Notice -->
+        <div class="modal fade" id="modal-post-notice" tabindex="-1" role="dialog" aria-labelledby="modalNoticeTitle" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-white border-bottom align-items-center">
+                        <h5 class="modal-title font-weight-bold text-dark" id="modalNoticeTitle">
+                            📢 Issue Society Notice
+                        </h5>
+                        <button type="button" class="close text-muted" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="form-group mb-3">
+                            <label for="notice-title" class="font-weight-bold small text-dark">Notice Headline / Title *</label>
+                            <input type="text" class="form-control" id="notice-title" placeholder="e.g. Water Tank Cleaning Schedule on Sunday" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="notice-content" class="font-weight-bold small text-dark">Announcement Details / Content *</label>
+                            <textarea class="form-control" id="notice-content" rows="5" placeholder="Enter notice announcement text for residents…" required></textarea>
+                        </div>
+                        <div class="custom-control custom-switch mb-3">
+                            <input type="checkbox" class="custom-control-input" id="notice-is-active" checked>
+                            <label class="custom-control-label small font-weight-bold text-dark" for="notice-is-active">Publish immediately on Resident Portal</label>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-block py-2 font-weight-bold" id="btn-submit-notice">
+                            📢 Publish Notice
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 2: Action Confirmation & Remarks (Full-Screen Bottom Sheet on Mobile) -->
+        <div class="modal fade" id="modal-action-confirm" tabindex="-1" role="dialog" aria-labelledby="modalActionTitle" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-white border-bottom align-items-center">
+                        <h5 class="modal-title font-weight-bold text-dark" id="modalActionTitle">
+                            Confirm Committee Action
+                        </h5>
+                        <button type="button" class="close text-muted" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p class="text-muted small mb-3" id="modal-action-summary"></p>
+                        <div class="form-group mb-3" id="modal-remarks-group">
+                            <label for="action-remarks" class="font-weight-bold small text-dark">Committee Remarks / Notes (Optional)</label>
+                            <textarea class="form-control" id="action-remarks" rows="3" placeholder="Add resolution notes, remarks, or rejection reason…"></textarea>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn btn-light border mr-2" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary font-weight-bold" id="btn-confirm-action">Confirm</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+/* Sticky Navigation bar */
+.committee-sticky-nav {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    background: #fff;
+    padding-bottom: 8px;
+}
+.committee-nav-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-bottom: 4px;
+    width: 100%;
+}
+.committee-nav-pills .nav-link {
+    color: #475569;
+    background: #f1f5f9;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+.committee-nav-pills .nav-link.active {
+    background: #173d5b;
+    color: #fff;
+}
+.committee-nav-pills .nav-link.active .badge {
+    background: #fff;
+    color: #173d5b;
+}
+
+/* Mobile-Friendly Grid for Tabs - No Scrolling Needed */
+@media (max-width: 767px) {
+    .committee-nav-pills {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 5px !important;
+        padding: 4px 0 !important;
+    }
+    .committee-nav-pills .nav-item {
+        width: 100% !important;
+    }
+    .committee-nav-pills .nav-link {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 6px 2px !important;
+        font-size: 0.72rem !important;
+        border-radius: 10px !important;
+        line-height: 1.15 !important;
+        text-align: center !important;
+        min-height: 52px !important;
+    }
+    .committee-nav-pills .nav-link .tab-icon {
+        font-size: 1.05rem !important;
+        line-height: 1 !important;
+        margin-bottom: 2px !important;
+    }
+    .committee-nav-pills .nav-link .tab-label {
+        font-size: 0.68rem !important;
+        font-weight: 600 !important;
+    }
+    .committee-nav-pills .nav-link .badge {
+        font-size: 0.65rem !important;
+        padding: 2px 4px !important;
+        margin-left: 0 !important;
+        margin-top: 2px !important;
+    }
+}
+
+/* Flat Badge */
+.comm-flat-badge {
+    font-family: monospace;
+    font-size: 0.88rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background-color: #e2e8f0;
+    color: #0f172a;
+    display: inline-block;
+}
+
+/* Card Stack Styling */
+.comm-card-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.comm-card-item:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+.comm-card-item.border-pending {
+    border-left: 5px solid #ffc107 !important;
+}
+.comm-card-item.border-approved {
+    border-left: 5px solid #28a745 !important;
+}
+.comm-card-item.border-rejected {
+    border-left: 5px solid #dc3545 !important;
+}
+
+/* Mobile Modal Bottom Sheet */
+@media (max-width: 767px) {
+    .container.committee-portal-root {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+    .modal-dialog {
+        width: 100vw !important;
+        height: 100vh !important;
+        margin: 0 !important;
+        max-width: none !important;
+    }
+    .modal-content {
+        height: 100% !important;
+        border-radius: 0 !important;
+    }
+    .modal-header {
+        position: sticky;
+        top: 0;
+        z-index: 1050;
+        background: #fff;
+    }
+}
+</style>
+{% endblock %}
