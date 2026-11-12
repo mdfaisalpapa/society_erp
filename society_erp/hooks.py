@@ -88,7 +88,8 @@ regional_overrides = {
 
 scheduler_events = {
     "daily": [
-        "society_erp.parking_rental.expire_due_parking_rentals"
+        "society_erp.parking_rental.expire_due_parking_rentals",
+        "society_erp.api.facility_staff.cleanup_reconciled_muster_photos"
     ]
 }
 

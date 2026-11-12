@@ -554,3 +554,66 @@ def generate_reconciliation_purchase_invoice(reconciliation_id: str) -> dict:
         "total_amount": pi.grand_total,
         "message": _("Purchase Invoice {0} created successfully with {1} Cost Center apportioned lines.").format(pi.name, len(items))
     }
+
+
+@frappe.whitelist()
+def cleanup_reconciled_muster_photos() -> dict:
+    """
+    Automated retention cleanup:
+    Deletes shift muster photos for billing months whose Facility Invoice Reconciliation
+    has been verified/approved by the Committee and is in the subsequent month or older.
+    Keeps the text muster audit record (headcount, notes, date, shift) while freeing disk space.
+    """
+    # 1. Find verified reconciliations
+    verified_reconciliations = frappe.get_all(
+        "Facility Invoice Reconciliation",
+        filters={"status": ["in", ["Committee Verified", "Approved For Payment"]]},
+        fields=["agency", "from_date", "to_date", "billing_month", "billing_year"]
+    )
+
+    deleted_count = 0
+    cleaned_musters = []
+
+    for rec in verified_reconciliations:
+        if not rec.to_date:
+            continue
+
+        # Look for muster records on or before rec.to_date that still retain photos
+        musters = frappe.get_all(
+            "Facility Shift Muster",
+            filters={
+                "agency": rec.agency,
+                "shift_date": ["<=", rec.to_date],
+                "muster_photo": ["is", "set"]
+            },
+            fields=["name", "muster_photo", "shift_date", "shift"]
+        )
+
+        for m in musters:
+            photo_url = m.muster_photo
+            if photo_url and photo_url != "DELETED_POST_BILLING_VERIFICATION":
+                # Find and delete matching File document from disk
+                file_docs = frappe.get_all("File", filters={"file_url": photo_url}, fields=["name"])
+                for f in file_docs:
+                    try:
+                        frappe.delete_doc("File", f.name, ignore_permissions=True, force=True)
+                    except Exception as e:
+                        frappe.log_error(f"Error deleting muster photo file {f.name}: {e}")
+
+                # Update muster record to flag photo as purged while preserving audit trail
+                frappe.db.set_value("Facility Shift Muster", m.name, {
+                    "muster_photo": "DELETED_POST_BILLING_VERIFICATION",
+                    "briefing_notes": f"{(m.briefing_notes or '').strip()} [Photo purged after bill verification {rec.billing_month} {rec.billing_year}]".strip()
+                })
+                deleted_count += 1
+                cleaned_musters.append(m.name)
+
+    if deleted_count > 0:
+        frappe.db.commit()
+
+    return {
+        "status": "success",
+        "deleted_count": deleted_count,
+        "cleaned_musters": cleaned_musters,
+        "message": _("Purged {0} verified shift muster photos.").format(deleted_count)
+    }
