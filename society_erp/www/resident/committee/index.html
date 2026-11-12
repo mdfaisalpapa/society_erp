@@ -323,16 +323,33 @@
                             </div>
                         </div>
 
-                        <!-- Direct Action Buttons (Sign with confirmation / Decline with prompt) -->
+                        <!-- Direct Action Buttons (Sign with confirmation / Decline with reason) -->
                         <div class="border-top pt-3 mt-3">
                             <label class="font-weight-bold small text-dark mb-2">Record Your Response:</label>
-                            <div class="d-flex gap-2">
+                            <div class="d-flex gap-2 mb-3" id="vote-action-buttons-group">
                                 <button type="button" class="btn btn-success font-weight-bold flex-fill py-2 shadow-sm mr-2" id="btn-modal-direct-sign">
                                     ✅ Sign & Accept Resolution
                                 </button>
                                 <button type="button" class="btn btn-outline-danger font-weight-bold flex-fill py-2" id="btn-modal-direct-decline">
                                     ❌ Decline Resolution…
                                 </button>
+                            </div>
+
+                            <!-- Embedded Inline Decline Box (Revealed when Decline is clicked) -->
+                            <div id="inline-decline-box" class="d-none bg-light p-3 rounded border border-danger">
+                                <h6 class="font-weight-bold text-danger mb-2">❌ Specify Reason for Declining</h6>
+                                <p class="text-muted small mb-2">A written reason is required to record a formal rejection on the committee board resolution.</p>
+                                <div class="form-group mb-2">
+                                    <textarea class="form-control" id="inline-decline-reason" rows="3" placeholder="Please state your reason for declining this resolution…"></textarea>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button type="button" class="btn btn-light btn-sm border mr-2" id="btn-cancel-inline-decline">
+                                        Back
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-sm font-weight-bold" id="btn-confirm-inline-decline">
+                                        Confirm Decline
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

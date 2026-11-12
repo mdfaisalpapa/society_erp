@@ -1128,8 +1128,11 @@ frappe.ready(function () {
         $("#vote-res-id").text(`Resolution ID: ${res.name}`);
         $("#vote-res-date").text(formatDate(res.creation));
         $("#vote-res-content").html(res.resolution_text || "<p class='text-muted'>No text provided.</p>");
-        $("#vote-decline-reason").val("");
-        $("#vote-decline-reason-group").addClass("d-none");
+        
+        // Reset decline box state
+        $("#vote-action-buttons-group").removeClass("d-none");
+        $("#inline-decline-box").addClass("d-none");
+        $("#inline-decline-reason").val("");
 
         // Populate Signatories Breakdown in the modal
         const signatories = res.signatories || [];
@@ -1217,33 +1220,32 @@ frappe.ready(function () {
         );
     });
 
-    // Direct Action 2: Decline with Reason Popup
+    // Direct Action 2: Decline Toggle Inline Box
     $("#btn-modal-direct-decline").on("click", function () {
-        if (!activeVoteDocname) return;
-        const $btn = $(this);
-        const resTitle = $("#vote-res-title").text();
+        $("#vote-action-buttons-group").addClass("d-none");
+        $("#inline-decline-box").removeClass("d-none");
+        $("#inline-decline-reason").val("").focus();
+    });
 
-        frappe.prompt(
-            [
-                {
-                    label: __("Reason for Declining"),
-                    fieldname: "decline_reason",
-                    fieldtype: "Small Text",
-                    reqd: 1,
-                    description: __("Please specify why you are declining this resolution.")
-                }
-            ],
-            function (values) {
-                const reason = (values.decline_reason || "").trim();
-                if (!reason) {
-                    frappe.msgprint({ title: __("Required"), message: __("Reason is required to decline."), indicator: "orange" });
-                    return;
-                }
-                executeResolutionVote("Declined", reason, $btn);
-            },
-            __(`Decline Resolution: ${escapeHtml(activeVoteDocname)}`),
-            __("Confirm Decline")
-        );
+    $("#btn-cancel-inline-decline").on("click", function () {
+        $("#inline-decline-box").addClass("d-none");
+        $("#vote-action-buttons-group").removeClass("d-none");
+        $("#inline-decline-reason").val("");
+    });
+
+    $("#btn-confirm-inline-decline").on("click", function () {
+        if (!activeVoteDocname) return;
+        const reason = $("#inline-decline-reason").val().trim();
+        if (!reason) {
+            frappe.msgprint({
+                title: __("Reason Required"),
+                message: __("Please specify why you are declining this resolution."),
+                indicator: "orange"
+            });
+            $("#inline-decline-reason").focus();
+            return;
+        }
+        executeResolutionVote("Declined", reason, $(this));
     });
 
     // Publish Passed Resolution to Notice Board Handler
