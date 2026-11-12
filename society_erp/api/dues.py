@@ -1,18 +1,13 @@
 import frappe
-from frappe import _
-from frappe.utils import flt, fmt_money, format_date
+from frappe.utils import format_date, fmt_money, flt
 from society_erp.resident_portal import get_verified_owner_records
 from society_erp.api.utils import portal_api
-
 
 @frappe.whitelist()
 @portal_api
 def get_flat_dues(for_user: str = None) -> dict:
     """
-    Fetch outstanding dues and submitted sales invoices for the verified flat(s).
-
-    :param for_user: Optional email override for headless bot impersonation
-    :return: dict with flat, outstanding_balance, currency, and invoice list
+    Fetch outstanding dues and submitted sales invoices with detailed ledger listing.
     """
     owners = get_verified_owner_records(user_override=for_user)
     flats = sorted({o.flat for o in owners if o.flat})
@@ -23,11 +18,11 @@ def get_flat_dues(for_user: str = None) -> dict:
             "outstanding_balance": 0.0,
             "currency": frappe.db.get_default("currency") or "INR",
             "invoices": [],
+            "summary_text": "No registered flat found."
         }
 
     currency = frappe.db.get_default("currency") or "INR"
 
-    # Query submitted Sales Invoices (docstatus=1) for all flats linked to this user
     invoices = frappe.get_all(
         "Sales Invoice",
         filters={
@@ -44,15 +39,20 @@ def get_flat_dues(for_user: str = None) -> dict:
             "status",
         ],
         order_by="posting_date desc, creation desc",
-        limit_page_length=100,
+        limit_page_length=20,
     )
 
     total_outstanding = 0.0
     invoice_list = []
+    lines = []
 
     for inv in invoices:
         outstanding = flt(inv.outstanding_amount)
         total_outstanding += outstanding
+        p_date = format_date(inv.posting_date, "dd-MM-yyyy") if inv.posting_date else "-"
+        d_date = format_date(inv.due_date, "dd-MM-yyyy") if inv.due_date else "-"
+        f_total = fmt_money(inv.grand_total, currency=currency)
+        f_out = fmt_money(outstanding, currency=currency)
 
         invoice_list.append({
             "name": inv.name,
@@ -62,20 +62,26 @@ def get_flat_dues(for_user: str = None) -> dict:
             "grand_total": flt(inv.grand_total),
             "outstanding_amount": outstanding,
             "status": inv.status,
-            "formatted_grand_total": fmt_money(inv.grand_total, currency=currency),
-            "formatted_outstanding": fmt_money(outstanding, currency=currency),
-            "formatted_posting_date": format_date(inv.posting_date) if inv.posting_date else "-",
-            "formatted_due_date": format_date(inv.due_date) if inv.due_date else "-",
+            "formatted_grand_total": f_total,
+            "formatted_outstanding": f_out,
+            "formatted_posting_date": p_date,
+            "formatted_due_date": d_date,
         })
+        lines.append(f"• 📄 *{inv.name}* (Due: {d_date})\n  Total: {f_total} | Outstanding: *{f_out}* | Status: `{inv.status}`")
 
     primary_flat = flats[0] if len(flats) == 1 else None
+    f_total_outstanding = fmt_money(total_outstanding, currency=currency)
+
+    summary_text = f"• *Total Outstanding Balance:* *{f_total_outstanding}*\n• *Invoices on Record:* {len(invoice_list)}\n\n"
+    summary_text += ("*Recent Invoices:*\n" + "\n\n".join(lines[:6])) if lines else "No maintenance invoices pending."
 
     return {
         "flat": primary_flat or flats,
         "flats": flats,
         "outstanding_balance": round(total_outstanding, 2),
         "currency": currency,
-        "formatted_outstanding_balance": fmt_money(total_outstanding, currency=currency),
+        "formatted_outstanding_balance": f_total_outstanding,
         "invoice_count": len(invoice_list),
         "invoices": invoice_list,
+        "summary_text": summary_text
     }

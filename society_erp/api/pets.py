@@ -8,13 +8,13 @@ from society_erp.api.utils import portal_api
 @portal_api
 def get_pets(for_user: str = None) -> dict:
     """
-    Fetch registered pets for the verified resident flat(s).
+    Fetch registered pets for the verified resident flat(s) with complete records.
     """
     owners = get_verified_owner_records(user_override=for_user)
     flats = sorted({o.flat for o in owners if o.flat})
 
     if not flats:
-        return {"pets": [], "count": 0}
+        return {"pets": [], "count": 0, "summary_text": "No registered flats found."}
 
     pets = frappe.get_all(
         "Resident Pets",
@@ -28,12 +28,17 @@ def get_pets(for_user: str = None) -> dict:
         limit_page_length=20,
     )
 
+    lines = []
     for p in pets:
         p["formatted_lic_expiry"] = format_date(p.license_expiry_date, "dd-MM-yyyy") if p.license_expiry_date else "-"
         p["formatted_vac_due"] = format_date(p.vaccination_due_date, "dd-MM-yyyy") if p.vaccination_due_date else "-"
+        lines.append(f"• 🐾 *{p.pet_name}* (Status: `{p.approval_status}`)\n  License: {p.license_no or '-'} (Exp: {p['formatted_lic_expiry']})\n  Vaccination Cert: {p.vaccination_certificate_no or '-'} (Due: {p['formatted_vac_due']})")
+
+    summary_text = "\n\n".join(lines) if lines else "No pets currently registered for your flat."
 
     return {
         "pets": pets,
         "count": len(pets),
-        "primary_pet": pets[0] if pets else None
+        "primary_pet": pets[0] if pets else None,
+        "summary_text": summary_text
     }

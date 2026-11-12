@@ -6,7 +6,7 @@ from society_erp.api.utils import portal_api
 @portal_api
 def get_emergency_contacts() -> dict:
     """
-    Fetch active emergency contacts categorized into internal society contacts and public emergencies.
+    Fetch active emergency contacts categorized with complete phone and hours directory.
     """
     all_contacts = frappe.get_all(
         "Emergency Contact",
@@ -19,6 +19,9 @@ def get_emergency_contacts() -> dict:
     internal = []
     public = []
 
+    int_lines = []
+    pub_lines = []
+
     for c in all_contacts:
         item = {
             "title": c.title,
@@ -28,14 +31,25 @@ def get_emergency_contacts() -> dict:
             "description": c.description or "",
             "category": c.category
         }
+        line = f"• {item['icon']} *{c.title}*: 📞 `{c.phone}` ({item['hours']})"
+        if c.description:
+            line += f"\n  _{c.description}_"
+
         if c.category in internal_categories:
             internal.append(item)
+            int_lines.append(line)
         else:
             public.append(item)
+            pub_lines.append(line)
+
+    summary_text = "*Internal Security & Estate:*\n" + ("\n".join(int_lines) if int_lines else "• Main Gate Security: 📞 24x7 Intercom\n• Estate Office: 📞 044-24567890 (9 AM - 6 PM)\n• Electrician / Plumber on-duty")
+    if pub_lines:
+        summary_text += "\n\n*Public Emergency Services:*\n" + "\n".join(pub_lines)
 
     return {
         "contacts": all_contacts,
         "internal": internal,
         "public": public,
-        "count": len(all_contacts)
+        "count": len(all_contacts),
+        "summary_text": summary_text
     }
