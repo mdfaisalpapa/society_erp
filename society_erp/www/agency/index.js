@@ -336,8 +336,9 @@ frappe.ready(function() {
             return;
         }
 
-        let html = `
-            <div class="table-responsive">
+        // DESKTOP TABLE VIEW (Visible on d-none d-md-block)
+        let desktopHtml = `
+            <div class="d-none d-md-block">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="thead-light">
                         <tr>
@@ -351,10 +352,12 @@ frappe.ready(function() {
                     <tbody>
         `;
 
+        // MOBILE CARD VIEW (Visible on d-block d-md-none)
+        let mobileHtml = `<div class="d-block d-md-none">`;
+
         roster.forEach(st => {
             const isApproved = st.approval_status === 'Approved';
             const isOnDuty = st.is_on_duty;
-            const punch = st.today_punch;
 
             let badgeApproval = '';
             if (st.approval_status === 'Pending') {
@@ -376,7 +379,7 @@ frappe.ready(function() {
                 if (outTimeFormatted) {
                     punchTimes = `<span class="small text-muted font-weight-bold">In: ${inTimeFormatted} &bull; Out: ${outTimeFormatted}</span>`;
                 } else {
-                    punchTimes = `<span class="small text-success font-weight-bold">In: ${inTimeFormatted} (Active)</span>`;
+                    punchTimes = `<span class="small text-success font-weight-bold">In: ${inTimeFormatted} (Active Shift)</span>`;
                 }
             }
 
@@ -388,15 +391,20 @@ frappe.ready(function() {
                 ? `<div class="small text-primary font-family-monospace font-weight-bold">💼 ${frappe.utils.escape_html(st.cost_center)}</div>`
                 : `<div class="small text-muted font-family-monospace">No Cost Center</div>`;
 
-            let actionBtn = '';
+            // Desktop Buttons
+            let desktopActions = '';
+            // Mobile Buttons
+            let mobileActions = '';
+
             if (!isApproved) {
-                actionBtn = `<small class="text-muted font-italic">Awaiting Committee Approval</small>`;
+                desktopActions = `<small class="text-muted font-italic">Awaiting Approval</small>`;
+                mobileActions = `<div class="text-center text-muted small font-italic py-1">Awaiting Committee Approval</div>`;
             } else {
-                const punchBtn = isOnDuty
+                const punchBtnDesktop = isOnDuty
                     ? `<button class="btn btn-sm btn-outline-danger btn-agency-punch font-weight-bold mr-1" data-id="${st.staff_id}" data-punch="in">⏹️ Punch Out</button>`
                     : `<button class="btn btn-sm btn-success btn-agency-punch font-weight-bold mr-1" data-id="${st.staff_id}" data-punch="out">▶️ Punch In</button>`;
                 
-                const assignBtn = `
+                const assignBtnDesktop = `
                     <button class="btn btn-sm btn-outline-primary btn-assign-duty font-weight-bold" 
                             data-id="${st.staff_id}" 
                             data-name="${frappe.utils.escape_html(st.full_name)}" 
@@ -406,10 +414,27 @@ frappe.ready(function() {
                         📍 Assign Post
                     </button>
                 `;
-                actionBtn = punchBtn + assignBtn;
+                desktopActions = punchBtnDesktop + assignBtnDesktop;
+
+                const punchBtnMobile = isOnDuty
+                    ? `<button class="btn btn-danger btn-block btn-agency-punch font-weight-bold mb-2 py-2" data-id="${st.staff_id}" data-punch="in">⏹️ Punch Out</button>`
+                    : `<button class="btn btn-success btn-block btn-agency-punch font-weight-bold mb-2 py-2" data-id="${st.staff_id}" data-punch="out">▶️ Punch In</button>`;
+
+                const assignBtnMobile = `
+                    <button class="btn btn-outline-primary btn-block btn-assign-duty font-weight-bold py-2" 
+                            data-id="${st.staff_id}" 
+                            data-name="${frappe.utils.escape_html(st.full_name)}" 
+                            data-role="${frappe.utils.escape_html(st.role)}"
+                            data-post="${frappe.utils.escape_html(st.duty_post || '')}"
+                            data-att-id="${st.attendance_id || ''}">
+                        📍 Assign Duty Post / Block
+                    </button>
+                `;
+                mobileActions = punchBtnMobile + assignBtnMobile;
             }
 
-            html += `
+            // Desktop Row
+            desktopHtml += `
                 <tr>
                     <td>
                         <div class="font-weight-bold text-dark">${frappe.utils.escape_html(st.full_name)}</div>
@@ -428,19 +453,47 @@ frappe.ready(function() {
                         <div>${punchTimes}</div>
                     </td>
                     <td class="text-right">
-                        ${actionBtn}
+                        ${desktopActions}
                     </td>
                 </tr>
             `;
+
+            // Mobile Card Item (Stacked layout, zero horizontal scroll)
+            const borderCol = !isApproved ? '#ffc107' : (isOnDuty ? '#28a745' : '#6c757d');
+            mobileHtml += `
+                <div class="card mb-3 shadow-sm border p-3 bg-white" style="border-left: 5px solid ${borderCol} !important;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>${dutyBadge}</div>
+                        <div>${badgeApproval}</div>
+                    </div>
+                    
+                    <h5 class="font-weight-bold text-dark mb-1">${frappe.utils.escape_html(st.full_name)}</h5>
+                    <div class="small text-muted mb-2">
+                        <span class="badge badge-info bg-info text-white mr-1">${frappe.utils.escape_html(st.role)}</span>
+                        <code>${st.staff_id}</code> &bull; 📞 ${frappe.utils.escape_html(st.contact_number || 'N/A')}
+                    </div>
+
+                    <div class="p-2 mb-2 bg-light rounded small">
+                        <div><strong>Assigned Duty:</strong> ${postDisplay}</div>
+                        <div><strong>Cost Center:</strong> ${ccDisplay}</div>
+                        <div class="mt-1 pt-1 border-top"><strong>Shift Timings:</strong> ${punchTimes}</div>
+                    </div>
+
+                    <div class="pt-2 border-top">
+                        ${mobileActions}
+                    </div>
+                </div>
+            `;
         });
 
-        html += `
+        desktopHtml += `
                     </tbody>
                 </table>
             </div>
         `;
+        mobileHtml += `</div>`;
 
-        container.html(html);
+        container.html(desktopHtml + mobileHtml);
     }
 
     function showAlert(type, msg) {
