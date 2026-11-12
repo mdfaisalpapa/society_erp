@@ -487,6 +487,11 @@ def get_committee_data(module_type="all"):
         from society_erp.api.water import get_daily_water_summary
         data["water_summary"] = get_daily_water_summary()
 
+    # 13. Housekeeping Cleaning Proofs
+    if module_type in ("all", "cleaning_log"):
+        from society_erp.api.facility_staff import get_daily_cleaning_summary
+        data["cleaning_summary"] = get_daily_cleaning_summary()
+
     # Counts summary
     res_pending_count = 0
     if comm_member_name:

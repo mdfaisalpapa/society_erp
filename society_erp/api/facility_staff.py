@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import nowdate, now_datetime, get_datetime, time_diff_in_hours, add_days
+from frappe.utils import nowdate, now_datetime, nowtime, get_datetime, time_diff_in_hours, add_days
 
 
 @frappe.whitelist()
@@ -376,9 +376,38 @@ def review_facility_staff(staff_id: str, action: str, remarks: str = None) -> di
     if action == "Approved":
         doc.status = "Active"
         doc.rejection_remarks = None
+
+        # Automatically create or enable portal login user if requested
+        if doc.enable_portal_user and doc.portal_email:
+            email = doc.portal_email.strip().lower()
+            if not frappe.db.exists("User", email):
+                first_name = doc.full_name.split()[0]
+                last_name = " ".join(doc.full_name.split()[1:]) if len(doc.full_name.split()) > 1 else ""
+                new_user = frappe.get_doc({
+                    "doctype": "User",
+                    "email": email,
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "enabled": 1,
+                    "send_welcome_email": 0,
+                    "user_type": "Website User",
+                    "roles": [{"role": "Facility Operations Staff"}]
+                })
+                new_user.insert(ignore_permissions=True)
+                new_user.new_password = "Staff@" + (doc.contact_number[-4:] if doc.contact_number else "1234")
+                new_user.save(ignore_permissions=True)
+                doc.user_id = email
+            else:
+                # Add role to existing user
+                u = frappe.get_doc("User", email)
+                u.add_roles("Facility Operations Staff")
+                doc.user_id = email
     else:
         doc.status = "Inactive"
         doc.rejection_remarks = remarks
+        # Disable user account if rejected
+        if doc.user_id and frappe.db.exists("User", doc.user_id):
+            frappe.db.set_value("User", doc.user_id, "enabled", 0)
 
     doc.save(ignore_permissions=True)
 
@@ -623,4 +652,75 @@ def cleanup_reconciled_muster_photos(retention_days: int = 30) -> dict:
         "deleted_count": deleted_count,
         "cleaned_musters": cleaned_musters,
         "message": _("Purged {0} shift muster photos older than 1 month ({1}).").format(deleted_count, cutoff_date)
+    }
+
+
+@frappe.whitelist()
+def log_housekeeping_work(
+    block: str,
+    location_type: str,
+    floor_or_area: str,
+    photo_after: str,
+    photo_before: str = None,
+    activity_type: str = "Floor Mopping & Sweeping",
+    cleaning_status: str = "Satisfactory",
+    notes: str = None
+) -> dict:
+    """
+    Records daily cleaning and housekeeping work with block, floor/area, and photo proof.
+    """
+    if not block or not frappe.db.exists("Block", block):
+        frappe.throw(_("Invalid Block: {0}").format(block))
+
+    if not photo_after:
+        frappe.throw(_("After cleaning photograph is mandatory for inspection proof."))
+
+    user = frappe.session.user
+    supervisor_id = frappe.db.get_value("Facility Staff", {"user_id": user}, "name")
+
+    doc = frappe.get_doc({
+        "doctype": "Housekeeping Work Log",
+        "block": block,
+        "location_type": location_type,
+        "floor_or_area": floor_or_area.strip(),
+        "log_date": nowdate(),
+        "log_time": nowtime(),
+        "supervisor": supervisor_id,
+        "activity_type": activity_type,
+        "cleaning_status": cleaning_status,
+        "photo_before": photo_before,
+        "photo_after": photo_after,
+        "notes": notes
+    })
+    doc.insert(ignore_permissions=True)
+
+    return {
+        "status": "success",
+        "log_id": doc.name,
+        "block": doc.block,
+        "floor_or_area": doc.floor_or_area,
+        "message": _("Cleaning log recorded for Block {0} ({1}).").format(doc.block, doc.floor_or_area)
+    }
+
+
+@frappe.whitelist()
+def get_daily_cleaning_summary(date: str = None) -> dict:
+    """
+    Returns latest housekeeping cleaning logs grouped by block and floor/area.
+    """
+    target_date = date or nowdate()
+    logs = frappe.get_all(
+        "Housekeeping Work Log",
+        filters={"log_date": target_date},
+        fields=[
+            "name", "block", "location_type", "floor_or_area", "log_date", "log_time",
+            "supervisor", "activity_type", "cleaning_status", "photo_before", "photo_after", "notes", "creation"
+        ],
+        order_by="creation desc"
+    )
+
+    return {
+        "date": target_date,
+        "total_logs": len(logs),
+        "logs": logs
     }

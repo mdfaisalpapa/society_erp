@@ -32,7 +32,10 @@
   "joining_date",
   "section_break_blacklist",
   "blacklisted_reason",
-  "notes"
+  "notes",
+  "enable_portal_user",
+  "portal_email",
+  "user_id"
  ],
  "fields": [
   {
@@ -198,6 +201,25 @@
    "in_list_view": 1,
    "label": "Default Physical Post",
    "options": "Facility Duty Post"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_portal_user",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enable Mobile Portal Login"
+  },
+  {
+   "fieldname": "portal_email",
+   "fieldtype": "Data",
+   "label": "Portal Login Email / Username"
+  },
+  {
+   "fieldname": "user_id",
+   "fieldtype": "Link",
+   "label": "Linked Frappe User Account",
+   "options": "User",
+   "read_only": 1
   }
  ],
  "image_field": "photo",

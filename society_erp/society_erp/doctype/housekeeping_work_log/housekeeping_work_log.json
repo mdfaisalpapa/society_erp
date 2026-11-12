@@ -1,0 +1,176 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:HKL-{block}-{YYYY}-{MM}-{DD}-{###}",
+ "creation": "2026-11-13 05:15:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "block",
+  "location_type",
+  "floor_or_area",
+  "log_date",
+  "log_time",
+  "shift",
+  "supervisor",
+  "staff_assigned",
+  "section_cleaning",
+  "activity_type",
+  "cleaning_status",
+  "photo_before",
+  "photo_after",
+  "section_notes",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "block",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Block / Zone",
+   "options": "Block",
+   "reqd": 1
+  },
+  {
+   "default": "Block Floor",
+   "fieldname": "location_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Location Type",
+   "options": "Block Floor\nBasement / Parking\nStaircase & Lift Lobby\nTerrace / Roof\nCommon Area / Road\nClubhouse / Community Hall\nGarbage Chute Area",
+   "reqd": 1
+  },
+  {
+   "fieldname": "floor_or_area",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Floor / Specific Area",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "log_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "log_time",
+   "fieldtype": "Time",
+   "label": "Time"
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Link",
+   "label": "Shift",
+   "options": "Facility Shift"
+  },
+  {
+   "fieldname": "supervisor",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Supervisor",
+   "options": "Facility Staff"
+  },
+  {
+   "fieldname": "staff_assigned",
+   "fieldtype": "Link",
+   "label": "Housekeeping Staff Assigned",
+   "options": "Facility Staff"
+  },
+  {
+   "fieldname": "section_cleaning",
+   "fieldtype": "Section Break",
+   "label": "Cleaning Activity & Photo Proof"
+  },
+  {
+   "default": "Floor Mopping & Sweeping",
+   "fieldname": "activity_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Cleaning Activity",
+   "options": "Floor Mopping & Sweeping\nDeep Cleaning / Scrubbing\nGarbage Collection & Chute Wash\nGlass & Railing Wiping\nCobweb Removal\nBasement Washing\nStaircase Washing"
+  },
+  {
+   "default": "Satisfactory",
+   "fieldname": "cleaning_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Inspection Status",
+   "options": "Satisfactory\nNeeds Re-cleaning\nWork In Progress"
+  },
+  {
+   "fieldname": "photo_before",
+   "fieldtype": "Attach Image",
+   "label": "Before Cleaning Photo"
+  },
+  {
+   "fieldname": "photo_after",
+   "fieldtype": "Attach Image",
+   "in_list_view": 1,
+   "label": "After Cleaning Photo (Required Proof)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Supervisor Remarks / Resident Feedback"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-13 05:15:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society ERP",
+ "name": "Housekeeping Work Log",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Facility Agency Manager",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

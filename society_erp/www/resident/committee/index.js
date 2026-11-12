@@ -1285,6 +1285,82 @@ frappe.ready(function () {
     }
 
 
+
+    // --- 12. Housekeeping Cleaning Proofs Module ---
+    function renderCleaningLog(summary) {
+        const $cont = $("#container-cleaning_log");
+        if (!summary || !summary.logs || !summary.logs.length) {
+            $cont.html(`
+                <div class="text-center py-5 bg-white rounded border">
+                    <div style="font-size: 2.5rem;">🧹</div>
+                    <h6 class="font-weight-bold mt-2">No Cleaning Logs Recorded Today</h6>
+                    <p class="text-muted small">Housekeeping staff cleaning photos along with block floor and area tags will appear here.</p>
+                </div>
+            `);
+            return;
+        }
+
+        let html = `
+            <div class="card mb-3 border-0 bg-light p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <h6 class="font-weight-bold text-dark mb-1">🧹 Today's Housekeeping Cleaning Inspections</h6>
+                        <small class="text-muted">Verified before/after photo logs by Block, Floor, and Common Areas</small>
+                    </div>
+                    <span class="badge badge-success px-2 py-1">
+                        ${summary.total_logs} Areas Cleaned & Inspected
+                    </span>
+                </div>
+            </div>
+            <div class="row">
+        `;
+
+        summary.logs.forEach(l => {
+            html += `
+                <div class="col-12 col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 shadow-sm border p-3 bg-white d-flex flex-column justify-content-between" style="border-left: 4px solid #28a745 !important;">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span class="badge badge-primary font-weight-bold">🏢 Block ${escapeHtml(l.block)}</span>
+                                    <span class="badge badge-light border text-dark font-weight-bold ml-1">📍 ${escapeHtml(l.floor_or_area)}</span>
+                                </div>
+                                <span class="badge badge-success">${escapeHtml(l.cleaning_status || 'Satisfactory')}</span>
+                            </div>
+                            <h6 class="font-weight-bold text-dark mb-1">${escapeHtml(l.activity_type)}</h6>
+                            <small class="text-muted d-block mb-2">Type: <strong>${escapeHtml(l.location_type)}</strong> &bull; Time: <strong>${(l.log_time || '').substring(0, 5)}</strong></small>
+
+                            <!-- Photo Comparison Grid -->
+                            <div class="row no-gutters mb-2">
+                                ${l.photo_before ? `
+                                    <div class="col-6 pr-1">
+                                        <small class="text-muted font-weight-bold d-block mb-1">Before:</small>
+                                        <a href="${l.photo_before}" target="_blank">
+                                            <img src="${l.photo_before}" class="img-fluid rounded border" style="height: 100px; width: 100%; object-fit: cover;">
+                                        </a>
+                                    </div>
+                                ` : ''}
+                                <div class="${l.photo_before ? 'col-6 pl-1' : 'col-12'}">
+                                    <small class="text-success font-weight-bold d-block mb-1">After (Cleaned):</small>
+                                    <a href="${l.photo_after}" target="_blank">
+                                        <img src="${l.photo_after}" class="img-fluid rounded border" style="height: 100px; width: 100%; object-fit: cover;">
+                                    </a>
+                                </div>
+                            </div>
+
+                            ${l.notes ? `
+                                <div class="small text-muted font-italic bg-light p-2 rounded">${escapeHtml(l.notes)}</div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        $cont.html(html);
+    }
+
     // --- 11. Block Water Sump & Pump Monitoring Module ---
     function renderWaterLog(summary) {
         const $cont = $("#container-water_log");
@@ -1447,6 +1523,7 @@ frappe.ready(function () {
         renderEmergency(committeeData.emergency_contacts || []);
         renderFacilityStaff(filterList(committeeData.facility_staff, "facility_staff", ["full_name", "agency", "role", "gate_assigned", "contact_number"]));
         renderWaterLog(committeeData.water_summary);
+        renderCleaningLog(committeeData.cleaning_summary);
     }
 
     // --- Data Fetching ---
