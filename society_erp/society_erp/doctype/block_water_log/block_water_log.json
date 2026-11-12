@@ -1,0 +1,232 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:BWL-{block}-{YYYY}-{MM}-{DD}-{###}",
+ "creation": "2026-11-13 05:05:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "block",
+  "log_date",
+  "log_time",
+  "logged_by",
+  "reading_source",
+  "section_domestic",
+  "domestic_level_ft",
+  "domestic_capacity_pct",
+  "domestic_photo",
+  "domestic_pump_status",
+  "domestic_pump_start",
+  "domestic_pump_stop",
+  "domestic_run_hours",
+  "section_flush",
+  "flush_level_ft",
+  "flush_capacity_pct",
+  "flush_photo",
+  "flush_pump_status",
+  "flush_pump_start",
+  "flush_pump_stop",
+  "flush_run_hours",
+  "section_remarks",
+  "is_low_level_alert",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "block",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Residential Block",
+   "options": "Block",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "log_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "log_time",
+   "fieldtype": "Time",
+   "label": "Time"
+  },
+  {
+   "fieldname": "logged_by",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Logged By / Operator"
+  },
+  {
+   "default": "Manual Staff Entry",
+   "fieldname": "reading_source",
+   "fieldtype": "Select",
+   "label": "Reading Source",
+   "options": "Manual Staff Entry\nIoT Sensor Telemetry\nSupervisor Regularization"
+  },
+  {
+   "fieldname": "section_domestic",
+   "fieldtype": "Section Break",
+   "label": "Domestic Water Sump (WTP / Borewell)"
+  },
+  {
+   "fieldname": "domestic_level_ft",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Domestic Water Level (Feet)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "domestic_capacity_pct",
+   "fieldtype": "Percent",
+   "label": "Domestic Sump Capacity %"
+  },
+  {
+   "fieldname": "domestic_photo",
+   "fieldtype": "Attach Image",
+   "label": "Domestic Sump Gauge Photo"
+  },
+  {
+   "default": "Off",
+   "fieldname": "domestic_pump_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Domestic Pump to OHT",
+   "options": "Off\nRunning\nTripped\nMaintenance"
+  },
+  {
+   "fieldname": "domestic_pump_start",
+   "fieldtype": "Datetime",
+   "label": "Domestic Pump Start Time"
+  },
+  {
+   "fieldname": "domestic_pump_stop",
+   "fieldtype": "Datetime",
+   "label": "Domestic Pump Stop Time"
+  },
+  {
+   "default": "0",
+   "fieldname": "domestic_run_hours",
+   "fieldtype": "Float",
+   "label": "Domestic Motor Run Hours",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_flush",
+   "fieldtype": "Section Break",
+   "label": "Flush Water Sump (STP Treated)"
+  },
+  {
+   "fieldname": "flush_level_ft",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Flush Water Level (Feet)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "flush_capacity_pct",
+   "fieldtype": "Percent",
+   "label": "Flush Sump Capacity %"
+  },
+  {
+   "fieldname": "flush_photo",
+   "fieldtype": "Attach Image",
+   "label": "Flush Sump Gauge Photo"
+  },
+  {
+   "default": "Off",
+   "fieldname": "flush_pump_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Flush Pump to OHT",
+   "options": "Off\nRunning\nTripped\nMaintenance"
+  },
+  {
+   "fieldname": "flush_pump_start",
+   "fieldtype": "Datetime",
+   "label": "Flush Pump Start Time"
+  },
+  {
+   "fieldname": "flush_pump_stop",
+   "fieldtype": "Datetime",
+   "label": "Flush Pump Stop Time"
+  },
+  {
+   "default": "0",
+   "fieldname": "flush_run_hours",
+   "fieldtype": "Float",
+   "label": "Flush Motor Run Hours",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_remarks",
+   "fieldtype": "Section Break",
+   "label": "Alerts & Operational Notes"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_low_level_alert",
+   "fieldtype": "Check",
+   "label": "Low Water Alert Triggered (< 2.5 ft)"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes / Water Quality Remarks"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-13 05:05:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society ERP",
+ "name": "Block Water Log",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Facility Agency Manager",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

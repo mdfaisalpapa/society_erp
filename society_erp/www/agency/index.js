@@ -21,6 +21,82 @@ frappe.ready(function() {
         }));
     });
 
+    // Open Water Sump & Pump Log Modal
+    $('#btn-open-water-modal').on('click', function() {
+        $('#form-water-log')[0].reset();
+        $('#modal-water-log').modal('show');
+    });
+
+    // Submit Water Log
+    $('#form-water-log').on('submit', function(e) {
+        e.preventDefault();
+        const btn = $('#btn-submit-water-log');
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
+
+        const block = $('#water-block-select').val();
+        const domLevel = $('#water-dom-level').val();
+        const domPump = $('#water-dom-pump').val();
+        const flushLevel = $('#water-flush-level').val();
+        const flushPump = $('#water-flush-pump').val();
+        const notes = $('#water-notes').val().trim();
+
+        const domFileInput = document.getElementById('water-dom-photo');
+        const flushFileInput = document.getElementById('water-flush-photo');
+
+        async function uploadIfPresent(fileInput) {
+            if (fileInput.files && fileInput.files[0]) {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('is_private', 0);
+                formData.append('folder', 'Home');
+                const resp = await fetch('/api/method/upload_file', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token }
+                });
+                const d = await resp.json();
+                return d.message ? d.message.file_url : null;
+            }
+            return null;
+        }
+
+        (async () => {
+            try {
+                const domPhotoUrl = await uploadIfPresent(domFileInput);
+                const flushPhotoUrl = await uploadIfPresent(flushFileInput);
+
+                frappe.call({
+                    method: 'society_erp.api.water.log_block_water',
+                    args: {
+                        block: block,
+                        domestic_level_ft: domLevel,
+                        domestic_photo: domPhotoUrl,
+                        domestic_pump_action: domPump,
+                        flush_level_ft: flushLevel,
+                        flush_photo: flushPhotoUrl,
+                        flush_pump_action: flushPump,
+                        notes: notes
+                    },
+                    callback: function(r) {
+                        btn.prop('disabled', false).text('💧 Save Water Log');
+                        if (r.message && r.message.status === 'success') {
+                            $('#modal-water-log').modal('hide');
+                            showAlert('success', '💧 ' + r.message.message);
+                        } else {
+                            frappe.msgprint(__('Failed to save water log.'));
+                        }
+                    },
+                    error: function() {
+                        btn.prop('disabled', false).text('💧 Save Water Log');
+                    }
+                });
+            } catch (err) {
+                btn.prop('disabled', false).text('💧 Save Water Log');
+                frappe.msgprint(__('Error uploading sump photo: ' + err));
+            }
+        })();
+    });
+
     // Open Onboard Modal
     $('#btn-open-onboard-modal').on('click', function() {
         $('#form-onboard-staff')[0].reset();

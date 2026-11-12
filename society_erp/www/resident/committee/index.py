@@ -482,6 +482,11 @@ def get_committee_data(module_type="all"):
             order_by="creation desc"
         )
 
+    # 12. Block Water Sump & Pump Monitoring
+    if module_type in ("all", "water_log"):
+        from society_erp.api.water import get_daily_water_summary
+        data["water_summary"] = get_daily_water_summary()
+
     # Counts summary
     res_pending_count = 0
     if comm_member_name:

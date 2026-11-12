@@ -1284,6 +1284,113 @@ frappe.ready(function () {
         $cont.html(html);
     }
 
+
+    // --- 11. Block Water Sump & Pump Monitoring Module ---
+    function renderWaterLog(summary) {
+        const $cont = $("#container-water_log");
+        if (!summary || !summary.blocks || !summary.blocks.length) {
+            $cont.html(`
+                <div class="text-center py-5 bg-white rounded border">
+                    <div style="font-size: 2.5rem;">💧</div>
+                    <h6 class="font-weight-bold mt-2">No Water Log Telemetry Found</h6>
+                    <p class="text-muted small">Water levels and pump logs will appear here once recorded by agency operators or IoT sensors.</p>
+                </div>
+            `);
+            return;
+        }
+
+        let html = `
+            <div class="card mb-3 border-0 bg-light p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <h6 class="font-weight-bold text-dark mb-1">💧 Daily Sump Levels & OHT Pump Running Status</h6>
+                        <small class="text-muted">Real-time monitoring across all 10 Residential Blocks (A1 to D3)</small>
+                    </div>
+                    <div class="mt-2 mt-md-0 d-flex align-items-center flex-wrap">
+                        ${summary.low_alert_blocks && summary.low_alert_blocks.length > 0 ? `
+                            <span class="badge badge-danger px-2 py-1 mr-2 font-weight-bold">
+                                ⚠️ Low Water: Blocks ${summary.low_alert_blocks.join(', ')}
+                            </span>
+                        ` : `
+                            <span class="badge badge-success px-2 py-1 mr-2 font-weight-bold">
+                                ✅ Sump Levels Normal
+                            </span>
+                        `}
+                        <span class="badge badge-primary px-2 py-1">
+                            ⏱️ Total Pump Run: ${summary.total_domestic_run_hours + summary.total_flush_run_hours} hrs
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+        `;
+
+        summary.blocks.forEach(b => {
+            const hasData = b.has_reading;
+            const isAlert = b.is_low_level_alert;
+            const borderCol = isAlert ? '#dc3545' : (hasData ? '#28a745' : '#6c757d');
+            const domPumpBadge = b.domestic_pump_status === 'Running' 
+                ? '<span class="badge badge-success">⚡ Running</span>'
+                : `<span class="badge badge-secondary">${b.domestic_pump_status || 'Off'}</span>`;
+            
+            const flushPumpBadge = b.flush_pump_status === 'Running' 
+                ? '<span class="badge badge-success">⚡ Running</span>'
+                : `<span class="badge badge-secondary">${b.flush_pump_status || 'Off'}</span>`;
+
+            html += `
+                <div class="col-12 col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 shadow-sm border p-3 d-flex flex-column justify-content-between" style="border-left: 4px solid ${borderCol} !important;">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="font-weight-bold text-dark mb-0">🏢 Block ${b.block}</h6>
+                                <span class="badge ${hasData ? 'badge-light border' : 'badge-warning'}">
+                                    ${hasData ? 'Logged: ' + (b.log_time || '') : 'Pending Log'}
+                                </span>
+                            </div>
+
+                            <!-- Domestic Sump -->
+                            <div class="p-2 mb-2 bg-light rounded small">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong>🚰 Domestic Sump (WTP)</strong>
+                                    ${domPumpBadge}
+                                </div>
+                                <div class="d-flex justify-content-between text-muted">
+                                    <span>Level: <strong class="text-dark">${hasData ? b.domestic_level_ft + ' ft' : '-'}</strong> (${hasData ? b.domestic_capacity_pct + '%' : '-'})</span>
+                                    <span>Run: <strong>${b.domestic_run_hours} hrs</strong></span>
+                                </div>
+                                ${b.domestic_photo ? `
+                                    <div class="mt-1 pt-1 border-top"><a href="${b.domestic_photo}" target="_blank" class="small text-primary font-weight-bold">📷 View Gauge Photo</a></div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Flush Sump -->
+                            <div class="p-2 mb-2 bg-light rounded small">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong>🚽 Flush Sump (STP)</strong>
+                                    ${flushPumpBadge}
+                                </div>
+                                <div class="d-flex justify-content-between text-muted">
+                                    <span>Level: <strong class="text-dark">${hasData ? b.flush_level_ft + ' ft' : '-'}</strong> (${hasData ? b.flush_capacity_pct + '%' : '-'})</span>
+                                    <span>Run: <strong>${b.flush_run_hours} hrs</strong></span>
+                                </div>
+                                ${b.flush_photo ? `
+                                    <div class="mt-1 pt-1 border-top"><a href="${b.flush_photo}" target="_blank" class="small text-primary font-weight-bold">📷 View Gauge Photo</a></div>
+                                ` : ''}
+                            </div>
+
+                            ${b.notes ? `
+                                <div class="small text-muted font-italic bg-white p-1 rounded border">${escapeHtml(b.notes)}</div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        $cont.html(html);
+    }
+
     // --- Search & Filter Logic ---
     function applyFilterAndRender() {
         const query = $searchInput.val().trim().toLowerCase();
@@ -1339,6 +1446,7 @@ frappe.ready(function () {
         renderResolutions(filteredResolutions);
         renderEmergency(committeeData.emergency_contacts || []);
         renderFacilityStaff(filterList(committeeData.facility_staff, "facility_staff", ["full_name", "agency", "role", "gate_assigned", "contact_number"]));
+        renderWaterLog(committeeData.water_summary);
     }
 
     // --- Data Fetching ---

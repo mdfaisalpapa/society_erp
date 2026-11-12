@@ -166,6 +166,11 @@
                             <span class="tab-icon">🛡️</span><span class="tab-label">Security & Staff</span> <span class="badge badge-success ml-1" id="badge-facility_staff">{{ counts.facility_on_duty }}</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link font-weight-bold text-primary" id="tab-water_log" data-toggle="pill" href="#pane-water_log" role="tab" data-module="water_log">
+                            <span class="tab-icon">💧</span><span class="tab-label">Water & Sumps</span>
+                        </a>
+                    </li>
                 </ul>
 
                 <button class="btn btn-outline-secondary btn-sm ml-auto d-md-none mt-2" type="button" data-toggle="collapse" data-target="#committeeFilterCollapse" aria-expanded="false" aria-controls="committeeFilterCollapse">
@@ -282,6 +287,11 @@
             <!-- 10. Facility & Security Staff Deployment Pane -->
             <div class="tab-pane fade" id="pane-facility_staff" role="tabpanel">
                 <div id="container-facility_staff"></div>
+            </div>
+
+            <!-- 11. Block Water Sump & Pump Monitoring Pane -->
+            <div class="tab-pane fade" id="pane-water_log" role="tabpanel">
+                <div id="container-water_log"></div>
             </div>
         </div>
 

@@ -31,18 +31,21 @@
                     <h3 class="font-weight-bold mb-1">{{ agency_name }}</h3>
                     <p class="small text-muted mb-0">Supervisor: <strong>{{ frappe.session.user }}</strong> &bull; Date: <strong>{{ today_date }}</strong></p>
                 </div>
-                <div class="mt-3 mt-md-0 d-flex gap-2">
-                    <button type="button" class="btn btn-primary font-weight-bold shadow-sm mr-2" id="btn-open-qr-scanner">
+                <div class="mt-3 mt-md-0 d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-warning text-dark font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-water-modal">
+                        💧 Log Sump & Pump
+                    </button>
+                    <button type="button" class="btn btn-primary font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-qr-scanner">
                         📷 Scan ID QR
                     </button>
-                    <button type="button" class="btn btn-info font-weight-bold shadow-sm mr-2" id="btn-open-muster-modal">
-                        📸 Record Shift Muster Photo
+                    <button type="button" class="btn btn-info font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-muster-modal">
+                        📸 Record Muster
                     </button>
-                    <button type="button" class="btn btn-success font-weight-bold shadow-sm" id="btn-open-onboard-modal">
+                    <button type="button" class="btn btn-success font-weight-bold shadow-sm mb-2" id="btn-open-onboard-modal">
                         ➕ Onboard Staff
                     </button>
                     {% if is_standalone %}
-                    <button type="button" class="btn btn-outline-light ml-2" onclick="window.close(); if(window.Telegram && window.Telegram.WebApp){ window.Telegram.WebApp.close(); }">
+                    <button type="button" class="btn btn-outline-light ml-2 mb-2" onclick="window.close(); if(window.Telegram && window.Telegram.WebApp){ window.Telegram.WebApp.close(); }">
                         ✕ Close
                     </button>
                     {% endif %}
@@ -299,6 +302,96 @@
                             Save Post Assignment
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Block Water Sump & Pump Log -->
+        <div class="modal fade" id="modal-water-log" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-primary text-white align-items-center">
+                        <h5 class="modal-title font-weight-bold">💧 Log Sump Water Levels & Pump Status</h5>
+                        <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <form id="form-water-log">
+                        <div class="modal-body p-4">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold small">Residential Block *</label>
+                                <select class="form-control font-weight-bold" id="water-block-select" required>
+                                    <option value="A1">Block A1</option>
+                                    <option value="A2">Block A2</option>
+                                    <option value="B1">Block B1</option>
+                                    <option value="B2">Block B2</option>
+                                    <option value="C1">Block C1</option>
+                                    <option value="C2">Block C2</option>
+                                    <option value="C3">Block C3</option>
+                                    <option value="D1">Block D1</option>
+                                    <option value="D2">Block D2</option>
+                                    <option value="D3">Block D3</option>
+                                </select>
+                            </div>
+
+                            <!-- 1. Domestic Water Sump -->
+                            <div class="card p-3 mb-3 border bg-light">
+                                <div class="font-weight-bold text-dark mb-2">🚰 Domestic Sump (WTP / Borewell)</div>
+                                <div class="row">
+                                    <div class="col-md-6 form-group mb-2">
+                                        <label class="small text-muted font-weight-bold">Water Level (Feet) *</label>
+                                        <input type="number" step="0.1" class="form-control form-control-sm" id="water-dom-level" placeholder="e.g. 6.5" required>
+                                    </div>
+                                    <div class="col-md-6 form-group mb-2">
+                                        <label class="small text-muted font-weight-bold">OHT Pump Action</label>
+                                        <select class="form-control form-control-sm" id="water-dom-pump">
+                                            <option value="off">⏹️ Off</option>
+                                            <option value="start">▶️ Start Pump (Switched ON)</option>
+                                            <option value="stop">⏹️ Stop Pump (Switched OFF)</option>
+                                            <option value="running">⚡ Keep Running</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group mb-0">
+                                    <label class="small text-muted font-weight-bold">Domestic Sump Gauge Photo</label>
+                                    <input type="file" class="form-control-file border p-1 rounded bg-white" id="water-dom-photo" accept="image/*" capture="environment">
+                                </div>
+                            </div>
+
+                            <!-- 2. Flush Water Sump -->
+                            <div class="card p-3 mb-3 border bg-light">
+                                <div class="font-weight-bold text-dark mb-2">🚽 Flush Sump (STP Treated)</div>
+                                <div class="row">
+                                    <div class="col-md-6 form-group mb-2">
+                                        <label class="small text-muted font-weight-bold">Water Level (Feet) *</label>
+                                        <input type="number" step="0.1" class="form-control form-control-sm" id="water-flush-level" placeholder="e.g. 4.2" required>
+                                    </div>
+                                    <div class="col-md-6 form-group mb-2">
+                                        <label class="small text-muted font-weight-bold">OHT Pump Action</label>
+                                        <select class="form-control form-control-sm" id="water-flush-pump">
+                                            <option value="off">⏹️ Off</option>
+                                            <option value="start">▶️ Start Pump (Switched ON)</option>
+                                            <option value="stop">⏹️ Stop Pump (Switched OFF)</option>
+                                            <option value="running">⚡ Keep Running</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group mb-0">
+                                    <label class="small text-muted font-weight-bold">Flush Sump Gauge Photo</label>
+                                    <input type="file" class="form-control-file border p-1 rounded bg-white" id="water-flush-photo" accept="image/*" capture="environment">
+                                </div>
+                            </div>
+
+                            <div class="form-group mb-0">
+                                <label class="small text-muted font-weight-bold">Notes / Water Clarity</label>
+                                <textarea class="form-control form-control-sm" id="water-notes" rows="2" placeholder="e.g. Borewell running well, STP water clear..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light border-top">
+                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary btn-sm px-4 font-weight-bold" id="btn-submit-water-log">
+                                💧 Save Water Log
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
