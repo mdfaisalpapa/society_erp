@@ -4,11 +4,9 @@ from frappe.auth import LoginManager
 from society_erp.api.utils import portal_api
 
 
-@frappe.whitelist()
-@portal_api
-def generate_portal_link(for_user: str, target_route: str = "/resident") -> dict:
+def create_portal_link(for_user: str, target_route: str = "/resident") -> dict:
     """
-    Generate an SSO magic link for Telegram WebApp or browser access.
+    Internal helper to generate an SSO magic link dictionary.
     Expires in 15 minutes.
     """
     if not for_user or not frappe.db.exists("User", for_user):
@@ -27,6 +25,16 @@ def generate_portal_link(for_user: str, target_route: str = "/resident") -> dict
         "token": token,
         "expires_in": 900
     }
+
+
+@frappe.whitelist()
+@portal_api
+def generate_portal_link(for_user: str, target_route: str = "/resident") -> dict:
+    """
+    Generate an SSO magic link for Telegram WebApp or browser access.
+    Expires in 15 minutes.
+    """
+    return create_portal_link(for_user=for_user, target_route=target_route)
 
 
 @frappe.whitelist(allow_guest=True)

@@ -1228,8 +1228,17 @@ frappe.ready(function () {
                     }
                     applyFilterAndRender();
 
-                    // If currently active tab is hidden, switch to the first visible tab
-                    if (!$("#committeeTabs .nav-link.active").is(":visible")) {
+                    // Support deep linking via URL hash (e.g. /resident/committee#tenants) or query param
+                    const hashTab = (window.location.hash || "").replace("#pane-", "").replace("#tab-", "").replace("#", "").trim();
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const paramTab = urlParams.get("tab") || hashTab;
+
+                    if (paramTab) {
+                        const $targetTab = $(`#tab-${paramTab}`);
+                        if ($targetTab.length && $targetTab.is(":visible")) {
+                            $targetTab.tab("show");
+                        }
+                    } else if (!$("#committeeTabs .nav-link.active").is(":visible")) {
                         const $firstVisible = $("#committeeTabs .nav-link:visible").first();
                         if ($firstVisible.length) {
                             $firstVisible.tab("show");
