@@ -43,6 +43,16 @@ def get_emergency_contacts() -> dict:
             pub_lines.append(line)
 
     summary_text = "*Internal Security & Estate:*\n" + ("\n".join(int_lines) if int_lines else "• Main Gate Security: 📞 24x7 Intercom\n• Estate Office: 📞 044-24567890 (9 AM - 6 PM)\n• Electrician / Plumber on-duty")
+
+    # Append live on-duty facility security & guard details
+    try:
+        from society_erp.api.facility_staff import get_on_duty_security_summary
+        sec_summary = get_on_duty_security_summary()
+        if sec_summary and sec_summary.get("guards"):
+            summary_text += "\n\n" + sec_summary.get("summary_text", "")
+    except Exception as e:
+        frappe.log_error(f"Failed to fetch on-duty security in emergency API: {e}")
+
     if pub_lines:
         summary_text += "\n\n*Public Emergency Services:*\n" + "\n".join(pub_lines)
 

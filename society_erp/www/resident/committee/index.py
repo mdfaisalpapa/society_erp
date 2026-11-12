@@ -475,6 +475,12 @@ def get_committee_data(module_type="all"):
     if module_type in ("all", "facility_staff"):
         from society_erp.api.facility_staff import get_daily_roster
         data["facility_staff"] = get_daily_roster().get("roster", [])
+        data["facility_musters"] = frappe.get_all(
+            "Facility Shift Muster",
+            filters={"shift_date": nowdate()},
+            fields=["name", "agency", "shift", "category", "muster_photo", "reported_count", "briefing_notes", "creation"],
+            order_by="creation desc"
+        )
 
     # Counts summary
     res_pending_count = 0

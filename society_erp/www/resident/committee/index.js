@@ -34,6 +34,7 @@ frappe.ready(function () {
         facility_bookings: [],
         classifieds: [],
         facility_staff: [],
+        facility_musters: [],
         counts: {}
     };
 
@@ -1168,7 +1169,34 @@ frappe.ready(function () {
             return;
         }
 
+        // Shift Muster Gallery Section (if any muster photos recorded today)
+        const musters = committeeData.facility_musters || [];
+        let musterGalleryHtml = '';
+        if (musters.length > 0) {
+            musterGalleryHtml = `
+                <div class="card mb-3 border-0 bg-white shadow-sm p-3">
+                    <h6 class="font-weight-bold text-dark mb-2">📸 Today's Shift Lineup & Muster Photos</h6>
+                    <div class="row">
+            `;
+            musters.forEach(m => {
+                musterGalleryHtml += `
+                    <div class="col-12 col-md-4 col-lg-3 mb-2">
+                        <div class="border rounded p-2 bg-light text-center">
+                            <a href="${m.muster_photo}" target="_blank">
+                                <img src="${m.muster_photo}" class="img-fluid rounded mb-2" style="max-height: 120px; object-fit: cover;" alt="Shift Lineup">
+                            </a>
+                            <div class="font-weight-bold small text-dark">${escapeHtml(m.shift)}</div>
+                            <div class="small text-muted">${escapeHtml(m.category)} &bull; Count: <strong>${m.reported_count || 0}</strong></div>
+                            ${m.briefing_notes ? `<div class="small text-muted font-italic mt-1 text-truncate">${escapeHtml(m.briefing_notes)}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            musterGalleryHtml += `</div></div>`;
+        }
+
         let html = `
+            ${musterGalleryHtml}
             <div class="card mb-3 border-0 bg-light p-3">
                 <div class="d-flex justify-content-between align-items-center flex-wrap">
                     <div>

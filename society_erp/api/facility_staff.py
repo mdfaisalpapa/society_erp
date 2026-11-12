@@ -453,3 +453,104 @@ def record_shift_muster(agency: str, shift: str, category: str, muster_photo: st
         "photo": doc.muster_photo,
         "message": _("Shift Lineup Group Photo saved successfully for {0}.").format(shift)
     }
+
+
+@frappe.whitelist()
+def generate_reconciliation_purchase_invoice(reconciliation_id: str) -> dict:
+    """
+    Creates an ERPNext Purchase Invoice from an approved Facility Invoice Reconciliation.
+    Breaks down invoice item lines by the actual man-days and verified posts apportioned
+    to specific Cost Centers (10 Blocks, General Common, WTP/STP, Community Hall).
+    """
+    user = frappe.session.user
+    roles = frappe.get_roles(user)
+    if not ("System Manager" in roles or "Society Committee" in roles or "Society Committee Member" in roles or user == "Administrator"):
+        frappe.throw(_("Unauthorized: Only Committee Members or Accounts Managers can create invoices."))
+
+    if not reconciliation_id or not frappe.db.exists("Facility Invoice Reconciliation", reconciliation_id):
+        frappe.throw(_("Reconciliation record not found: {0}").format(reconciliation_id))
+
+    rec = frappe.get_doc("Facility Invoice Reconciliation", reconciliation_id)
+    company = "Kendriya Vihar Chennai 3"
+    supplier = frappe.db.get_value("Facility Agency", rec.agency, "supplier") or rec.agency
+
+    if not frappe.db.exists("Supplier", supplier):
+        frappe.throw(_("Supplier '{0}' not found for Agency '{1}'. Please configure supplier.").format(supplier, rec.agency))
+
+    # Query attendances in this period grouped by cost_center & role
+    attendances = frappe.db.sql("""
+        SELECT 
+            COALESCE(cost_center, 'General Common - KVC3') as cost_center,
+            role,
+            COUNT(name) as present_count
+        FROM `tabFacility Staff Attendance`
+        WHERE agency = %s 
+          AND attendance_date BETWEEN %s AND %s
+          AND status IN ('Present', 'Half Day')
+        GROUP BY cost_center, role
+    """, (rec.agency, rec.from_date, rec.to_date), as_dict=True)
+
+    items = []
+    default_expense_account = "Security - KVC3"
+    default_payable_account = frappe.db.get_value("Company", company, "default_payable_account") or "Creditors - KVC3"
+
+    rate_per_day = 750.0  # fallback standard rate
+    contract_quota = frappe.get_all("Facility Contract Quota", filters={"parent": rec.contract}, fields=["role", "rate_per_shift"])
+    rate_map = {q.role: float(q.rate_per_shift) for q in contract_quota if q.rate_per_shift}
+
+    for att in attendances:
+        rate = rate_map.get(att.role, rate_per_day)
+        amount = float(att.present_count) * rate
+        exp_account = "Housekeeping - KVC3" if "Housekeeping" in (att.role or "") else "Security - KVC3"
+
+        items.append({
+            "item_name": f"{att.role} Deployment - {att.cost_center}",
+            "description": f"Verified deployment of {att.role} ({att.present_count} man-days) allocated to {att.cost_center}",
+            "qty": att.present_count,
+            "rate": rate,
+            "amount": amount,
+            "expense_account": exp_account,
+            "cost_center": att.cost_center
+        })
+
+    if not items:
+        # Fallback to single lump sum item
+        items.append({
+            "item_name": f"Facility Services - {rec.billing_month} {rec.billing_year}",
+            "description": f"Verified facility deployment for period {rec.from_date} to {rec.to_date}",
+            "qty": 1,
+            "rate": float(rec.net_approved_payable or rec.contract_monthly_amount or 50000.0),
+            "amount": float(rec.net_approved_payable or rec.contract_monthly_amount or 50000.0),
+            "expense_account": default_expense_account,
+            "cost_center": "General Common - KVC3"
+        })
+
+    # Create Purchase Invoice in Draft
+    pi = frappe.get_doc({
+        "doctype": "Purchase Invoice",
+        "company": company,
+        "supplier": supplier,
+        "posting_date": nowdate(),
+        "bill_no": rec.invoice_number or f"REC-{rec.name}",
+        "bill_date": rec.to_date or nowdate(),
+        "credit_to": default_payable_account,
+        "remarks": f"Generated from Facility Invoice Reconciliation {rec.name} for {rec.agency} ({rec.billing_month} {rec.billing_year})",
+        "items": items
+    })
+    pi.insert(ignore_permissions=True)
+
+    # Link back to reconciliation
+    frappe.db.set_value("Facility Invoice Reconciliation", rec.name, {
+        "status": "Committee Verified",
+        "approval_date": nowdate(),
+        "verified_by_committee": user,
+        "approval_remarks": f"Purchase Invoice {pi.name} generated with cost center line apportionment."
+    })
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "purchase_invoice": pi.name,
+        "total_amount": pi.grand_total,
+        "message": _("Purchase Invoice {0} created successfully with {1} Cost Center apportioned lines.").format(pi.name, len(items))
+    }
