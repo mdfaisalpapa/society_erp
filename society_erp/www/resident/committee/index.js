@@ -717,20 +717,16 @@ frappe.ready(function () {
                 statusBadge = `<span class="badge badge-secondary font-weight-bold">📝 Draft</span>`;
             }
 
-            // User vote status button
-            let userActionHtml = "";
-            if (res.user_status === "Pending") {
-                userActionHtml = `
-                    <button type="button" class="btn btn-primary btn-sm font-weight-bold btn-vote-open mr-2" data-docname="${res.name}" data-title="${escapeHtml(res.resolution_title)}">
-                        🗳️ Vote / Sign Now
-                    </button>
-                `;
-            } else if (res.user_status === "Signed") {
-                userActionHtml = `<span class="badge badge-success px-2 py-1 mr-2"><i class="fa fa-check"></i> You Signed</span>`;
+            // User vote status in header
+            let userActionHeaderHtml = "";
+            if (res.user_status === "Signed") {
+                userActionHeaderHtml = `<span class="badge badge-success px-2 py-1 mr-2"><i class="fa fa-check"></i> You Signed</span>`;
             } else if (res.user_status === "Declined") {
-                userActionHtml = `<span class="badge badge-danger px-2 py-1 mr-2"><i class="fa fa-times"></i> You Declined</span>`;
+                userActionHeaderHtml = `<span class="badge badge-danger px-2 py-1 mr-2"><i class="fa fa-times"></i> You Declined</span>`;
+            } else if (res.user_status === "Pending") {
+                userActionHeaderHtml = `<span class="badge badge-warning text-dark px-2 py-1 mr-2">⏳ Your Vote Pending</span>`;
             } else {
-                userActionHtml = `<span class="badge badge-light border text-muted mr-2">Observer</span>`;
+                userActionHeaderHtml = `<span class="badge badge-light border text-muted mr-2">Observer</span>`;
             }
 
             // Publish to Notice Board Button (Enabled only for Passed resolutions, if user is the Author/Admin, and not yet published)
@@ -755,6 +751,33 @@ frappe.ready(function () {
                         </span>
                     `;
                 }
+            }
+
+            // Vote / Sign Button Below the Record
+            let voteButtonBelowHtml = "";
+            if (res.user_status === "Pending") {
+                voteButtonBelowHtml = `
+                    <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-3 flex-wrap">
+                        <div class="small text-muted mb-2 mb-md-0">
+                            ℹ️ Review resolution text and signatories status before recording your response.
+                        </div>
+                        <button type="button" class="btn btn-primary font-weight-bold shadow-sm btn-vote-open px-4" data-docname="${res.name}">
+                            🗳️ Vote / Sign Resolution Now
+                        </button>
+                    </div>
+                `;
+            } else if (res.user_status === "Signed") {
+                voteButtonBelowHtml = `
+                    <div class="card-footer bg-light border-top py-2 px-3 small text-success font-weight-bold d-flex align-items-center">
+                        <span class="mr-2">✅</span> You have signed this resolution.
+                    </div>
+                `;
+            } else if (res.user_status === "Declined") {
+                voteButtonBelowHtml = `
+                    <div class="card-footer bg-light border-top py-2 px-3 small text-danger font-weight-bold d-flex align-items-center">
+                        <span class="mr-2">❌</span> You declined this resolution.
+                    </div>
+                `;
             }
 
             // Signatory breakdown tags
@@ -788,7 +811,7 @@ frappe.ready(function () {
                                 <span class="text-muted small ml-2">📅 ${formatDate(res.creation)}</span>
                             </div>
                             <div class="mt-2 mt-md-0 d-flex align-items-center">
-                                ${userActionHtml}
+                                ${userActionHeaderHtml}
                                 ${publishBtnHtml}
                             </div>
                         </div>
@@ -815,6 +838,7 @@ frappe.ready(function () {
                                 ${signatoriesListHtml}
                             </div>
                         </div>
+                        ${voteButtonBelowHtml}
                     </div>
                 </div>
             `;
@@ -1054,12 +1078,54 @@ frappe.ready(function () {
     // Open Vote Modal
     $(document).on("click", ".btn-vote-open", function () {
         activeVoteDocname = $(this).data("docname");
-        const title = $(this).data("title");
+        
+        // Find the full resolution object from committeeData
+        const res = (committeeData.resolutions || []).find(r => r.name === activeVoteDocname);
+        if (!res) return;
 
-        $("#vote-res-title").text(title);
-        $("#vote-res-id").text(`Resolution ID: ${activeVoteDocname}`);
+        $("#vote-res-title").text(res.resolution_title || "Board Resolution");
+        $("#vote-res-id").text(`Resolution ID: ${res.name}`);
+        $("#vote-res-date").text(formatDate(res.creation));
+        $("#vote-res-content").html(res.resolution_text || "<p class='text-muted'>No text provided.</p>");
         $("#vote-decline-reason").val("");
         $("#vote-decline-reason-group").addClass("d-none");
+
+        // Populate Signatories Breakdown in the modal
+        const signatories = res.signatories || [];
+        const signedList = signatories.filter(s => s.signature_status === "Signed");
+        const otherList = signatories.filter(s => s.signature_status !== "Signed");
+
+        $("#vote-res-tally").text(`${signedList.length} of ${signatories.length} Members Signed`);
+
+        const $signedContainer = $("#vote-res-signed-members").empty();
+        if (signedList.length > 0) {
+            signedList.forEach(s => {
+                $signedContainer.append(`
+                    <span class="badge badge-success mr-1 mb-1 px-2 py-1 font-weight-normal" title="Signed on: ${formatDate(s.signed_on)}">
+                        ✅ <strong>${escapeHtml(s.signatory_name || s.signatory)}</strong> (${escapeHtml(s.designation_name || s.role || 'Member')})
+                    </span>
+                `);
+            });
+        } else {
+            $signedContainer.html(`<span class="small text-muted font-italic">No committee members have signed yet.</span>`);
+        }
+
+        const $otherContainer = $("#vote-res-other-members").empty();
+        if (otherList.length > 0) {
+            otherList.forEach(s => {
+                const isDeclined = s.signature_status === "Declined";
+                const badgeClass = isDeclined ? "badge-danger" : "badge-light border text-muted";
+                const icon = isDeclined ? "❌" : "⏳";
+                const note = s.rejection_reason ? ` - "${escapeHtml(s.rejection_reason)}"` : "";
+                $otherContainer.append(`
+                    <span class="badge ${badgeClass} mr-1 mb-1 px-2 py-1 font-weight-normal" title="${s.signature_status}">
+                        ${icon} ${escapeHtml(s.signatory_name || s.signatory)} (${escapeHtml(s.designation_name || s.role || 'Member')})${note}
+                    </span>
+                `);
+            });
+        } else {
+            $otherContainer.html(`<span class="small text-muted font-italic">All signatories have responded!</span>`);
+        }
 
         selectedVoteAction = "Signed";
         $(".btn-vote-choice").removeClass("active");
