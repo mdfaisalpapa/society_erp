@@ -11,6 +11,9 @@
   "resolution_text",
   "signatories",
   "status",
+  "is_published_to_notice_board",
+  "published_notice",
+  "published_on",
   "amended_from",
   "created_by_member"
  ],
@@ -40,6 +43,27 @@
    "fieldtype": "Select",
    "label": "Status",
    "options": "Draft\nCirculated\nPassed\nRejected"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_published_to_notice_board",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Published to Notice Board",
+   "read_only": 1
+  },
+  {
+   "fieldname": "published_notice",
+   "fieldtype": "Link",
+   "label": "Published Notice",
+   "options": "Society Notice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "published_on",
+   "fieldtype": "Datetime",
+   "label": "Published On",
+   "read_only": 1
   },
   {
    "fieldname": "amended_from",

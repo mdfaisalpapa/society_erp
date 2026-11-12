@@ -721,16 +721,40 @@ frappe.ready(function () {
             let userActionHtml = "";
             if (res.user_status === "Pending") {
                 userActionHtml = `
-                    <button type="button" class="btn btn-primary btn-sm font-weight-bold btn-vote-open" data-docname="${res.name}" data-title="${escapeHtml(res.resolution_title)}">
+                    <button type="button" class="btn btn-primary btn-sm font-weight-bold btn-vote-open mr-2" data-docname="${res.name}" data-title="${escapeHtml(res.resolution_title)}">
                         🗳️ Vote / Sign Now
                     </button>
                 `;
             } else if (res.user_status === "Signed") {
-                userActionHtml = `<span class="badge badge-success px-2 py-1"><i class="fa fa-check"></i> You Signed</span>`;
+                userActionHtml = `<span class="badge badge-success px-2 py-1 mr-2"><i class="fa fa-check"></i> You Signed</span>`;
             } else if (res.user_status === "Declined") {
-                userActionHtml = `<span class="badge badge-danger px-2 py-1"><i class="fa fa-times"></i> You Declined</span>`;
+                userActionHtml = `<span class="badge badge-danger px-2 py-1 mr-2"><i class="fa fa-times"></i> You Declined</span>`;
             } else {
-                userActionHtml = `<span class="badge badge-light border text-muted">Observer</span>`;
+                userActionHtml = `<span class="badge badge-light border text-muted mr-2">Observer</span>`;
+            }
+
+            // Publish to Notice Board Button (Enabled only for Passed resolutions, if user is the Author/Admin, and not yet published)
+            let publishBtnHtml = "";
+            if (res.status === "Passed") {
+                if (res.is_published_to_notice_board) {
+                    publishBtnHtml = `
+                        <span class="badge badge-info px-2 py-1 ml-1" title="Published Notice ID: ${res.published_notice || ''}">
+                            📢 Published to Notice Board
+                        </span>
+                    `;
+                } else if (res.is_author) {
+                    publishBtnHtml = `
+                        <button type="button" class="btn btn-success btn-sm font-weight-bold btn-publish-resolution ml-1 shadow-sm" data-docname="${res.name}" data-title="${escapeHtml(res.resolution_title)}">
+                            📢 Publish to Notice Board
+                        </button>
+                    `;
+                } else {
+                    publishBtnHtml = `
+                        <span class="badge badge-light border text-muted ml-1" title="Awaiting publishing by the author">
+                            Pending Author Publication
+                        </span>
+                    `;
+                }
             }
 
             // Signatory breakdown tags
@@ -763,8 +787,9 @@ frappe.ready(function () {
                                 ${statusBadge}
                                 <span class="text-muted small ml-2">📅 ${formatDate(res.creation)}</span>
                             </div>
-                            <div class="mt-2 mt-md-0">
+                            <div class="mt-2 mt-md-0 d-flex align-items-center">
                                 ${userActionHtml}
+                                ${publishBtnHtml}
                             </div>
                         </div>
                         <div class="card-body">
@@ -1095,5 +1120,37 @@ frappe.ready(function () {
                 frappe.msgprint({ title: __("Error"), message: errMsg, indicator: "red" });
             }
         });
+    });
+
+    // Publish Passed Resolution to Notice Board Handler
+    $(document).on("click", ".btn-publish-resolution", function () {
+        const docname = $(this).data("docname");
+        const title = $(this).data("title");
+        const $btn = $(this);
+
+        frappe.confirm(
+            `Are you sure you want to publish the Passed Board Resolution <strong>${escapeHtml(title)} (${escapeHtml(docname)})</strong> to the Society Notice Board for all residents to see?`,
+            function () {
+                const origText = $btn.html();
+                $btn.prop("disabled", true).html("Publishing…");
+
+                frappe.call({
+                    method: "society_erp.www.resident.committee.index.publish_resolution_to_notice_board",
+                    args: { docname: docname },
+                    callback: function (r) {
+                        $btn.prop("disabled", false).html(origText);
+                        if (r && r.message && r.message.status === "success") {
+                            showAlert(r.message.message, "success");
+                            loadCommitteeData();
+                        }
+                    },
+                    error: function (err) {
+                        $btn.prop("disabled", false).html(origText);
+                        const errMsg = err && err.message ? err.message : "Failed to publish resolution to Notice Board.";
+                        frappe.msgprint({ title: __("Error"), message: errMsg, indicator: "red" });
+                    }
+                });
+            }
+        );
     });
 });

@@ -302,6 +302,10 @@ def get_committee_data(module_type="all"):
                 "status",
                 "docstatus",
                 "owner",
+                "created_by_member",
+                "is_published_to_notice_board",
+                "published_notice",
+                "published_on",
                 "creation",
             ],
             order_by="creation desc",
@@ -326,10 +330,20 @@ def get_committee_data(module_type="all"):
             )
             res["signatories"] = signatories
             
-            # Check current user's voting status
+            # Check current user's voting status and authorship
             res["user_signatory_row"] = None
             res["user_has_voted"] = False
             res["user_status"] = "Not Signatory"
+
+            # Check if current user is the author (drafter) of this resolution
+            is_author = False
+            if member_info.get("is_admin") or frappe.session.user == "Administrator":
+                is_author = True
+            elif res.owner and res.owner.strip().lower() in (frappe.session.user.lower(), user_email):
+                is_author = True
+            elif comm_member_name and res.created_by_member == comm_member_name:
+                is_author = True
+            res["is_author"] = is_author
             
             for s in signatories:
                 if comm_member_name and s.signatory == comm_member_name:
@@ -625,4 +639,79 @@ def create_board_resolution(title, text):
         "status": "success",
         "message": _("Board Resolution created and circulated for voting!"),
         "resolution_id": doc.name,
+    }
+
+
+@frappe.whitelist()
+def publish_resolution_to_notice_board(docname):
+    """
+    Publishes a Passed Board Resolution to the Society Notice Board.
+    Restricted to the Committee Member who drafted the resolution (or System Administrator).
+    """
+    has_access, member_info = check_committee_access()
+    if not has_access:
+        frappe.throw(_("Permission Denied: Only AoA Committee Members can publish resolutions."), frappe.PermissionError)
+
+    doc = frappe.get_doc("Board Resolution", docname)
+
+    # 1. Must be in 'Passed' status
+    if doc.status != "Passed":
+        frappe.throw(_("Only Passed Board Resolutions can be published to the Notice Board. (Current status: {0})").format(doc.status))
+
+    # 2. Check already published
+    if doc.is_published_to_notice_board and doc.published_notice:
+        frappe.throw(_("This resolution has already been published to the Notice Board (Notice ID: {0}).").format(doc.published_notice))
+
+    # 3. Verify author authority
+    user = frappe.session.user
+    user_email = (member_info.get("email") or user).strip().lower()
+    comm_member_name = frappe.db.get_value(
+        "Committee Member",
+        {"member_name": ["in", [user, user_email]], "status": "Active"},
+        "name",
+    )
+
+    is_author = False
+    if member_info.get("is_admin") or user == "Administrator":
+        is_author = True
+    elif doc.owner and doc.owner.strip().lower() in (user.lower(), user_email):
+        is_author = True
+    elif comm_member_name and doc.created_by_member == comm_member_name:
+        is_author = True
+
+    if not is_author:
+        frappe.throw(_("Permission Denied: Only the Committee Member who drafted this resolution can publish it to the Notice Board."))
+
+    # 4. Generate the Society Notice text
+    # Strip HTML tags or present clean announcement
+    import re
+    clean_text = re.sub('<[^<]+?>', '', doc.resolution_text or "").strip()
+    notice_title = f"Passed Board Resolution: {doc.resolution_title}"
+    notice_content = (
+        f"Official Board Resolution {doc.name} has been passed by the Managing Committee with required majority.\n\n"
+        f"Resolution Summary:\n{clean_text}\n\n"
+        f"Passed on: {doc.modified.strftime('%d-%b-%Y') if hasattr(doc.modified, 'strftime') else today()}\n"
+        f"Published by: {member_info.get('owner_name', 'Managing Committee')}"
+    )
+
+    notice_doc = frappe.new_doc("Society Notice")
+    notice_doc.title = notice_title
+    notice_doc.content = notice_content
+    notice_doc.date = today()
+    notice_doc.is_active = 1
+    notice_doc.posted_by = member_info.get("name") if member_info.get("name") else None
+    notice_doc.insert(ignore_permissions=True)
+
+    # 5. Update resolution tracking fields
+    now_dt = frappe.utils.now_datetime()
+    doc.is_published_to_notice_board = 1
+    doc.published_notice = notice_doc.name
+    doc.published_on = now_dt
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "message": _("Board Resolution successfully published to Society Notice Board! (Notice ID: {0})").format(notice_doc.name),
+        "notice_id": notice_doc.name,
     }
