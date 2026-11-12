@@ -45,4 +45,25 @@ def verify_entry_code(passcode: str) -> dict:
             "date": str(v.expected_date)
         }
 
+    # Check Worker Pass (Linked to Work Permit)
+    worker = frappe.get_all(
+        "Worker Pass",
+        filters={"passcode": code},
+        fields=["name", "work_permit", "worker_name", "worker_phone", "status"],
+        limit=1
+    )
+    if worker:
+        w = worker[0]
+        permit = frappe.get_doc("Work Permit", w.work_permit) if w.work_permit else None
+        return {
+            "valid": True if (w.status == "Active" and permit and permit.status == "Approved") else False,
+            "type": "Contractor Worker",
+            "flat": permit.flat_number if permit else "-",
+            "name": w.worker_name,
+            "status": f"Worker: {w.status} / Permit: {permit.status if permit else 'None'}",
+            "contractor": permit.contractor_name if permit else "-",
+            "valid_until": str(permit.end_date) if permit else "-",
+            "work_type": permit.work_type if permit else "-"
+        }
+
     return {"valid": False, "message": "Invalid or expired passcode"}

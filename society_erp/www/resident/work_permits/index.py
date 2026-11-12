@@ -1,3 +1,4 @@
+import random
 import frappe
 from frappe import _
 from frappe.utils import format_date, today
@@ -32,6 +33,14 @@ def get_context(context):
     for p in permits:
         p["formatted_start"] = format_date(p.start_date) if p.start_date else "-"
         p["formatted_end"] = format_date(p.end_date) if p.end_date else "-"
+        # Fetch worker passes linked to this permit
+        passes = frappe.get_all(
+            "Worker Pass",
+            filters={"work_permit": p.name},
+            fields=["name", "worker_name", "worker_phone", "passcode", "status"],
+            order_by="creation asc",
+        )
+        p["passes"] = passes
 
     context.permits = permits
     return context
@@ -66,3 +75,40 @@ def apply_work_permit(contractor_name, work_type, start_date, end_date, remarks=
         "message": _("Work Permit application submitted successfully (Permit ID: {0}).").format(doc.name),
         "name": doc.name,
     }
+
+
+@frappe.whitelist()
+def add_worker_pass(work_permit, worker_name, worker_phone=None):
+    res = get_resident_info()
+    if not res:
+        frappe.throw(_("Access Denied."))
+
+    permit = frappe.get_doc("Work Permit", work_permit)
+    if permit.flat_number != res["flat"]:
+        frappe.throw(_("Unauthorized for this permit."), frappe.PermissionError)
+
+    w_name = (worker_name or "").strip()
+    if not w_name:
+        frappe.throw(_("Worker Name is required."))
+
+    # Generate 6-digit gate passcode e.g. WP-4821
+    passcode = f"WP-{random.randint(1000, 9999)}"
+
+    doc = frappe.get_doc({
+        "doctype": "Worker Pass",
+        "work_permit": work_permit,
+        "worker_name": w_name,
+        "worker_phone": (worker_phone or "").strip(),
+        "passcode": passcode,
+        "status": "Active",
+    })
+    doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "message": _("Worker pass generated successfully! Passcode: {0}").format(passcode),
+        "passcode": passcode,
+        "name": doc.name,
+    }
+

@@ -50,6 +50,11 @@
         color: #2e7d32;
         border-color: #a5d6a7;
     }
+    .cal-day-partial {
+        background-color: #fff3cd;
+        color: #b78103;
+        border-color: #ffe082;
+    }
     .cal-day-booked {
         background-color: #ffebee;
         color: #c62828;
@@ -74,6 +79,7 @@
         margin-right: 4px;
     }
     .dot-available { background-color: #2e7d32; }
+    .dot-partial { background-color: #f57f17; }
     .dot-booked { background-color: #c62828; }
     .dot-past { background-color: #adb5bd; }
 </style>
@@ -272,8 +278,9 @@
                     </div>
 
                     <!-- Legend -->
-                    <div class="d-flex justify-content-around align-items-center pt-2 border-top small text-muted">
-                        <div><span class="cal-legend-dot dot-available"></span> Available</div>
+                    <div class="d-flex justify-content-around align-items-center pt-2 border-top small text-muted flex-wrap">
+                        <div><span class="cal-legend-dot dot-available"></span> Free</div>
+                        <div><span class="cal-legend-dot dot-partial"></span> Partial</div>
                         <div><span class="cal-legend-dot dot-booked"></span> Booked</div>
                         <div><span class="cal-legend-dot dot-past"></span> Past</div>
                     </div>
@@ -439,27 +446,47 @@ function renderCalendar() {
         } else {
             // Check booking schedule
             const dayBookings = bookedScheduleCache[dateStr] || [];
-            let isBooked = false;
 
             if (selectedShift === "ALL") {
-                // If any booking exists on this day
-                isBooked = dayBookings.length > 0;
+                // Total distinct shifts: Morning, Afternoon, Evening (or 1 Full Day)
+                const hasFullDay = dayBookings.some(b => b.shift.includes("Full Day"));
+                const bookedShiftsCount = dayBookings.length;
+
+                if (hasFullDay || bookedShiftsCount >= 3) {
+                    // Fully booked day
+                    cell.classList.add("cal-day-booked");
+                    cell.title = "Fully Booked (All slots taken)";
+                } else if (bookedShiftsCount > 0) {
+                    // Partially booked day (Orange)
+                    cell.classList.add("cal-day-partial");
+                    cell.title = "Partially Booked (" + bookedShiftsCount + " shift reserved, others available)";
+                    cell.onclick = function() {
+                        openBookingModalWithDate(dateStr);
+                    };
+                } else {
+                    // Completely free day (Green)
+                    cell.classList.add("cal-day-available");
+                    cell.title = "All slots available";
+                    cell.onclick = function() {
+                        openBookingModalWithDate(dateStr);
+                    };
+                }
             } else {
                 // If specific shift or full day is booked
-                isBooked = dayBookings.some(b => {
+                const isBooked = dayBookings.some(b => {
                     return b.shift.includes("Full Day") || selectedShift.includes("Full Day") || b.shift === selectedShift;
                 });
-            }
 
-            if (isBooked) {
-                cell.classList.add("cal-day-booked");
-                cell.title = "Booked / Reserved";
-            } else {
-                cell.classList.add("cal-day-available");
-                cell.title = "Available for booking";
-                cell.onclick = function() {
-                    openBookingModalWithDate(dateStr);
-                };
+                if (isBooked) {
+                    cell.classList.add("cal-day-booked");
+                    cell.title = selectedShift + " is Booked";
+                } else {
+                    cell.classList.add("cal-day-available");
+                    cell.title = selectedShift + " is Available";
+                    cell.onclick = function() {
+                        openBookingModalWithDate(dateStr);
+                    };
+                }
             }
         }
         container.appendChild(cell);

@@ -49,7 +49,8 @@
                             <th>Contractor</th>
                             <th>Validity Period</th>
                             <th>Status</th>
-                            <th>Remarks</th>
+                            <th>Worker Passes</th>
+                            <th class="text-right">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -72,7 +73,28 @@
                                     <span class="badge badge-secondary font-weight-bold">{{ p.status }}</span>
                                 {% endif %}
                             </td>
-                            <td class="small text-muted">{{ p.remarks or "-" }}</td>
+                            <td>
+                                {% if p.passes %}
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for pass in p.passes %}
+                                            <span class="badge badge-light border text-dark small" title="Passcode: {{ pass.passcode }}">
+                                                👷 {{ pass.worker_name }} (<code>{{ pass.passcode }}</code>)
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted small">No workers added</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-right">
+                                {% if p.status == 'Approved' %}
+                                    <button class="btn btn-sm btn-outline-primary py-1 px-2" onclick="openWorkerPassModal('{{ p.name }}', '{{ p.contractor_name }}')">
+                                        + Add Worker
+                                    </button>
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -101,6 +123,30 @@
                         <div>📅 Period: {{ p.formatted_start }} to {{ p.formatted_end }}</div>
                         {% if p.remarks %}
                             <div class="mt-1 text-dark"><em>Note:</em> {{ p.remarks }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Worker Passes for mobile -->
+                    <div class="pt-2 border-top">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small font-weight-bold text-dark">Worker Gate Passes:</span>
+                            {% if p.status == 'Approved' %}
+                            <button class="btn btn-xs btn-outline-primary py-0 px-2 small" onclick="openWorkerPassModal('{{ p.name }}', '{{ p.contractor_name }}')">
+                                + Add Worker
+                            </button>
+                            {% endif %}
+                        </div>
+                        {% if p.passes %}
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for pass in p.passes %}
+                                    <div class="badge badge-light border text-dark p-2 mb-1 w-100 text-left d-flex justify-content-between">
+                                        <span>👷 <strong>{{ pass.worker_name }}</strong></span>
+                                        <code class="text-primary font-weight-bold">{{ pass.passcode }}</code>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-muted small">No workers added yet.</div>
                         {% endif %}
                     </div>
                 </div>
@@ -163,11 +209,96 @@
                 </div>
             </div>
         </div>
+
+        <!-- MODAL: Add Worker Pass -->
+        <div class="modal fade" id="modal-worker-pass" tabindex="-1" role="dialog" aria-labelledby="modalWorkerPassTitle" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-white border-bottom align-items-center">
+                        <h5 class="modal-title font-weight-bold text-dark" id="modalWorkerPassTitle">
+                            🎫 Generate Worker Gate Pass
+                        </h5>
+                        <button type="button" class="close text-muted" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <form id="form-worker-pass">
+                            <input type="hidden" id="wp-permit-id">
+                            <div class="alert alert-light border small mb-3">
+                                Permit: <strong id="wp-permit-label"></strong>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="wp-worker-name" class="font-weight-bold small text-dark">Worker Full Name *</label>
+                                <input type="text" class="form-control" id="wp-worker-name" placeholder="e.g. Ramesh Kumar" required>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="wp-worker-phone" class="font-weight-bold small text-dark">Mobile Phone Number (Optional)</label>
+                                <input type="tel" class="form-control" id="wp-worker-phone" placeholder="e.g. 9876543210">
+                            </div>
+                            <div class="alert alert-info py-2 px-3 small mb-3">
+                                ℹ️ A unique security gate passcode will be issued. Security guards can verify this passcode at the main gate for contractor worker entry.
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="button" class="btn btn-light border mr-2" data-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary font-weight-bold" id="btn-submit-worker-pass">Generate Gate Pass</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     {% endif %}
 </div>
 
 <script>
+function openWorkerPassModal(permitId, contractorName) {
+    $("#wp-permit-id").val(permitId);
+    $("#wp-permit-label").text(`${permitId} (${contractorName})`);
+    $("#wp-worker-name").val("");
+    $("#wp-worker-phone").val("");
+    $("#modal-worker-pass").modal("show");
+}
+
 frappe.ready(function() {
+    $("#form-worker-pass").on("submit", function(e) {
+        e.preventDefault();
+        const permitId = $("#wp-permit-id").val();
+        const workerName = $("#wp-worker-name").val().trim();
+        const workerPhone = $("#wp-worker-phone").val().trim();
+
+        if (!workerName) return;
+
+        const $btn = $("#btn-submit-worker-pass");
+        const orig = $btn.text();
+        $btn.prop("disabled", true).text("Generating…");
+
+        frappe.call({
+            method: "society_erp.www.resident.work_permits.index.add_worker_pass",
+            args: {
+                work_permit: permitId,
+                worker_name: workerName,
+                worker_phone: workerPhone
+            },
+            callback: function(r) {
+                $btn.prop("disabled", false).text(orig);
+                $("#modal-worker-pass").modal("hide");
+                if (r && r.message && r.message.status === "success") {
+                    frappe.msgprint({
+                        title: "Worker Pass Created",
+                        indicator: "green",
+                        message: `Passcode: <strong class='h4 text-primary'>${r.message.passcode}</strong><br>Share this passcode with the worker to show security at the gate.`
+                    });
+                    setTimeout(() => window.location.reload(), 2000);
+                }
+            },
+            error: function(err) {
+                $btn.prop("disabled", false).text(orig);
+                frappe.msgprint(err.message || "Failed to generate worker pass.");
+            }
+        });
+    });
+
     $("#form-work-permit").on("submit", function(e) {
         e.preventDefault();
         const contractor = $("#permit-contractor").val().trim();

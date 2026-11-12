@@ -40,7 +40,7 @@ def get_context(context):
         return context
 
     # Only display staff whose own status is Active as well.
-    context.staff_members = frappe.get_all(
+    staff_list = frappe.get_all(
         "Domestic Staff",
         filters={
             "name": ["in", staff_names],
@@ -50,5 +50,27 @@ def get_context(context):
         order_by="staff_name asc",
         limit_page_length=1000,
     )
+
+    # Attach live attendance feed for each domestic staff member
+    for s in staff_list:
+        latest_log = frappe.get_all(
+            "Staff Attendance Log",
+            filters={"staff_id": s.name},
+            fields=["log_type", "timestamp"],
+            order_by="timestamp desc",
+            limit=1,
+        )
+        if latest_log:
+            log = latest_log[0]
+            s["last_seen_type"] = log.log_type
+            s["last_seen_time"] = frappe.utils.format_datetime(log.timestamp, "dd-MM-yyyy HH:mm")
+            # Present inside campus if last log is IN
+            s["is_inside"] = log.log_type == "IN"
+        else:
+            s["last_seen_type"] = None
+            s["last_seen_time"] = "No recent gate logs"
+            s["is_inside"] = False
+
+    context.staff_members = staff_list
 
     return context

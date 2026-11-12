@@ -21,7 +21,10 @@
   {
    "fieldname": "log_type",
    "fieldtype": "Select",
-   "label": "Log Type"
+   "in_list_view": 1,
+   "label": "Log Type",
+   "options": "IN\nOUT",
+   "default": "IN"
   },
   {
    "fieldname": "timestamp",

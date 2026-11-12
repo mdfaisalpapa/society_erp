@@ -9,6 +9,8 @@
  "field_order": [
   "work_permit",
   "worker_name",
+  "worker_phone",
+  "passcode",
   "worker_photo",
   "status",
   "revocation_reason"
@@ -17,13 +19,28 @@
   {
    "fieldname": "work_permit",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Work Permit",
-   "options": "Work Permit"
+   "options": "Work Permit",
+   "reqd": 1
   },
   {
    "fieldname": "worker_name",
    "fieldtype": "Data",
-   "label": "Worker Name"
+   "in_list_view": 1,
+   "label": "Worker Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "worker_phone",
+   "fieldtype": "Data",
+   "label": "Worker Mobile Phone"
+  },
+  {
+   "fieldname": "passcode",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Security Passcode"
   },
   {
    "fieldname": "worker_photo",
@@ -31,8 +48,10 @@
    "label": "Worker Photo"
   },
   {
+   "default": "Active",
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Status",
    "options": "Active\nRevoked\nExpired"
   },

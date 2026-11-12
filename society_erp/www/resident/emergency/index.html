@@ -1,0 +1,120 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Emergency Contacts & SOS Directory{% endblock %}
+
+{% block header %}
+<style>
+    .sos-card {
+        border-radius: 12px;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        border-left: 5px solid #dc3545 !important;
+    }
+    .sos-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(220, 53, 69, 0.15);
+    }
+    .contact-card {
+        border-radius: 12px;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        border-left: 5px solid #0d6efd !important;
+    }
+    .contact-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(13, 110, 253, 0.12);
+    }
+    .call-btn {
+        font-weight: 700;
+        border-radius: 8px;
+    }
+    .icon-badge {
+        font-size: 2rem;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="container py-4">
+    <!-- Uniform Standard Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div>
+            <h2 class="mb-1 text-danger">🚨 Emergency SOS & Contacts Directory</h2>
+            <p class="text-muted mb-0">Direct 1-tap dial for Security, Estate Office, Ambulance, Fire, and Police.</p>
+        </div>
+        <div class="mt-2 mt-md-0">
+            <a href="/resident" class="btn btn-outline-secondary">
+                🔙 Back to Resident Portal
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Call Banner for Main Gate -->
+    <div class="card mb-4 bg-danger text-white border-0 shadow">
+        <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap">
+            <div class="mb-2 mb-md-0">
+                <h4 class="font-weight-bold mb-1">👮 Society Main Gate Security (24x7)</h4>
+                <p class="mb-0 text-white-50">Direct intercom line to main entrance security guards for immediate assistance.</p>
+            </div>
+            <a href="tel:080-23456781" class="btn btn-light text-danger font-weight-bold px-4 py-2 call-btn shadow-sm">
+                📞 CALL MAIN GATE NOW
+            </a>
+        </div>
+    </div>
+
+    <!-- Section 1: Society Internal Operations & Security -->
+    <h5 class="font-weight-bold mb-3 text-dark">🏢 Society Internal Contacts</h5>
+    <div class="row mb-4">
+        {% for c in internal_contacts %}
+        <div class="col-12 col-md-6 col-lg-4 mb-3">
+            <div class="card h-100 shadow-sm border contact-card p-3 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="icon-badge">{{ c.icon }}</span>
+                        <span class="badge badge-info bg-info text-white">{{ c.badge }}</span>
+                    </div>
+                    <h6 class="font-weight-bold text-dark mb-1">{{ c.title }}</h6>
+                    <p class="small text-muted mb-3">{{ c.desc }}</p>
+                </div>
+                <div class="pt-2 border-top d-flex justify-content-between align-items-center">
+                    <span class="font-weight-bold text-dark small">{{ c.phone }}</span>
+                    <a href="tel:{{ c.phone }}" class="btn btn-sm btn-outline-primary call-btn px-3">
+                        📞 Call
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Section 2: National & Public Emergency Services -->
+    <h5 class="font-weight-bold mb-3 text-danger">🚨 Public Emergency Helplines</h5>
+    <div class="row mb-4">
+        {% for pe in public_emergencies %}
+        <div class="col-12 col-md-6 col-lg-4 mb-3">
+            <div class="card h-100 shadow-sm border sos-card p-3 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="icon-badge">{{ pe.icon }}</span>
+                        <span class="badge badge-danger bg-danger text-white">Emergency</span>
+                    </div>
+                    <h6 class="font-weight-bold text-dark mb-1">{{ pe.title }}</h6>
+                    <p class="small text-muted mb-3">{{ pe.desc }}</p>
+                </div>
+                <div class="pt-2 border-top d-flex justify-content-between align-items-center">
+                    <span class="h5 font-weight-bold text-danger mb-0">{{ pe.phone }}</span>
+                    <a href="tel:{{ pe.phone }}" class="btn btn-sm btn-danger text-white call-btn px-3">
+                        🚨 Dial {{ pe.phone }}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
