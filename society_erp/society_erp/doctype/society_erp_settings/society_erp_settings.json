@@ -15,7 +15,8 @@
   "default_dues_threshold",
   "default_maintenance_accounts",
   "portal_features_section",
-  "enable_emergency_sos"
+  "enable_emergency_sos",
+  "enabled_portal_tiles"
  ],
  "fields": [
   {
@@ -77,6 +78,14 @@
    "fieldname": "enable_emergency_sos",
    "fieldtype": "Check",
    "label": "Enable Emergency SOS & Contacts for Residents"
+  },
+  {
+   "default": "",
+   "description": "JSON object mapping tile key to 1/0 or enabled status",
+   "fieldname": "enabled_portal_tiles",
+   "fieldtype": "Code",
+   "options": "JSON",
+   "label": "Enabled Portal Tiles Configuration"
   }
  ],
  "grid_page_length": 50,

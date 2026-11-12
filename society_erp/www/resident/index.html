@@ -23,7 +23,7 @@
         <div class="row mt-4 portal-grid">
 
             <!-- 0. AoA Committee Portal (RESTRICTED TO COMMITTEE MEMBERS) -->
-            {% if is_committee_member %}
+            {% if is_committee_member and tiles.get('committee', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/committee" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover border-danger" style="background: linear-gradient(180deg, #fff9f9 0%, #fff 100%);">
@@ -38,6 +38,7 @@
             {% endif %}
             
             <!-- 1. Flat & Profile Details (Common) -->
+            {% if tiles.get('profile', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/profile" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
@@ -49,9 +50,10 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
 
             <!-- 2. Owner Details (RESTRICTED TO OWNERS) -->
-            {% if is_owner %}
+            {% if is_owner and tiles.get('owners', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/owners" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover border-warning">
@@ -66,6 +68,7 @@
             {% endif %}
 
             <!-- 3. Society Dues (Common) -->
+            {% if tiles.get('dues', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/dues" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
@@ -77,8 +80,10 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
 
             <!-- 3b. Society Financials (Common) -->
+            {% if tiles.get('financials', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/financials" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
@@ -90,9 +95,10 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
 
             <!-- 4. Tenant Management (RESTRICTED TO OWNERS) -->
-            {% if is_owner %}
+            {% if is_owner and tiles.get('tenants', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/tenants" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover border-warning">
@@ -107,6 +113,7 @@
             {% endif %}
 
             <!-- 5. Book Facility (Common) -->
+            {% if tiles.get('book_facility', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/book_facility" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
@@ -118,8 +125,10 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
 
             <!-- 6. Visitor Management (Common) -->
+            {% if tiles.get('visitors', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/visitors" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
@@ -131,8 +140,10 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
 
             <!-- 7. Maintenance Tickets (Common) -->
+            {% if tiles.get('maintenance', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/maintenance" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
@@ -144,8 +155,10 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
 
             <!-- 8. Vehicles & Parking (Common) -->
+            {% if tiles.get('vehicles', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/vehicles" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
@@ -157,8 +170,10 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
 
             <!-- 9. Family Members (Common) -->
+            {% if tiles.get('family', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/family" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
@@ -170,8 +185,10 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
 
             <!-- 10. Domestic Staff (Common) -->
+            {% if tiles.get('staff', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/staff" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
@@ -183,8 +200,10 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
 
             <!-- 10b. Resident Pets (Common) -->
+            {% if tiles.get('pets', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/pets" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
@@ -196,8 +215,10 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
 
             <!-- 11. Notice Board (Common) -->
+            {% if tiles.get('notices', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/notices" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
@@ -209,8 +230,10 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
 
             <!-- 11b. Resident Classifieds & Marketplace (Common) -->
+            {% if tiles.get('classifieds', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/classifieds" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
@@ -222,8 +245,10 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
 
             <!-- 13. Polls & Voting (Common) -->
+            {% if tiles.get('voting', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/consensus-vote" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover border-primary">
@@ -235,9 +260,10 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
 
             <!-- 12. Work Permit Management (RESTRICTED TO OWNERS) -->
-            {% if is_owner %}
+            {% if is_owner and tiles.get('work_permits', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/work_permits" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover border-warning">
@@ -265,7 +291,7 @@
             </div>
 
             <!-- 15. Emergency SOS & Contacts (Common) -->
-            {% if enable_emergency_sos %}
+            {% if enable_emergency_sos and tiles.get('emergency', True) %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/emergency" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover border-danger" style="background: linear-gradient(180deg, #fff5f5 0%, #fff 100%);">

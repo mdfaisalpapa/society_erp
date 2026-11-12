@@ -1,22 +1,138 @@
 {% extends "templates/web.html" %}
 
+{% block title %}Settings & Portal Feature Switches{% endblock %}
+
+{% block header %}
+<style>
+    .tile-switch-card {
+        border-radius: 12px;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .tile-switch-card:hover {
+        box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+    }
+    .tile-icon-box {
+        font-size: 1.8rem;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+        border-radius: 10px;
+        flex-shrink: 0;
+    }
+    .badge-pill-role {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+    }
+</style>
+{% endblock %}
+
 {% block page_content %}
 <div class="container my-4">
+    <!-- Uniform Standard Header -->
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
         <div>
-            <h2 class="mb-1 font-weight-bold">⚙️ Settings</h2>
-            <p class="text-muted mb-0">Manage your device notifications and preferences</p>
+            <h2 class="mb-1 font-weight-bold">⚙️ Portal Settings</h2>
+            <p class="text-muted mb-0">Manage notifications, device preferences, and portal feature access</p>
         </div>
         <div class="mt-2 mt-md-0">
             <a href="/resident" class="btn btn-outline-secondary btn-sm">🔙 Back to Resident Portal</a>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8 col-lg-6 mx-auto">
-            <!-- Dedicated Push Settings Anchor Target -->
+    <!-- Section 1: Device Notifications -->
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-header bg-white py-3 border-bottom">
+            <h5 class="mb-0 font-weight-bold text-dark">🔔 Push Notifications & Device Alerts</h5>
+        </div>
+        <div class="card-body">
             <div id="push-settings-container"></div>
         </div>
     </div>
+
+    <!-- Section 2: System Manager Master Portal Switchboard -->
+    {% if is_system_manager %}
+    <div class="card shadow-sm border-primary">
+        <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h5 class="mb-1 font-weight-bold">🛡️ Master Portal Feature Switchboard</h5>
+                <small class="text-white-50">Visible exclusively to <strong>System Managers</strong>. Turn any tile ON or OFF for residents and committee members.</small>
+            </div>
+            <span class="badge badge-light text-primary font-weight-bold px-3 py-2 mt-2 mt-md-0">
+                System Manager Mode
+            </span>
+        </div>
+        <div class="card-body bg-light">
+            <div class="alert alert-info py-2 small mb-3">
+                💡 <strong>How it works:</strong> Toggling a feature OFF instantly hides its tile on the Resident Portal and disables direct access for residents or committee members.
+            </div>
+
+            <div class="row">
+                {% for tile in portal_tiles %}
+                <div class="col-12 col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 shadow-sm border tile-switch-card p-3 d-flex flex-column justify-content-between bg-white" style="border-left: 4px solid {% if tile.enabled %}#198754{% else %}#dc3545{% endif %} !important;">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="tile-icon-box">{{ tile.icon }}</span>
+                                <div class="custom-control custom-switch" style="transform: scale(1.25); transform-origin: right center;">
+                                    <input type="checkbox" class="custom-control-input tile-toggle-switch" id="switch-tile-{{ tile.id }}" data-tile="{{ tile.id }}" {% if tile.enabled %}checked{% endif %}>
+                                    <label class="custom-control-label cursor-pointer" for="switch-tile-{{ tile.id }}"></label>
+                                </div>
+                            </div>
+                            <h6 class="font-weight-bold text-dark mb-1">{{ tile.title }}</h6>
+                            <p class="small text-muted mb-2">{{ tile.desc }}</p>
+                        </div>
+                        <div class="pt-2 border-top d-flex justify-content-between align-items-center">
+                            <span class="badge badge-secondary badge-pill-role">{{ tile.restricted_to }}</span>
+                            <span class="small font-weight-bold status-label-{{ tile.id }} {% if tile.enabled %}text-success{% else %}text-danger{% endif %}">
+                                {% if tile.enabled %}Active{% else %}Hidden{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    $(".tile-toggle-switch").on("change", function () {
+        const switchInput = $(this);
+        const tileId = switchInput.data("tile");
+        const isChecked = switchInput.is(":checked");
+        const label = $(".status-label-" + tileId);
+        
+        label.text("Updating…");
+
+        frappe.call({
+            method: "society_erp.www.resident.settings.index.save_tile_toggle",
+            args: {
+                tile_id: tileId,
+                enabled: isChecked ? 1 : 0
+            },
+            callback: function (r) {
+                if (r && r.message && r.message.status === "success") {
+                    label.attr("class", "small font-weight-bold status-label-" + tileId + " " + (isChecked ? "text-success" : "text-danger"))
+                         .text(isChecked ? "Active" : "Hidden");
+                    switchInput.closest(".tile-switch-card").css("border-left-color", isChecked ? "#198754" : "#dc3545");
+                    frappe.show_alert({
+                        message: __(r.message.message),
+                        indicator: isChecked ? "green" : "orange"
+                    }, 4);
+                }
+            },
+            error: function () {
+                switchInput.prop("checked", !isChecked);
+                label.text(!isChecked ? "Active" : "Hidden");
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
