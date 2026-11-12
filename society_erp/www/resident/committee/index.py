@@ -115,6 +115,10 @@ def get_context(context):
             "Resident Classified", {"approval_status": "Pending Approval"}
         ),
         "resolutions_pending": 0,
+        "facility_on_duty": frappe.db.count(
+            "Facility Staff Attendance", {"attendance_date": nowdate(), "status": "Present", "out_time": ("is", "not set")}
+        ),
+        "facility_staff_total": frappe.db.count("Facility Staff", {"status": "Active"}),
     }
 
     # Count pending resolutions for the current user
@@ -467,6 +471,11 @@ def get_committee_data(module_type="all"):
         classifieds.sort(key=lambda x: (0 if x.get("approval_status") == "Pending Approval" else 1, str(x.get("creation"))), reverse=False)
         data["classifieds"] = classifieds
 
+    # 11. Facility & Security Staff
+    if module_type in ("all", "facility_staff"):
+        from society_erp.api.facility_staff import get_daily_roster
+        data["facility_staff"] = get_daily_roster().get("roster", [])
+
     # Counts summary
     res_pending_count = 0
     if comm_member_name:
@@ -498,6 +507,8 @@ def get_committee_data(module_type="all"):
         "facility_bookings_pending": frappe.db.count("Facility Booking", {"status": "Pending Approval"}),
         "classifieds_pending": frappe.db.count("Resident Classified", {"approval_status": "Pending Approval"}),
         "resolutions_pending": res_pending_count,
+        "facility_on_duty": frappe.db.count("Facility Staff Attendance", {"attendance_date": nowdate(), "status": "Present", "out_time": ("is", "not set")}),
+        "facility_staff_total": frappe.db.count("Facility Staff", {"status": "Active"}),
     }
 
     return data

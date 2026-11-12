@@ -42,6 +42,7 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
         "facility_bookings_pending": frappe.db.count("Facility Booking", {"status": "Pending Approval"}),
         "classifieds_pending": frappe.db.count("Resident Classified", {"approval_status": "Pending Approval"}),
         "resolutions_pending": 0,
+        "facility_on_duty": frappe.db.count("Facility Staff Attendance", {"attendance_date": frappe.utils.nowdate(), "status": "Present", "out_time": ("is", "not set")}),
     }
     if cm and cm.name:
         counts["resolutions_pending"] = frappe.db.count(
@@ -246,6 +247,23 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
             "web_app_url": sso.get("url"),
             "route": route
         })
+
+    # 12. Facility & Security Staff
+    c_on_duty = counts.get("facility_on_duty", 0)
+    route = "/resident/committee?tab=facility_staff&standalone=1#pane-facility_staff"
+    sso = create_portal_link(user_email, target_route=route)
+    sub_tiles.append({
+        "id": "comm_facility_staff",
+        "module": "facility_staff",
+        "label": f"🛡️ Security & Staff ({c_on_duty} On Duty)" if c_on_duty > 0 else "🛡️ Security & Staff",
+        "title": "Facility Staff",
+        "icon": "🛡️",
+        "badge": c_on_duty,
+        "badge_type": "success" if c_on_duty > 0 else "secondary",
+        "value": "open_comm_facility_staff",
+        "web_app_url": sso.get("url"),
+        "route": route
+    })
 
     # Add Return to Main Menu option at the bottom
     sub_tiles.append({

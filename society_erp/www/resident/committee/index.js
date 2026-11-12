@@ -33,6 +33,7 @@ frappe.ready(function () {
         resolutions: [],
         facility_bookings: [],
         classifieds: [],
+        facility_staff: [],
         counts: {}
     };
 
@@ -1153,6 +1154,87 @@ frappe.ready(function () {
         $cont.html(html);
     }
 
+    // --- 10. Facility & Security Staff Deployment Module ---
+    function renderFacilityStaff(items) {
+        const $cont = $("#container-facility_staff");
+        if (!items || !items.length) {
+            $cont.html(`
+                <div class="text-center py-5 bg-white rounded border">
+                    <div style="font-size: 2.5rem;">🛡️</div>
+                    <h6 class="font-weight-bold mt-2">No Facility Staff Records Found</h6>
+                    <p class="text-muted small">No active security guards or housekeeping staff registered for today.</p>
+                </div>
+            `);
+            return;
+        }
+
+        let html = `
+            <div class="card mb-3 border-0 bg-light p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <h6 class="font-weight-bold text-dark mb-1">🛡️ Today's Security & Facility Deployment</h6>
+                        <small class="text-muted">Real-time gate check-ins and verified agency personnel</small>
+                    </div>
+                    <div class="mt-2 mt-md-0">
+                        <span class="badge badge-success px-2 py-1 mr-1">
+                            ${items.filter(s => s.is_on_duty).length} On Duty
+                        </span>
+                        <span class="badge badge-secondary px-2 py-1">
+                            ${items.length} Total Registered
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+        `;
+
+        items.forEach(st => {
+            const isOnDuty = st.is_on_duty;
+            const borderCol = isOnDuty ? '#28a745' : '#6c757d';
+            const badgeCol = isOnDuty ? 'badge-success' : 'badge-secondary';
+            const statusTxt = isOnDuty ? '🟢 On Duty' : (st.in_time ? '🔴 Checked Out' : '⚪ Not Clocked In');
+
+            html += `
+                <div class="col-12 col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 shadow-sm border p-3 d-flex flex-column justify-content-between" style="border-left: 4px solid ${borderCol} !important;">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge ${badgeCol} font-weight-bold">${statusTxt}</span>
+                                <span class="badge badge-light border text-muted">${escapeHtml(st.gate || st.gate_assigned || 'All Gates')}</span>
+                            </div>
+                            <h6 class="font-weight-bold text-dark mb-1">${escapeHtml(st.full_name)}</h6>
+                            <div class="small text-muted mb-2">
+                                <span class="badge badge-info bg-info text-white mr-1">${escapeHtml(st.role)}</span>
+                                <span class="text-muted">(${escapeHtml(st.agency)})</span>
+                            </div>
+                            <div class="small text-muted mb-2">
+                                📞 Contact: <strong>${escapeHtml(st.contact_number || 'N/A')}</strong><br>
+                                🪪 Police Verification: <span class="badge ${st.police_status === 'Verified' ? 'badge-success' : 'badge-warning'}">${escapeHtml(st.police_status || 'Pending')}</span>
+                            </div>
+                            ${st.in_time ? `
+                                <div class="bg-light p-2 rounded small text-muted mb-2">
+                                    ⏱️ Punch In: <strong>${escapeHtml(st.in_time.substring(11, 16))}</strong>
+                                    ${st.out_time ? ` &bull; Out: <strong>${escapeHtml(st.out_time.substring(11, 16))}</strong>` : ' <em>(Active Shift)</em>'}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="pt-2 border-top d-flex justify-content-between align-items-center">
+                            <span class="small text-muted">ID: <code>${escapeHtml(st.staff_id)}</code></span>
+                            <div>
+                                <button type="button" class="btn btn-sm ${isOnDuty ? 'btn-outline-danger' : 'btn-outline-success'} py-1 px-2 btn-punch-staff" data-staff-id="${escapeHtml(st.staff_id)}" data-action="${isOnDuty ? 'out' : 'in'}">
+                                    ${isOnDuty ? '⏹️ Punch Out' : '▶️ Punch In'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        $cont.html(html);
+    }
+
     // --- Search & Filter Logic ---
     function applyFilterAndRender() {
         const query = $searchInput.val().trim().toLowerCase();
@@ -1207,6 +1289,7 @@ frappe.ready(function () {
         });
         renderResolutions(filteredResolutions);
         renderEmergency(committeeData.emergency_contacts || []);
+        renderFacilityStaff(filterList(committeeData.facility_staff, "facility_staff", ["full_name", "agency", "role", "gate_assigned", "contact_number"]));
     }
 
     // --- Data Fetching ---
@@ -1710,6 +1793,37 @@ frappe.ready(function () {
             error: function (err) {
                 $btn.prop("disabled", false).text("Save Contact");
                 const errMsg = err && err.message ? err.message : "Failed to save contact.";
+                frappe.msgprint({ title: __("Error"), message: errMsg, indicator: "red" });
+            }
+        });
+    });
+
+    // --- Facility Staff Punch Button Handler ---
+    $(document).on("click", ".btn-punch-staff", function () {
+        const $b = $(this);
+        const staffId = $b.data("staff-id");
+        const action = $b.data("action");
+        const origText = $b.text();
+
+        $b.prop("disabled", true).text("Recording…");
+
+        frappe.call({
+            method: "society_erp.api.facility_staff.punch_attendance",
+            args: {
+                staff_id: staffId,
+                punch_type: action,
+                method: "Supervisor Punch"
+            },
+            callback: function (r) {
+                $b.prop("disabled", false).text(origText);
+                if (r && r.message && r.message.status === "success") {
+                    showAlert(r.message.message, "success");
+                    loadCommitteeData();
+                }
+            },
+            error: function (err) {
+                $b.prop("disabled", false).text(origText);
+                const errMsg = err && err.message ? err.message : "Punch failed.";
                 frappe.msgprint({ title: __("Error"), message: errMsg, indicator: "red" });
             }
         });

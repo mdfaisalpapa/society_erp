@@ -161,6 +161,11 @@
                         </a>
                     </li>
                     {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link font-weight-bold text-info" id="tab-facility_staff" data-toggle="pill" href="#pane-facility_staff" role="tab" data-module="facility_staff">
+                            <span class="tab-icon">🛡️</span><span class="tab-label">Security & Staff</span> <span class="badge badge-success ml-1" id="badge-facility_staff">{{ counts.facility_on_duty }}</span>
+                        </a>
+                    </li>
                 </ul>
 
                 <button class="btn btn-outline-secondary btn-sm ml-auto d-md-none mt-2" type="button" data-toggle="collapse" data-target="#committeeFilterCollapse" aria-expanded="false" aria-controls="committeeFilterCollapse">
@@ -272,6 +277,11 @@
             <!-- 9. Emergency SOS & Directory Settings Pane -->
             <div class="tab-pane fade" id="pane-emergency" role="tabpanel">
                 <div id="container-emergency"></div>
+            </div>
+
+            <!-- 10. Facility & Security Staff Deployment Pane -->
+            <div class="tab-pane fade" id="pane-facility_staff" role="tabpanel">
+                <div id="container-facility_staff"></div>
             </div>
         </div>
 

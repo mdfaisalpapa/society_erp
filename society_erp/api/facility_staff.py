@@ -202,3 +202,50 @@ def get_active_shift_for_time(target_dt=None) -> str:
                 return s.name
 
     return shifts[0].name if shifts else None
+
+
+@frappe.whitelist()
+def get_on_duty_security_summary() -> dict:
+    """
+    Returns verified on-duty security guards and supervisors currently clocked-in.
+    Used for Telegram bot on-duty security quick lookups and emergency routing.
+    """
+    today = nowdate()
+    on_duty_attendances = frappe.get_all(
+        "Facility Staff Attendance",
+        filters={
+            "attendance_date": today,
+            "status": "Present",
+            "out_time": ("is", "not set")
+        },
+        fields=["name", "staff", "staff_name", "role", "gate", "in_time", "shift"]
+    )
+
+    guards = []
+    lines = []
+
+    for att in on_duty_attendances:
+        staff_doc = frappe.get_value("Facility Staff", att.staff, ["contact_number", "photo"], as_dict=True)
+        phone = staff_doc.contact_number if staff_doc else ""
+        item = {
+            "name": att.staff_name,
+            "role": att.role,
+            "gate": att.gate or "Main Gate",
+            "shift": att.shift,
+            "in_time": str(att.in_time),
+            "phone": phone
+        }
+        guards.append(item)
+        lines.append(f"• 👮 *{att.staff_name}* ({att.role})\n  📍 Gate: `{item['gate']}` | 📞 `{phone or 'Via Gate Intercom'}` | In: {str(att.in_time)[11:16]}")
+
+    if not lines:
+        summary_text = "ℹ️ _No security personnel currently checked-in via electronic gate punch._\n📞 Main Gate 24x7 Security Intercom: `Ext 100`"
+    else:
+        summary_text = "*Current On-Duty Security & Supervisors:*\n\n" + "\n\n".join(lines)
+
+    return {
+        "on_duty_count": len(guards),
+        "guards": guards,
+        "summary_text": summary_text
+    }
+
