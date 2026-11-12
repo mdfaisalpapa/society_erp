@@ -1,0 +1,255 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Book Facility & Amenities{% endblock %}
+
+{% block header %}
+<style>
+    .booking-status {
+        font-size: 0.85rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    .status-confirmed { background-color: #d1e7dd; color: #0f5132; }
+    .status-cancelled { background-color: #f8d7da; color: #842029; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="container py-4">
+    <!-- Uniform Standard Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div>
+            <h2 class="mb-1">🏛️ Facility & Amenities Booking</h2>
+            <p class="text-muted mb-0">Reserve common amenities like Community Hall for Flat: <strong>{{ flat_number }}</strong></p>
+        </div>
+        <div class="mt-2 mt-md-0 d-flex gap-2">
+            <button class="btn btn-primary" data-toggle="modal" data-target="#facilityModal" data-bs-toggle="modal" data-bs-target="#facilityModal">
+                ➕ New Booking
+            </button>
+            <a href="/resident" class="btn btn-outline-secondary">
+                🔙 Back to Resident Portal
+            </a>
+        </div>
+    </div>
+
+    {% if not_a_resident %}
+    <div class="alert alert-warning text-center">
+        <h4>Access Restricted</h4>
+        <p>No verified resident record found for your user account. Please contact the society office.</p>
+        <a href="/resident" class="btn btn-outline-secondary mt-2">Back to Resident Portal</a>
+    </div>
+    {% else %}
+
+    <div class="row">
+        <!-- Main: Booking History -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-dark">📋 Your Reservations</h5>
+                    <span class="badge badge-info bg-info text-white">{{ bookings | length }} Bookings</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if bookings %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Booking #</th>
+                                    <th>Facility</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for b in bookings %}
+                                <tr>
+                                    <td>
+                                        <strong class="text-dark">#{{ b.name }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="font-weight-bold">{{ b.facility }}</span>
+                                    </td>
+                                    <td>
+                                        <span>{{ b.formatted_booking_date }}</span>
+                                    </td>
+                                    <td>
+                                        {% if b.status == 'Confirmed' %}
+                                            <span class="booking-status status-confirmed">Confirmed</span>
+                                        {% else %}
+                                            <span class="booking-status status-cancelled">Cancelled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if b.status == 'Confirmed' %}
+                                        <button class="btn btn-sm btn-outline-danger" onclick="cancelBooking('{{ b.name }}')">
+                                            Cancel
+                                        </button>
+                                        {% else %}
+                                        <span class="text-muted small">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <h4>No facility bookings yet</h4>
+                        <p>Book the Community Hall or other society amenities for your events.</p>
+                        <button class="btn btn-outline-primary" data-toggle="modal" data-target="#facilityModal" data-bs-toggle="modal" data-bs-target="#facilityModal">
+                            Make a reservation
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar: Upcoming Bookings / Availability Awareness -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="mb-0 text-dark">📅 Booked Dates Calendar</h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_bookings %}
+                    <p class="text-muted small mb-2">The following dates are already reserved:</p>
+                    <ul class="list-group list-group-flush">
+                        {% for ub in upcoming_bookings %}
+                        <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="font-weight-bold">{{ ub.facility }}</span>
+                                <div class="text-muted small">{{ ub.formatted_booking_date }}</div>
+                            </div>
+                            <span class="badge badge-warning bg-warning text-dark">Reserved</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="text-center py-3 text-muted">
+                        <p class="mb-0">No upcoming booked dates. All dates are currently open!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h6 class="font-weight-bold">ℹ️ Booking Guidelines</h6>
+                    <ul class="small text-muted pl-3 mb-0">
+                        <li>Bookings are confirmed on a first-come, first-served basis.</li>
+                        <li>Cleanliness and decorum must be maintained during events.</li>
+                        <li>Cancellations should be made at least 24 hours in advance.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal: New Facility Booking -->
+<div class="modal fade" id="facilityModal" tabindex="-1" role="dialog" aria-labelledby="facilityModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold" id="facilityModalLabel">🏛️ Book a Facility</h5>
+                <button type="button" class="close btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="facilityBookingForm">
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label class="form-label font-weight-bold">Select Facility *</label>
+                        <select name="facility" class="form-control form-select" required>
+                            {% for f in facilities %}
+                            <option value="{{ f }}">{{ f }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label font-weight-bold">Date of Booking *</label>
+                        <input type="date" name="booking_date" class="form-control" min="{{ today_date }}" value="{{ today_date }}" required>
+                        <small class="text-muted">Select an available date.</small>
+                    </div>
+
+                    <div class="alert alert-info py-2 px-3 small mb-0">
+                        By submitting, you agree to adhere to the society amenity usage rules and timings.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="btnSubmitBooking">Confirm Reservation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function cancelBooking(bookingId) {
+    if (!confirm("Are you sure you want to cancel this booking?")) return;
+
+    frappe.call({
+        method: "society_erp.www.resident.book_facility.index.cancel_booking",
+        args: { booking_id: bookingId },
+        callback: function(r) {
+            if (r.message && r.message.status === "success") {
+                frappe.msgprint({
+                    title: "Cancelled",
+                    indicator: "green",
+                    message: r.message.message
+                });
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        },
+        error: function(err) {
+            frappe.msgprint(err.message || "Failed to cancel booking.");
+        }
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById("facilityBookingForm");
+    if (!form) return;
+
+    form.addEventListener("submit", function(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById("btnSubmitBooking");
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Submitting...";
+
+        const formData = new FormData(form);
+        const data = {
+            facility: formData.get("facility"),
+            booking_date: formData.get("booking_date")
+        };
+
+        frappe.call({
+            method: "society_erp.www.resident.book_facility.index.book_facility",
+            args: data,
+            callback: function(r) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Confirm Reservation";
+                if (r.message && r.message.status === "success") {
+                    frappe.msgprint({
+                        title: "Booking Confirmed",
+                        indicator: "green",
+                        message: r.message.message
+                    });
+                    setTimeout(() => window.location.reload(), 1500);
+                }
+            },
+            error: function(err) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Confirm Reservation";
+                frappe.msgprint(err.message || "Failed to confirm booking.");
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

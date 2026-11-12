@@ -1,0 +1,201 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-4">
+    {% if not_a_resident %}
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+            <div>
+                <h2 class="mb-1 font-weight-bold">🐾 Resident Pets</h2>
+            </div>
+            <div>
+                <a href="/resident" class="btn btn-outline-secondary btn-sm">🔙 Back to Resident Portal</a>
+            </div>
+        </div>
+        <div class="alert alert-danger">Your account is not linked to an active flat. Please contact the Estate Office.</div>
+    {% else %}
+        <!-- Standard Header & Navigation -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+            <div>
+                <h2 class="mb-1 font-weight-bold">🐾 Resident Pets — Flat {{ flat_number }}</h2>
+                <p class="text-muted mb-0">Register and manage vaccinated household pets in compliance with Society Pet Guidelines.</p>
+            </div>
+            <div class="mt-2 mt-md-0 d-flex align-items-center">
+                <button type="button" class="btn btn-primary btn-sm mr-2 shadow-sm font-weight-bold" data-toggle="modal" data-target="#modal-register-pet">
+                    ➕ Register Pet
+                </button>
+                <a href="/resident" class="btn btn-outline-secondary btn-sm">🔙 Back to Resident Portal</a>
+            </div>
+        </div>
+
+        {% if not pets %}
+            <div class="text-center py-5 bg-white rounded border">
+                <div style="font-size: 2.2rem;">🐕</div>
+                <h5 class="font-weight-bold mt-2">No Pets Registered</h5>
+                <p class="text-muted small mb-3">No companion animals or pets are registered under Flat {{ flat_number }}.</p>
+                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modal-register-pet">
+                    + Register Pet
+                </button>
+            </div>
+        {% else %}
+            <!-- Desktop Table View -->
+            <div class="table-responsive d-none d-md-block mb-4">
+                <table class="table table-hover bg-white border rounded">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Pet Name</th>
+                            <th>License No & Expiry</th>
+                            <th>Vaccination Details</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in pets %}
+                        <tr>
+                            <td class="font-weight-bold text-dark">
+                                <span class="mr-2">🐶</span>{{ p.pet_name }}
+                            </td>
+                            <td class="small">
+                                <div>License: <code>{{ p.license_no or "-" }}</code></div>
+                                <div class="text-muted">Expiry: {{ p.formatted_lic_expiry }}</div>
+                            </td>
+                            <td class="small">
+                                <div>Cert: <code>{{ p.vaccination_certificate_no or "-" }}</code></div>
+                                <div class="text-muted">Due Date: <strong>{{ p.formatted_vac_due }}</strong></div>
+                            </td>
+                            <td>
+                                {% if p.approval_status == 'Approved' %}
+                                    <span class="badge badge-success font-weight-bold">✅ Approved</span>
+                                {% elif p.approval_status == 'Rejected' %}
+                                    <span class="badge badge-danger font-weight-bold">❌ Rejected</span>
+                                {% else %}
+                                    <span class="badge badge-warning text-dark font-weight-bold">⏳ Pending Review</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mobile Card View -->
+            <div class="d-block d-md-none">
+                {% for p in pets %}
+                <div class="card p-3 mb-3 shadow-sm border {% if p.approval_status == 'Approved' %}border-success{% elif p.approval_status == 'Rejected' %}border-danger{% else %}border-warning{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="h6 font-weight-bold text-dark mb-0">🐾 {{ p.pet_name }}</span>
+                        {% if p.approval_status == 'Approved' %}
+                            <span class="badge badge-success font-weight-bold">✅ Approved</span>
+                        {% elif p.approval_status == 'Rejected' %}
+                            <span class="badge badge-danger font-weight-bold">❌ Rejected</span>
+                        {% else %}
+                            <span class="badge badge-warning text-dark font-weight-bold">⏳ Pending</span>
+                        {% endif %}
+                    </div>
+                    <div class="small text-muted">
+                        <div>License: <code>{{ p.license_no or "-" }}</code> (Exp: {{ p.formatted_lic_expiry }})</div>
+                        <div>Vaccination Due: <strong>{{ p.formatted_vac_due }}</strong></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Modal: Register Pet -->
+        <div class="modal fade" id="modal-register-pet" tabindex="-1" role="dialog" aria-labelledby="modalPetTitle" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-white border-bottom">
+                        <h5 class="modal-title font-weight-bold text-dark" id="modalPetTitle">
+                            🐾 Register Household Pet
+                        </h5>
+                        <button type="button" class="close text-muted" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <form id="form-pet-register">
+                            <div class="form-group mb-3">
+                                <label for="pet-name" class="font-weight-bold small text-dark">Pet Name & Breed *</label>
+                                <input type="text" class="form-control" id="pet-name" placeholder="e.g. Bruno (Golden Retriever)" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-6 form-group mb-3">
+                                    <label for="pet-license" class="font-weight-bold small text-dark">Municipal License No</label>
+                                    <input type="text" class="form-control" id="pet-license" placeholder="e.g. GCC/PET/1234">
+                                </div>
+                                <div class="col-6 form-group mb-3">
+                                    <label for="pet-license-expiry" class="font-weight-bold small text-dark">License Expiry Date</label>
+                                    <input type="date" class="form-control" id="pet-license-expiry">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6 form-group mb-3">
+                                    <label for="pet-vac-cert" class="font-weight-bold small text-dark">Vaccination Cert No</label>
+                                    <input type="text" class="form-control" id="pet-vac-cert" placeholder="e.g. ARV-9876">
+                                </div>
+                                <div class="col-6 form-group mb-3">
+                                    <label for="pet-vac-due" class="font-weight-bold small text-dark">Next Due Date</label>
+                                    <input type="date" class="form-control" id="pet-vac-due">
+                                </div>
+                            </div>
+                            <div class="alert alert-info py-2 px-3 small mb-3">
+                                ℹ️ Per Society Bye-laws, all companion dogs and cats must maintain up-to-date Anti-Rabies vaccination.
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="button" class="btn btn-light border mr-2" data-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary font-weight-bold" id="btn-submit-pet">Submit Pet Registration</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+frappe.ready(function() {
+    $("#form-pet-register").on("submit", function(e) {
+        e.preventDefault();
+        const petName = $("#pet-name").val().trim();
+        const licenseNo = $("#pet-license").val().trim();
+        const licExpiry = $("#pet-license-expiry").val();
+        const vacCert = $("#pet-vac-cert").val().trim();
+        const vacDue = $("#pet-vac-due").val();
+
+        if (!petName) {
+            frappe.msgprint({ title: __("Required"), message: __("Please enter pet name."), indicator: "orange" });
+            return;
+        }
+
+        const $btn = $("#btn-submit-pet");
+        const origText = $btn.html();
+        $btn.prop("disabled", true).html("Submitting…");
+
+        frappe.call({
+            method: "society_erp.www.resident.pets.index.register_pet",
+            args: {
+                pet_name: petName,
+                license_no: licenseNo,
+                license_expiry_date: licExpiry,
+                vaccination_certificate_no: vacCert,
+                vaccination_due_date: vacDue
+            },
+            callback: function(r) {
+                $btn.prop("disabled", false).html(origText);
+                $("#modal-register-pet").modal("hide");
+                if (r && r.message && r.message.status === "success") {
+                    frappe.show_alert({ message: r.message.message, indicator: "green" });
+                    setTimeout(() => window.location.reload(), 1200);
+                }
+            },
+            error: function(err) {
+                $btn.prop("disabled", false).html(origText);
+                const errMsg = err && err.message ? err.message : "Failed to register pet.";
+                frappe.msgprint({ title: __("Error"), message: errMsg, indicator: "red" });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

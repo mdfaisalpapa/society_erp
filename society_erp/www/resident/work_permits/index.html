@@ -1,0 +1,214 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-4">
+    {% if not_a_resident %}
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+            <div>
+                <h2 class="mb-1 font-weight-bold">👷 Work Permits</h2>
+            </div>
+            <div>
+                <a href="/resident" class="btn btn-outline-secondary btn-sm">🔙 Back to Resident Portal</a>
+            </div>
+        </div>
+        <div class="alert alert-danger">Your account is not linked to an active flat. Please contact the Estate Office.</div>
+    {% else %}
+        <!-- Standard Header & Navigation -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+            <div>
+                <h2 class="mb-1 font-weight-bold">👷 Work Permits — Flat {{ flat_number }}</h2>
+                <p class="text-muted mb-0">Apply and track renovation, interior, and repair contractor permits.</p>
+            </div>
+            <div class="mt-2 mt-md-0 d-flex align-items-center">
+                <button type="button" class="btn btn-primary btn-sm mr-2 shadow-sm font-weight-bold" data-toggle="modal" data-target="#modal-apply-permit">
+                    ➕ Apply Work Permit
+                </button>
+                <a href="/resident" class="btn btn-outline-secondary btn-sm">🔙 Back to Resident Portal</a>
+            </div>
+        </div>
+
+        <div id="permit-alert" class="alert d-none small mb-3"></div>
+
+        {% if not permits %}
+            <div class="text-center py-5 bg-white rounded border">
+                <div style="font-size: 2.2rem;">🔨</div>
+                <h5 class="font-weight-bold mt-2">No Work Permits</h5>
+                <p class="text-muted small mb-3">You have not submitted any contractor work permit requests for Flat {{ flat_number }}.</p>
+                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modal-apply-permit">
+                    + Apply for First Permit
+                </button>
+            </div>
+        {% else %}
+            <!-- Desktop Table View -->
+            <div class="table-responsive d-none d-md-block mb-4">
+                <table class="table table-hover bg-white border rounded">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Permit ID</th>
+                            <th>Work Scope</th>
+                            <th>Contractor</th>
+                            <th>Validity Period</th>
+                            <th>Status</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in permits %}
+                        <tr>
+                            <td class="font-weight-bold"><code>{{ p.name }}</code></td>
+                            <td><span class="badge badge-light border">{{ p.work_type }}</span></td>
+                            <td class="font-weight-bold text-dark">{{ p.contractor_name }}</td>
+                            <td class="small text-muted">{{ p.formatted_start }} to {{ p.formatted_end }}</td>
+                            <td>
+                                {% if p.status == 'Pending' %}
+                                    <span class="badge badge-warning text-dark font-weight-bold">⏳ Pending Approval</span>
+                                {% elif p.status == 'Approved' %}
+                                    <span class="badge badge-success font-weight-bold">✅ Approved</span>
+                                {% elif p.status == 'Rejected' %}
+                                    <span class="badge badge-danger font-weight-bold">❌ Rejected</span>
+                                {% elif p.status == 'Completed' %}
+                                    <span class="badge badge-info font-weight-bold">🏁 Completed</span>
+                                {% else %}
+                                    <span class="badge badge-secondary font-weight-bold">{{ p.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="small text-muted">{{ p.remarks or "-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mobile Card View -->
+            <div class="d-block d-md-none">
+                {% for p in permits %}
+                <div class="card p-3 mb-3 shadow-sm border {% if p.status == 'Approved' %}border-success{% elif p.status == 'Rejected' %}border-danger{% elif p.status == 'Pending' %}border-warning{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge badge-dark"><code>{{ p.name }}</code></span>
+                        {% if p.status == 'Pending' %}
+                            <span class="badge badge-warning text-dark font-weight-bold">⏳ Pending</span>
+                        {% elif p.status == 'Approved' %}
+                            <span class="badge badge-success font-weight-bold">✅ Approved</span>
+                        {% elif p.status == 'Rejected' %}
+                            <span class="badge badge-danger font-weight-bold">❌ Rejected</span>
+                        {% else %}
+                            <span class="badge badge-secondary font-weight-bold">{{ p.status }}</span>
+                        {% endif %}
+                    </div>
+                    <h6 class="font-weight-bold text-dark mb-1">Contractor: {{ p.contractor_name }}</h6>
+                    <div class="small text-muted mb-2">
+                        <div>Scope: <strong>{{ p.work_type }}</strong></div>
+                        <div>📅 Period: {{ p.formatted_start }} to {{ p.formatted_end }}</div>
+                        {% if p.remarks %}
+                            <div class="mt-1 text-dark"><em>Note:</em> {{ p.remarks }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Modal: Apply Work Permit -->
+        <div class="modal fade" id="modal-apply-permit" tabindex="-1" role="dialog" aria-labelledby="modalPermitTitle" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-white border-bottom">
+                        <h5 class="modal-title font-weight-bold text-dark" id="modalPermitTitle">
+                            👷 Apply for Work Permit
+                        </h5>
+                        <button type="button" class="close text-muted" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <form id="form-work-permit">
+                            <div class="form-group mb-3">
+                                <label for="permit-contractor" class="font-weight-bold small text-dark">Contractor / Vendor Name *</label>
+                                <input type="text" class="form-control" id="permit-contractor" placeholder="e.g. ABC Interior Decorators" required>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="permit-work-type" class="font-weight-bold small text-dark">Work Scope / Category *</label>
+                                <select class="form-control" id="permit-work-type" required>
+                                    <option value="Interior">Interior Decoration</option>
+                                    <option value="Civil">Civil Work / Tiling</option>
+                                    <option value="Carpentry">Carpentry & Woodwork</option>
+                                    <option value="Painting">Painting</option>
+                                    <option value="Plumbing">Plumbing</option>
+                                    <option value="Other">Other Minor Repairs</option>
+                                </select>
+                            </div>
+                            <div class="row">
+                                <div class="col-6 form-group mb-3">
+                                    <label for="permit-start-date" class="font-weight-bold small text-dark">Start Date *</label>
+                                    <input type="date" class="form-control" id="permit-start-date" required>
+                                </div>
+                                <div class="col-6 form-group mb-3">
+                                    <label for="permit-end-date" class="font-weight-bold small text-dark">End Date *</label>
+                                    <input type="date" class="form-control" id="permit-end-date" required>
+                                </div>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="permit-remarks" class="font-weight-bold small text-dark">Scope Details / Remarks</label>
+                                <textarea class="form-control" id="permit-remarks" rows="3" placeholder="Describe the planned work scope, number of workers, etc."></textarea>
+                            </div>
+                            <div class="alert alert-info py-2 px-3 small mb-3">
+                                ℹ️ Working hours are strictly 09:00 AM to 06:00 PM on weekdays and Saturdays per Society Bye-Laws.
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="button" class="btn btn-light border mr-2" data-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary font-weight-bold" id="btn-submit-permit">Submit Permit Application</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+frappe.ready(function() {
+    $("#form-work-permit").on("submit", function(e) {
+        e.preventDefault();
+        const contractor = $("#permit-contractor").val().trim();
+        const workType = $("#permit-work-type").val();
+        const startDate = $("#permit-start-date").val();
+        const endDate = $("#permit-end-date").val();
+        const remarks = $("#permit-remarks").val().trim();
+
+        if (!contractor || !startDate || !endDate) {
+            frappe.msgprint({ title: __("Required Fields"), message: __("Please fill all required fields."), indicator: "orange" });
+            return;
+        }
+
+        const $btn = $("#btn-submit-permit");
+        const origText = $btn.html();
+        $btn.prop("disabled", true).html("Submitting…");
+
+        frappe.call({
+            method: "society_erp.www.resident.work_permits.index.apply_work_permit",
+            args: {
+                contractor_name: contractor,
+                work_type: workType,
+                start_date: startDate,
+                end_date: endDate,
+                remarks: remarks
+            },
+            callback: function(r) {
+                $btn.prop("disabled", false).html(origText);
+                $("#modal-apply-permit").modal("hide");
+                if (r && r.message && r.message.status === "success") {
+                    frappe.show_alert({ message: r.message.message, indicator: "green" });
+                    setTimeout(() => window.location.reload(), 1200);
+                }
+            },
+            error: function(err) {
+                $btn.prop("disabled", false).html(origText);
+                const errMsg = err && err.message ? err.message : "Failed to apply for work permit.";
+                frappe.msgprint({ title: __("Error"), message: errMsg, indicator: "red" });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
