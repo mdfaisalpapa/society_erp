@@ -111,6 +111,9 @@ def get_context(context):
         "facility_bookings_pending": frappe.db.count(
             "Facility Booking", {"status": "Pending Approval"}
         ),
+        "classifieds_pending": frappe.db.count(
+            "Resident Classified", {"approval_status": "Pending Approval"}
+        ),
         "resolutions_pending": 0,
     }
 
@@ -419,6 +422,33 @@ def get_committee_data(module_type="all"):
         bookings.sort(key=lambda x: (0 if x.get("status") == "Pending Approval" else 1, str(x.get("booking_date"))))
         data["facility_bookings"] = bookings
 
+    # 10. Resident Classifieds
+    if module_type in ("all", "classifieds"):
+        classifieds = frappe.get_all(
+            "Resident Classified",
+            fields=[
+                "name",
+                "title",
+                "category",
+                "listing_type",
+                "price",
+                "resident",
+                "contact_person",
+                "contact_phone",
+                "approval_status",
+                "status",
+                "description",
+                "committee_remarks",
+                "creation",
+            ],
+            order_by="creation desc",
+            limit_page_length=100,
+        )
+        for c in classifieds:
+            c["formatted_date"] = format_date(c.creation, "dd-MM-yyyy")
+        classifieds.sort(key=lambda x: (0 if x.get("approval_status") == "Pending Approval" else 1, str(x.get("creation"))), reverse=False)
+        data["classifieds"] = classifieds
+
     # Counts summary
     res_pending_count = 0
     if comm_member_name:
@@ -436,6 +466,7 @@ def get_committee_data(module_type="all"):
         "tickets_open": frappe.db.count("Maintenance Ticket", {"status": "Open"}),
         "notices_active": frappe.db.count("Society Notice", {"is_active": 1}),
         "facility_bookings_pending": frappe.db.count("Facility Booking", {"status": "Pending Approval"}),
+        "classifieds_pending": frappe.db.count("Resident Classified", {"approval_status": "Pending Approval"}),
         "resolutions_pending": res_pending_count,
     }
 
@@ -469,6 +500,7 @@ def update_item_status(doctype, docname, action, remarks=None):
         "Maintenance Ticket",
         "Society Notice",
         "Facility Booking",
+        "Resident Classified",
     }
     if doctype not in allowed_doctypes:
         frappe.throw(_("Invalid DocType."))
@@ -552,6 +584,14 @@ def update_item_status(doctype, docname, action, remarks=None):
             doc.status = action
         if remarks:
             doc.remarks = f"{doc.remarks or ''}\n[{today()}] {comm_name}: {remarks}".strip()
+
+    elif doctype == "Resident Classified":
+        if action in ("Approved", "Rejected"):
+            doc.approval_status = action
+            doc.approved_by = comm_name
+            doc.approval_date = today()
+        if remarks:
+            doc.committee_remarks = f"{doc.committee_remarks or ''}\n[{today()}] {comm_name}: {remarks}".strip()
 
     doc.save(ignore_permissions=True)
     frappe.db.commit()

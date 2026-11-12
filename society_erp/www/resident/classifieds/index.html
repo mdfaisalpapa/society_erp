@@ -1,0 +1,381 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Resident Classifieds & Marketplace{% endblock %}
+
+{% block header %}
+<style>
+    .ad-card {
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        border-radius: 10px;
+    }
+    .ad-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    .ad-price {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #198754;
+    }
+    .category-badge {
+        font-size: 0.78rem;
+        padding: 0.25rem 0.55rem;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+    .badge-rent { background: #cfe2ff; color: #084298; }
+    .badge-sell { background: #d1e7dd; color: #0f5132; }
+    .badge-service { background: #fff3cd; color: #664d03; }
+    .badge-other { background: #e2e3e5; color: #41464b; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="container py-4">
+    <!-- Standard Uniform Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div>
+            <h2 class="mb-1">📢 Classifieds & Marketplace</h2>
+            <p class="text-muted mb-0">Buy, sell used items, rent homes, or offer resident services in Flat: <strong>{{ flat_number }}</strong></p>
+        </div>
+        <div class="mt-2 mt-md-0 d-flex gap-2">
+            <button class="btn btn-primary" data-toggle="modal" data-target="#adModal" data-bs-toggle="modal" data-bs-target="#adModal">
+                ➕ Post New Ad
+            </button>
+            <a href="/resident" class="btn btn-outline-secondary">
+                🔙 Back to Resident Portal
+            </a>
+        </div>
+    </div>
+
+    {% if not_a_resident %}
+    <div class="alert alert-warning text-center">
+        <h4>Access Restricted</h4>
+        <p>No verified resident record found for your user account. Please contact the society office.</p>
+        <a href="/resident" class="btn btn-outline-secondary mt-2">Back to Resident Portal</a>
+    </div>
+    {% else %}
+
+    <!-- Tabs: Browse Ads vs My Ads -->
+    <ul class="nav nav-tabs mb-4" id="classifiedTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active font-weight-bold" id="browse-tab" data-toggle="tab" href="#tab-browse" role="tab">
+                🛍️ Community Ads <span class="badge badge-info bg-info text-white ml-1">{{ approved_ads | length }}</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link font-weight-bold" id="myads-tab" data-toggle="tab" href="#tab-myads" role="tab">
+                📝 My Postings <span class="badge badge-secondary bg-secondary text-white ml-1">{{ my_ads | length }}</span>
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="classifiedTabsContent">
+        <!-- 1. Browse Ads Pane (Fluid Card Grid) -->
+        <div class="tab-pane fade show active" id="tab-browse" role="tabpanel">
+            {% if approved_ads %}
+            <div class="row">
+                {% for ad in approved_ads %}
+                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm border ad-card">
+                        {% if ad.image %}
+                        <img src="{{ ad.image }}" class="card-img-top" alt="{{ ad.title }}" style="height: 180px; object-fit: cover;">
+                        {% endif %}
+                        <div class="card-body d-flex flex-direction-column flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="category-badge {% if 'Rent' in ad.category %}badge-rent{% elif 'Sell' in ad.category %}badge-sell{% elif 'Service' in ad.category %}badge-service{% else %}badge-other{% endif %}">
+                                        {{ ad.category }}
+                                    </span>
+                                    <span class="text-muted small">Flat: <strong>{{ ad.resident }}</strong></span>
+                                </div>
+                                <h5 class="card-title font-weight-bold text-dark mb-1">{{ ad.title }}</h5>
+                                {% if ad.price %}
+                                <div class="ad-price mb-2">₹ {{ "{:,.0f}".format(ad.price) }}</div>
+                                {% endif %}
+                                <p class="card-text text-muted small mb-3" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                                    {{ ad.description }}
+                                </p>
+                            </div>
+                            <div class="border-top pt-2 mt-auto d-flex justify-content-between align-items-center">
+                                <span class="text-muted small">📅 {{ ad.formatted_date }}</span>
+                                {% if ad.contact_phone %}
+                                <a href="tel:{{ ad.contact_phone }}" class="btn btn-sm btn-outline-success">
+                                    📞 Contact ({{ ad.contact_person or ad.resident }})
+                                </a>
+                                {% else %}
+                                <span class="text-muted small">Contact: {{ ad.resident }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5 bg-white rounded border shadow-sm text-muted">
+                <div style="font-size: 2.5rem;">🛍️</div>
+                <h5 class="mt-2 font-weight-bold">No Active Classifieds</h5>
+                <p class="mb-3">Be the first to post a rental requirement, sell furniture/appliances, or offer professional services!</p>
+                <button class="btn btn-outline-primary" data-toggle="modal" data-target="#adModal" data-bs-toggle="modal" data-bs-target="#adModal">
+                    ➕ Post Classified Ad
+                </button>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- 2. My Postings Pane (Desktop Table + Mobile Cards) -->
+        <div class="tab-pane fade" id="tab-myads" role="tabpanel">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-dark">📋 My Ads & Status</h5>
+                    <span class="badge badge-info bg-info text-white">{{ my_ads | length }} Ads</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if my_ads %}
+                    <!-- Desktop Table -->
+                    <div class="table-responsive d-none d-md-block">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ad Title</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>Posted On</th>
+                                    <th>Approval Status</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ma in my_ads %}
+                                <tr>
+                                    <td>
+                                        <strong class="text-dark">{{ ma.title }}</strong>
+                                        {% if ma.committee_remarks %}
+                                        <div class="small text-danger">Committee Note: {{ ma.committee_remarks }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td><span class="badge badge-light border">{{ ma.category }}</span></td>
+                                    <td>{% if ma.price %}₹ {{ "{:,.0f}".format(ma.price) }}{% else %}-{% endif %}</td>
+                                    <td>{{ ma.formatted_date }}</td>
+                                    <td>
+                                        {% if ma.approval_status == 'Approved' %}
+                                            <span class="badge badge-success bg-success text-white">Approved</span>
+                                        {% elif ma.approval_status == 'Rejected' %}
+                                            <span class="badge badge-danger bg-danger text-white">Rejected</span>
+                                        {% else %}
+                                            <span class="badge badge-warning bg-warning text-dark">Pending Approval</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if ma.status == 'Active' %}
+                                            <span class="badge badge-primary bg-primary text-white">Active</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary bg-secondary text-white">Closed</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if ma.status == 'Active' %}
+                                        <button class="btn btn-sm btn-outline-danger" onclick="closeAd('{{ ma.name }}')">
+                                            Close Ad
+                                        </button>
+                                        {% else %}
+                                        <span class="text-muted small">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Fluid Cards View -->
+                    <div class="d-md-none p-3">
+                        {% for ma in my_ads %}
+                        <div class="card mb-3 p-3 shadow-sm border rounded">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <strong class="text-dark">{{ ma.title }}</strong>
+                                <div>
+                                    {% if ma.approval_status == 'Approved' %}
+                                        <span class="badge badge-success bg-success text-white">Approved</span>
+                                    {% elif ma.approval_status == 'Rejected' %}
+                                        <span class="badge badge-danger bg-danger text-white">Rejected</span>
+                                    {% else %}
+                                        <span class="badge badge-warning bg-warning text-dark">Pending</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center small text-muted mb-2">
+                                <span>{{ ma.category }}</span>
+                                {% if ma.price %}
+                                <strong class="text-success">₹ {{ "{:,.0f}".format(ma.price) }}</strong>
+                                {% endif %}
+                            </div>
+                            {% if ma.committee_remarks %}
+                            <div class="small text-danger bg-light p-2 rounded mb-2">
+                                Committee Note: {{ ma.committee_remarks }}
+                            </div>
+                            {% endif %}
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                <span class="small text-muted">Posted: {{ ma.formatted_date }}</span>
+                                {% if ma.status == 'Active' %}
+                                <button class="btn btn-sm btn-outline-danger" onclick="closeAd('{{ ma.name }}')">
+                                    Close Ad
+                                </button>
+                                {% else %}
+                                <span class="badge badge-secondary bg-secondary text-white">Closed</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <p class="mb-0">You have not posted any classified ads yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal: Post Classified Ad -->
+<div class="modal fade" id="adModal" tabindex="-1" role="dialog" aria-labelledby="adModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold" id="adModalLabel">📢 Post Classified Ad</h5>
+                <button type="button" class="close btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="adForm">
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label class="form-label font-weight-bold">Ad Headline / Title *</label>
+                        <input type="text" name="title" class="form-control" placeholder="e.g. 3BHK Flat for Rent / Used Dining Table in Good Condition" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 form-group mb-3">
+                            <label class="form-label font-weight-bold">Category *</label>
+                            <select name="category" class="form-control form-select" required>
+                                <option value="Rent / Lease">Rent / Lease</option>
+                                <option value="Buy & Sell Used Items" selected>Buy & Sell Used Items</option>
+                                <option value="Services Offered">Services Offered</option>
+                                <option value="Lost & Found">Lost & Found</option>
+                                <option value="Others">Others</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 form-group mb-3">
+                            <label class="form-label font-weight-bold">Listing Type *</label>
+                            <select name="listing_type" class="form-control form-select" required>
+                                <option value="Sell Item" selected>Sell Item</option>
+                                <option value="Rent Flat/Room">Rent Flat/Room</option>
+                                <option value="Offer Service">Offer Service</option>
+                                <option value="Looking to Buy/Rent">Looking to Buy/Rent</option>
+                                <option value="Others">Others</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 form-group mb-3">
+                            <label class="form-label font-weight-bold">Price / Rent (₹)</label>
+                            <input type="number" name="price" class="form-control" placeholder="Optional">
+                        </div>
+                        <div class="col-md-4 form-group mb-3">
+                            <label class="form-label font-weight-bold">Contact Person</label>
+                            <input type="text" name="contact_person" class="form-control" value="{{ resident_info.resident_name or '' }}">
+                        </div>
+                        <div class="col-md-4 form-group mb-3">
+                            <label class="form-label font-weight-bold">Contact Phone</label>
+                            <input type="text" name="contact_phone" class="form-control" value="{{ resident_info.mobile_no or '' }}">
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label font-weight-bold">Detailed Description *</label>
+                        <textarea name="description" class="form-control" rows="4" placeholder="Describe the item condition, rent details, or service offered in detail..." required></textarea>
+                    </div>
+
+                    <div class="alert alert-info py-2 px-3 small mb-0">
+                        ℹ️ For community safety, all ads are reviewed and approved by the Managing Committee before publication.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="btnSubmitAd">Submit for Approval</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function closeAd(adId) {
+    if (!confirm("Are you sure you want to mark this ad as closed?")) return;
+
+    frappe.call({
+        method: "society_erp.www.resident.classifieds.index.close_classified",
+        args: { ad_id: adId },
+        callback: function(r) {
+            if (r.message && r.message.status === "success") {
+                frappe.msgprint({
+                    title: "Ad Closed",
+                    indicator: "green",
+                    message: r.message.message
+                });
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        }
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById("adForm");
+    if (!form) return;
+
+    form.addEventListener("submit", function(e) {
+        e.preventDefault();
+        const btn = document.getElementById("btnSubmitAd");
+        btn.disabled = true;
+        btn.innerText = "Submitting...";
+
+        const formData = new FormData(form);
+        const data = {
+            title: formData.get("title"),
+            category: formData.get("category"),
+            listing_type: formData.get("listing_type"),
+            price: formData.get("price"),
+            contact_person: formData.get("contact_person"),
+            contact_phone: formData.get("contact_phone"),
+            description: formData.get("description")
+        };
+
+        frappe.call({
+            method: "society_erp.www.resident.classifieds.index.post_classified",
+            args: data,
+            callback: function(r) {
+                btn.disabled = false;
+                btn.innerText = "Submit for Approval";
+                if (r.message && r.message.status === "success") {
+                    frappe.msgprint({
+                        title: "Submitted",
+                        indicator: "green",
+                        message: r.message.message
+                    });
+                    setTimeout(() => window.location.reload(), 1500);
+                }
+            },
+            error: function(err) {
+                btn.disabled = false;
+                btn.innerText = "Submit for Approval";
+                frappe.msgprint(err.message || "Failed to submit ad.");
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -52,7 +52,8 @@
                 </div>
                 <div class="card-body p-0">
                     {% if bookings %}
-                    <div class="table-responsive">
+                    <!-- Desktop Table View -->
+                    <div class="table-responsive d-none d-md-block">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
@@ -102,6 +103,44 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Mobile Fluid Cards View -->
+                    <div class="d-md-none p-3">
+                        {% for b in bookings %}
+                        <div class="card mb-3 p-3 shadow-sm border rounded">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <strong class="text-dark">#{{ b.name }}</strong>
+                                    <span class="font-weight-bold text-primary ml-1">{{ b.facility }}</span>
+                                </div>
+                                {% if b.status in ['Confirmed', 'Approved'] %}
+                                    <span class="booking-status status-approved">Approved</span>
+                                {% elif b.status == 'Pending Approval' %}
+                                    <span class="booking-status status-pending">Pending Approval</span>
+                                {% elif b.status == 'Rejected' %}
+                                    <span class="booking-status status-rejected">Rejected</span>
+                                {% else %}
+                                    <span class="booking-status status-cancelled">Cancelled</span>
+                                {% endif %}
+                            </div>
+                            <div class="small text-muted mb-2">
+                                📅 <strong>Booking Date:</strong> {{ b.formatted_booking_date }}
+                            </div>
+                            {% if b.remarks %}
+                            <div class="small text-secondary bg-light p-2 rounded mb-2">
+                                {{ b.remarks }}
+                            </div>
+                            {% endif %}
+                            {% if b.status in ['Confirmed', 'Approved', 'Pending Approval'] %}
+                            <div class="pt-2 border-top text-right">
+                                <button class="btn btn-sm btn-outline-danger btn-block" onclick="cancelBooking('{{ b.name }}')">
+                                    Cancel Booking
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
                     </div>
                     {% else %}
                     <div class="text-center py-5 text-muted">

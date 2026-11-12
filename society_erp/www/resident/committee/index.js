@@ -32,6 +32,7 @@ frappe.ready(function () {
         notices: [],
         resolutions: [],
         facility_bookings: [],
+        classifieds: [],
         counts: {}
     };
 
@@ -88,6 +89,7 @@ frappe.ready(function () {
         if (module === "pets") return item.approval_status === "Pending";
         if (module === "tickets") return item.status === "Open" || item.status === "Assigned";
         if (module === "facility_bookings") return item.status === "Pending Approval";
+        if (module === "classifieds") return item.approval_status === "Pending Approval";
         if (module === "resolutions") return item.user_status === "Pending" && (item.status === "Circulated" || item.status === "Draft");
         return false;
     }
@@ -100,6 +102,7 @@ frappe.ready(function () {
         $("#badge-pets").text(counts.pets_pending || 0);
         $("#badge-tickets").text(counts.tickets_open || 0);
         $("#badge-facility_bookings").text(counts.facility_bookings_pending || 0);
+        $("#badge-classifieds").text(counts.classifieds_pending || 0);
         $("#badge-resolutions").text(counts.resolutions_pending || 0);
     }
 
@@ -761,6 +764,103 @@ frappe.ready(function () {
         $cont.html(tableHtml + cardsHtml);
     }
 
+    function renderClassifieds(items) {
+        const $cont = $("#container-classifieds").empty();
+        if (!items || !items.length) {
+            $cont.html(`<div class="text-center py-4 text-muted small">No resident classified ads found.</div>`);
+            return;
+        }
+
+        // 1. Desktop Table
+        let tableHtml = `
+            <div class="d-none d-md-block table-responsive mb-4">
+                <table class="table table-hover bg-white border rounded">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Flat</th>
+                            <th>Ad Title & Category</th>
+                            <th>Price</th>
+                            <th>Contact</th>
+                            <th>Status</th>
+                            <th>Remarks</th>
+                            <th class="text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        // 2. Mobile Cards
+        let cardsHtml = `<div class="d-md-none">`;
+
+        items.forEach(c => {
+            const isPending = c.approval_status === "Pending Approval";
+            let borderClass = isPending ? "border-pending" : (c.approval_status === "Approved" ? "border-approved" : "border-rejected");
+
+            tableHtml += `
+                <tr class="${isPending ? 'table-warning-row' : ''}">
+                    <td><span class="comm-flat-badge">${escapeHtml(c.resident)}</span></td>
+                    <td>
+                        <strong>${escapeHtml(c.title)}</strong>
+                        <div><span class="badge badge-light border text-muted">${escapeHtml(c.category)}</span> <small class="text-muted">(${escapeHtml(c.listing_type)})</small></div>
+                        <div class="small text-muted mt-1" style="max-width: 320px; white-space: normal;">${escapeHtml(c.description)}</div>
+                    </td>
+                    <td>${c.price ? `₹ ${c.price}` : '-'}</td>
+                    <td class="small">
+                        <div>${escapeHtml(c.contact_person || '-')}</div>
+                        ${c.contact_phone ? `<div><a href="tel:${escapeHtml(c.contact_phone)}">${escapeHtml(c.contact_phone)}</a></div>` : ''}
+                    </td>
+                    <td>${getStatusBadge(c.approval_status)}</td>
+                    <td class="small text-muted">${escapeHtml(c.committee_remarks || '-')}</td>
+                    <td class="text-right">
+                        ${isPending ? `
+                            <button type="button" class="btn btn-sm btn-success py-1 px-2 btn-action" data-doctype="Resident Classified" data-docname="${c.name}" data-action="Approved" data-title="Approve Ad: ${escapeHtml(c.title)}" data-show-remarks="1">
+                                ✅ Approve
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger py-1 px-2 btn-action" data-doctype="Resident Classified" data-docname="${c.name}" data-action="Rejected" data-title="Reject Ad: ${escapeHtml(c.title)}" data-show-remarks="1">
+                                ❌ Reject
+                            </button>
+                        ` : `<span class="text-muted small">${escapeHtml(c.approval_status)}</span>`}
+                    </td>
+                </tr>
+            `;
+
+            cardsHtml += `
+                <div class="card p-3 mb-3 comm-card-item ${borderClass}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <span class="comm-flat-badge mr-2">${escapeHtml(c.resident)}</span>
+                            <strong class="text-dark">${escapeHtml(c.title)}</strong>
+                        </div>
+                        ${getStatusBadge(c.approval_status)}
+                    </div>
+                    <div class="small text-muted mb-2">
+                        <span class="badge badge-light border">${escapeHtml(c.category)}</span>
+                        ${c.price ? `<strong class="text-success ml-2">₹ ${c.price}</strong>` : ''}
+                    </div>
+                    <p class="small text-dark mb-2">${escapeHtml(c.description)}</p>
+                    <div class="small text-muted mb-2">
+                        📞 <strong>Contact:</strong> ${escapeHtml(c.contact_person || c.resident)} ${c.contact_phone ? `(${escapeHtml(c.contact_phone)})` : ''}
+                    </div>
+                    ${c.committee_remarks ? `<div class="small text-secondary mb-2 bg-light p-2 rounded">Committee Note: ${escapeHtml(c.committee_remarks)}</div>` : ''}
+                    ${isPending ? `
+                        <div class="d-flex pt-2 border-top">
+                            <button type="button" class="btn btn-success btn-sm flex-grow-1 mr-2 font-weight-bold btn-action" data-doctype="Resident Classified" data-docname="${c.name}" data-action="Approved" data-title="Approve Ad: ${escapeHtml(c.title)}" data-show-remarks="1">
+                                ✅ Approve
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm flex-grow-1 font-weight-bold btn-action" data-doctype="Resident Classified" data-docname="${c.name}" data-action="Rejected" data-title="Reject Ad: ${escapeHtml(c.title)}" data-show-remarks="1">
+                                ❌ Reject
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+
+        tableHtml += `</tbody></table></div>`;
+        cardsHtml += `</div>`;
+        $cont.html(tableHtml + cardsHtml);
+    }
+
     function renderNotices(items) {
         const $cont = $("#container-notices").empty();
         if (!items || !items.length) {
@@ -1001,6 +1101,7 @@ frappe.ready(function () {
         renderPets(filterList(committeeData.pets, "pets", ["flat", "parent", "pet_name", "license_no"]));
         renderTickets(filterList(committeeData.tickets, "tickets", ["name", "resident", "category", "description", "priority_level"]));
         renderFacilityBookings(filterList(committeeData.facility_bookings, "facility_bookings", ["facility", "resident", "name", "remarks"]));
+        renderClassifieds(filterList(committeeData.classifieds, "classifieds", ["title", "category", "listing_type", "resident", "description"]));
         renderNotices(filterList(committeeData.notices, "notices", ["title", "content"]));
         
         // Filter resolutions with dedicated filter options (All, Pending My Vote, Signed by Me, Declined by Me, Passed, Rejected)
