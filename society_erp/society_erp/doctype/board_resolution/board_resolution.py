@@ -42,7 +42,9 @@ def sign_resolution(docname, action, rejection_reason=None):
                 frappe.throw(_(f"You have already responded to this resolution (Status: {row.signature_status})."))
             
             row.signature_status = action
-            row.timestamp = frappe.utils.now_datetime()
+            now_dt = frappe.utils.now_datetime()
+            row.timestamp = now_dt
+            row.signed_on = now_dt
             row.rejection_reason = rejection_reason if action == "Declined" else None
             
     if not user_found:

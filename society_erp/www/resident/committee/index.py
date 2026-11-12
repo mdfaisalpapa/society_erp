@@ -83,7 +83,17 @@ def get_context(context):
         "notices_active": frappe.db.count(
             "Society Notice", {"is_active": 1}
         ),
+        "resolutions_pending": 0,
     }
+
+    # Count pending resolutions for the current user
+    user_email = (member_info.get("email") or frappe.session.user).strip().lower()
+    comm_member_name = frappe.db.get_value("Committee Member", {"member_name": user_email, "status": "Active"}, "name")
+    if comm_member_name:
+        context.counts["resolutions_pending"] = frappe.db.count(
+            "Resolution Signatory",
+            {"signatory": comm_member_name, "signature_status": "Pending"}
+        )
 
     return context
 
@@ -278,7 +288,74 @@ def get_committee_data(module_type="all"):
         tickets.sort(key=lambda x: (status_rank.get(x.get("status"), 3), str(x.get("creation"))), reverse=False)
         data["tickets"] = tickets
 
+    # 8. Board Resolutions
+    user_email = (member_info.get("email") or frappe.session.user).strip().lower()
+    comm_member_name = frappe.db.get_value("Committee Member", {"member_name": user_email, "status": "Active"}, "name")
+    
+    if module_type in ("all", "resolutions"):
+        resolutions = frappe.get_all(
+            "Board Resolution",
+            fields=[
+                "name",
+                "resolution_title",
+                "resolution_text",
+                "status",
+                "docstatus",
+                "owner",
+                "creation",
+            ],
+            order_by="creation desc",
+            limit_page_length=100,
+        )
+        
+        # Load signatories for each resolution
+        for res in resolutions:
+            signatories = frappe.get_all(
+                "Resolution Signatory",
+                filters={"parent": res.name},
+                fields=[
+                    "name",
+                    "signatory",
+                    "signatory_name",
+                    "designation_name",
+                    "signature_status",
+                    "signed_on",
+                    "rejection_reason",
+                ],
+                order_by="idx asc",
+            )
+            res["signatories"] = signatories
+            
+            # Check current user's voting status
+            res["user_signatory_row"] = None
+            res["user_has_voted"] = False
+            res["user_status"] = "Not Signatory"
+            
+            for s in signatories:
+                if comm_member_name and s.signatory == comm_member_name:
+                    res["user_signatory_row"] = s
+                    res["user_has_voted"] = s.signature_status in ("Signed", "Declined")
+                    res["user_status"] = s.signature_status
+                    break
+                    
+        # Sort pending-signature first for this member
+        resolutions.sort(
+            key=lambda x: (
+                0 if (x.get("user_status") == "Pending" and x.get("status") in ("Circulated", "Draft")) else 1,
+                str(x.get("creation")),
+            ),
+            reverse=False,
+        )
+        data["resolutions"] = resolutions
+
     # Counts summary
+    res_pending_count = 0
+    if comm_member_name:
+        res_pending_count = frappe.db.count(
+            "Resolution Signatory",
+            {"signatory": comm_member_name, "signature_status": "Pending"}
+        )
+
     data["counts"] = {
         "tenants_pending": frappe.db.count("Tenants", {"registration_status": "Pending"}),
         "vehicles_pending": frappe.db.count("Resident Vehicle", {"approval_status": "Pending"}),
@@ -287,6 +364,7 @@ def get_committee_data(module_type="all"):
         "family_pending": frappe.db.count("Family Members", {"registration_status": "Pending"}),
         "tickets_open": frappe.db.count("Maintenance Ticket", {"status": "Open"}),
         "notices_active": frappe.db.count("Society Notice", {"is_active": 1}),
+        "resolutions_pending": res_pending_count,
     }
 
     return data
@@ -418,4 +496,133 @@ def post_society_notice(title, content, is_active=1):
         "status": "success",
         "message": _("Notice published successfully!"),
         "notice_id": doc.name,
+    }
+
+
+@frappe.whitelist()
+def respond_board_resolution(docname, action, rejection_reason=None):
+    """
+    Whitelisted API for Committee Members to vote (Signed / Declined) on a Board Resolution
+    from the Committee Portal.
+    """
+    has_access, member_info = check_committee_access()
+    if not has_access:
+        frappe.throw(_("Permission Denied: Only AoA Committee Members can respond to resolutions."), frappe.PermissionError)
+
+    if action not in ("Signed", "Declined"):
+        frappe.throw(_("Invalid action. Must be 'Signed' or 'Declined'."))
+
+    if action == "Declined" and not rejection_reason:
+        frappe.throw(_("Please provide a reason for declining this resolution."))
+
+    doc = frappe.get_doc("Board Resolution", docname)
+
+    # Determine user identity - support User, Committee Member link, and Owner email
+    user = frappe.session.user
+    user_email = (member_info.get("email") or user).strip().lower()
+
+    # Find the corresponding Committee Member docname
+    comm_member_names = frappe.get_all(
+        "Committee Member",
+        filters={"member_name": ["in", [user, user_email]], "status": "Active"},
+        pluck="name",
+    )
+
+    user_found = False
+    for row in doc.get("signatories"):
+        member_user = frappe.db.get_value("Committee Member", row.signatory, "member_name")
+        is_match = False
+
+        if row.signatory in comm_member_names:
+            is_match = True
+        elif member_user and member_user.strip().lower() in (user.lower(), user_email):
+            is_match = True
+
+        if is_match:
+            user_found = True
+            if row.signature_status in ("Signed", "Declined"):
+                frappe.throw(_(f"You have already responded to this resolution (Status: {row.signature_status})."))
+
+            row.signature_status = action
+            now_dt = frappe.utils.now_datetime()
+            row.timestamp = now_dt
+            row.signed_on = now_dt
+            row.rejection_reason = rejection_reason if action == "Declined" else None
+            break
+
+    if not user_found:
+        frappe.throw(_("You are not listed as an active signatory for this resolution."))
+
+    # --- 51% MAJORITY CHECK ---
+    total_signatories = len(doc.get("signatories"))
+    if total_signatories > 0:
+        signed_count = sum(1 for r in doc.get("signatories") if r.signature_status == "Signed")
+        declined_count = sum(1 for r in doc.get("signatories") if r.signature_status == "Declined")
+
+        if (signed_count / total_signatories) >= 0.51:
+            doc.status = "Passed"
+        elif (declined_count / total_signatories) >= 0.51:
+            doc.status = "Rejected"
+
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "message": _("Your response has been recorded successfully."),
+        "resolution_status": doc.status,
+    }
+
+
+@frappe.whitelist()
+def create_board_resolution(title, text):
+    """
+    Creates a new Board Resolution from the Committee Portal and circulates it to all active Committee Members.
+    """
+    has_access, member_info = check_committee_access()
+    if not has_access:
+        frappe.throw(_("Permission Denied: Only AoA Committee Members can create resolutions."), frappe.PermissionError)
+
+    if not title or not title.strip():
+        frappe.throw(_("Resolution Title is required."))
+    if not text or not text.strip():
+        frappe.throw(_("Resolution Text is required."))
+
+    user = frappe.session.user
+    user_email = (member_info.get("email") or user).strip().lower()
+    comm_member_name = frappe.db.get_value(
+        "Committee Member",
+        {"member_name": ["in", [user, user_email]], "status": "Active"},
+        "name",
+    )
+
+    doc = frappe.new_doc("Board Resolution")
+    doc.resolution_title = title.strip()
+    doc.resolution_text = text.strip()
+    doc.status = "Circulated"
+    if comm_member_name:
+        doc.created_by_member = comm_member_name
+
+    # Auto-populate all active Committee Members as signatories
+    from society_erp.society_erp.doctype.board_resolution.board_resolution import get_active_committee_members
+    active_members = get_active_committee_members()
+    if not active_members:
+        frappe.throw(_("No active Committee Members found to add as signatories."))
+
+    for m in active_members:
+        doc.append("signatories", {
+            "signatory": m.get("name"),
+            "role": m.get("designation"),
+            "signatory_name": m.get("signatory_name"),
+            "designation_name": m.get("designation_name"),
+            "signature_status": "Pending",
+        })
+
+    doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "message": _("Board Resolution created and circulated for voting!"),
+        "resolution_id": doc.name,
     }
