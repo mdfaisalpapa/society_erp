@@ -1251,6 +1251,14 @@ frappe.ready(function () {
                         updateBadgeCounts(committeeData.counts);
                     }
                     applyFilterAndRender();
+
+                    // If currently active tab is hidden, switch to the first visible tab
+                    if (!$("#committeeTabs .nav-link.active").is(":visible")) {
+                        const $firstVisible = $("#committeeTabs .nav-link:visible").first();
+                        if ($firstVisible.length) {
+                            $firstVisible.tab("show");
+                        }
+                    }
                 }
             },
             error: function () {

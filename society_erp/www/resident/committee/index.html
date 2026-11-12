@@ -41,61 +41,81 @@
         <div class="committee-sticky-nav mb-3">
             <div class="d-flex align-items-center justify-content-between flex-wrap py-2 border-bottom bg-white">
                 <ul class="nav nav-pills committee-nav-pills" id="committeeTabs" role="tablist">
+                    {% if tiles.get('tenants', True) %}
                     <li class="nav-item">
-                        <a class="nav-link active font-weight-bold" id="tab-tenants" data-toggle="pill" href="#pane-tenants" role="tab" data-module="tenants">
+                        <a class="nav-link font-weight-bold" id="tab-tenants" data-toggle="pill" href="#pane-tenants" role="tab" data-module="tenants">
                             <span class="tab-icon">🏠</span><span class="tab-label">Tenants</span> <span class="badge badge-warning ml-1" id="badge-tenants">{{ counts.tenants_pending }}</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if tiles.get('vehicles', True) %}
                     <li class="nav-item">
                         <a class="nav-link font-weight-bold" id="tab-vehicles" data-toggle="pill" href="#pane-vehicles" role="tab" data-module="vehicles">
                             <span class="tab-icon">🚗</span><span class="tab-label">Vehicles</span> <span class="badge badge-warning ml-1" id="badge-vehicles">{{ counts.vehicles_pending }}</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if tiles.get('work_permits', True) %}
                     <li class="nav-item">
                         <a class="nav-link font-weight-bold" id="tab-work_permits" data-toggle="pill" href="#pane-work_permits" role="tab" data-module="work_permits">
                             <span class="tab-icon">👷</span><span class="tab-label">Permits</span> <span class="badge badge-warning ml-1" id="badge-permits">{{ counts.permits_pending }}</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if tiles.get('family', True) %}
                     <li class="nav-item">
                         <a class="nav-link font-weight-bold" id="tab-family" data-toggle="pill" href="#pane-family" role="tab" data-module="family">
                             <span class="tab-icon">👨‍👩‍👦</span><span class="tab-label">Family</span> <span class="badge badge-warning ml-1" id="badge-family">{{ counts.family_pending }}</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if tiles.get('pets', True) %}
                     <li class="nav-item">
                         <a class="nav-link font-weight-bold" id="tab-pets" data-toggle="pill" href="#pane-pets" role="tab" data-module="pets">
                             <span class="tab-icon">🐾</span><span class="tab-label">Pets</span> <span class="badge badge-warning ml-1" id="badge-pets">{{ counts.pets_pending }}</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if tiles.get('maintenance', True) %}
                     <li class="nav-item">
                         <a class="nav-link font-weight-bold" id="tab-tickets" data-toggle="pill" href="#pane-tickets" role="tab" data-module="tickets">
                             <span class="tab-icon">🛠️</span><span class="tab-label">Tickets</span> <span class="badge badge-danger ml-1" id="badge-tickets">{{ counts.tickets_open }}</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if tiles.get('book_facility', True) %}
                     <li class="nav-item">
                         <a class="nav-link font-weight-bold" id="tab-facility_bookings" data-toggle="pill" href="#pane-facility_bookings" role="tab" data-module="facility_bookings">
                             <span class="tab-icon">🏛️</span><span class="tab-label">Hall Bookings</span> <span class="badge badge-warning ml-1" id="badge-facility_bookings">{{ counts.facility_bookings_pending }}</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if tiles.get('classifieds', True) %}
                     <li class="nav-item">
                         <a class="nav-link font-weight-bold" id="tab-classifieds" data-toggle="pill" href="#pane-classifieds" role="tab" data-module="classifieds">
                             <span class="tab-icon">📢</span><span class="tab-label">Classifieds</span> <span class="badge badge-warning ml-1" id="badge-classifieds">{{ counts.classifieds_pending }}</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if tiles.get('notices', True) %}
                     <li class="nav-item">
                         <a class="nav-link font-weight-bold" id="tab-notices" data-toggle="pill" href="#pane-notices" role="tab" data-module="notices">
                             <span class="tab-icon">📋</span><span class="tab-label">Notices</span>
                         </a>
                     </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link font-weight-bold" id="tab-resolutions" data-toggle="pill" href="#pane-resolutions" role="tab" data-module="resolutions">
                             <span class="tab-icon">⚖️</span><span class="tab-label">Resolutions</span> <span class="badge badge-warning ml-1" id="badge-resolutions">{{ counts.resolutions_pending }}</span>
                         </a>
                     </li>
+                    {% if enable_emergency_sos and tiles.get('emergency', True) %}
                     <li class="nav-item">
                         <a class="nav-link font-weight-bold text-danger" id="tab-emergency" data-toggle="pill" href="#pane-emergency" role="tab" data-module="emergency">
                             <span class="tab-icon">🚨</span><span class="tab-label">Emergency SOS</span>
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
 
                 <button class="btn btn-outline-secondary btn-sm ml-auto d-md-none mt-2" type="button" data-toggle="collapse" data-target="#committeeFilterCollapse" aria-expanded="false" aria-controls="committeeFilterCollapse">

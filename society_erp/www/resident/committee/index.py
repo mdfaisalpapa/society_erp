@@ -131,6 +131,10 @@ def get_context(context):
     context.enable_emergency_sos = bool(int(enable_sos)) if enable_sos is not None else True
     context.emergency_contacts_count = frappe.db.count("Emergency Contact", {"enabled": 1})
 
+    # Portal tile master switch configuration
+    from society_erp.www.resident.settings.index import get_tile_settings
+    context.tiles = get_tile_settings()
+
     return context
 
 
@@ -465,6 +469,10 @@ def get_committee_data(module_type="all"):
 
     enable_sos = frappe.db.get_single_value("Society ERP Settings", "enable_emergency_sos")
     data["enable_emergency_sos"] = bool(int(enable_sos)) if enable_sos is not None else True
+    
+    from society_erp.www.resident.settings.index import get_tile_settings
+    data["tiles"] = get_tile_settings()
+
     data["emergency_contacts"] = frappe.get_all(
         "Emergency Contact",
         fields=["name", "title", "category", "phone", "operating_hours", "icon", "description", "enabled", "sort_order"],
