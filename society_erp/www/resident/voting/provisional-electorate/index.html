@@ -1,5 +1,17 @@
 {% extends "templates/web.html" %}
 
+{% block navbar %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
 {% block title %}Provisional Voter List & Objections{% endblock %}
 
 {% block page_content %}
@@ -11,7 +23,11 @@
         </div>
         <div class="mt-2 mt-md-0 d-flex align-items-center">
             <a href="/resident/voting" class="btn btn-outline-primary btn-sm mr-2">🗳️ Voting Center</a>
-            <a href="/resident" id="pe-back-btn" class="btn btn-outline-secondary btn-sm">🔙 Back to Resident Portal</a>
+            {% if is_standalone %}
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">✕ Close</button>
+{% else %}
+    <a href="/resident" id="pe-back-btn" class="btn btn-outline-secondary btn-sm">🔙 Back to Resident Portal</a>
+{% endif %}
         </div>
     </div>
 

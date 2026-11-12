@@ -1,5 +1,17 @@
 {% extends "templates/web.html" %}
 
+{% block navbar %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
 {% block page_content %}
 <div class="container my-4 resident-staff-page">
 
@@ -9,7 +21,11 @@
                 <h2 class="mb-1 font-weight-bold">🧹 Domestic Staff</h2>
             </div>
             <div>
-                <a href="/resident" class="btn btn-outline-secondary btn-sm">🔙 Back to Resident Portal</a>
+                {% if is_standalone %}
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">✕ Close</button>
+{% else %}
+    <a href="/resident" class="btn btn-outline-secondary btn-sm">🔙 Back to Resident Portal</a>
+{% endif %}
             </div>
         </div>
         <div class="alert alert-danger">
@@ -29,9 +45,13 @@
                 <span class="badge badge-dark p-2 mr-2">
                     Flat: {{ flat_number }}
                 </span>
-                <a href="/resident" class="btn btn-outline-secondary btn-sm">
+                {% if is_standalone %}
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">✕ Close</button>
+{% else %}
+    <a href="/resident" class="btn btn-outline-secondary btn-sm">
                     🔙 Back to Resident Portal
                 </a>
+{% endif %}
             </div>
         </div>
 

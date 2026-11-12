@@ -1,5 +1,17 @@
 {% extends "templates/web.html" %}
 
+{% block navbar %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
 {% block page_content %}
 <div class="container my-4">
     {% if not_a_resident %}

@@ -4,6 +4,11 @@ from frappe.utils import flt, fmt_money, format_date
 
 
 def get_context(context):
+    context.is_standalone = bool(frappe.form_dict.get("standalone"))
+    if context.is_standalone:
+        context.no_header = True
+        context.no_sidebar = True
+
     """
     Backend context handler for the 'My Dues' resident portal page.
     - Secures against guest access.

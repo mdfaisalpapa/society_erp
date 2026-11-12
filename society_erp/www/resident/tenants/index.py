@@ -3,6 +3,11 @@ from society_erp.resident_portal import get_verified_owner_records
 from society_erp.tenant_portal import get_tenants # <-- Update this import!
 
 def get_context(context):
+    context.is_standalone = bool(frappe.form_dict.get("standalone"))
+    if context.is_standalone:
+        context.no_header = True
+        context.no_sidebar = True
+
     # Add inside owner details, tenant management, and work permit page context scripts (.py)
     user_roles = frappe.get_roles(frappe.session.user)
     if "Flat Owner" not in user_roles:

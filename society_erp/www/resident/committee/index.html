@@ -20,7 +20,10 @@
             <p class="mb-3">
                 This portal is exclusively accessible to authorized <strong>AoA Managing Committee Members</strong> (Owners with Committee authorization).
             </p>
-            <a href="/resident" class="btn btn-outline-danger">🔙 Return to Resident Portal</a>
+            {% if is_standalone %}
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">✕ Close</button>
+{% else %}
+    <a href="/resident" class="btn btn-outline-danger">🔙 Return to Resident Portal</a>
         </div>
     {% else %}
         {% if is_standalone %}
@@ -73,6 +76,7 @@
                 <a href="/resident" class="btn btn-outline-secondary btn-sm">
                     🔙 Back to Resident Portal
                 </a>
+{% endif %}
             </div>
         </div>
         {% endif %}

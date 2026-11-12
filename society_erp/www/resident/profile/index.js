@@ -193,4 +193,15 @@ frappe.ready(function() {
             verifyAndUpdate();
         }
     });
+
+    // Auto-open modal if requested via URL param (e.g. from Telegram bot WebApp)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('modal') === 'update_mobile' || urlParams.get('open_modal') === 'update_mobile') {
+        setTimeout(function() {
+            showStateRequest();
+            $inputMobile.val('');
+            $modal.modal('show');
+            setTimeout(() => $inputMobile.focus(), 300);
+        }, 350);
+    }
 });

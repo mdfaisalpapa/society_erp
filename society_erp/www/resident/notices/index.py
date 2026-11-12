@@ -44,6 +44,11 @@ def get_resident_info(user=None):
 
 
 def get_context(context):
+    context.is_standalone = bool(frappe.form_dict.get("standalone"))
+    if context.is_standalone:
+        context.no_header = True
+        context.no_sidebar = True
+
     if frappe.session.user == "Guest":
         frappe.local.flags.redirect_location = "/login?redirect-to=/resident/notices"
         raise frappe.Redirect

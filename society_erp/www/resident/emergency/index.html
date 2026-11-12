@@ -1,5 +1,17 @@
 {% extends "templates/web.html" %}
 
+{% block navbar %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
 {% block title %}Emergency Contacts & SOS Directory{% endblock %}
 
 {% block header %}
@@ -48,9 +60,13 @@
             <p class="text-muted mb-0">Direct 1-tap dial for Security, Estate Office, Ambulance, Fire, and Police.</p>
         </div>
         <div class="mt-2 mt-md-0">
-            <a href="/resident" class="btn btn-outline-secondary">
+            {% if is_standalone %}
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">✕ Close</button>
+{% else %}
+    <a href="/resident" class="btn btn-outline-secondary">
                 🔙 Back to Resident Portal
             </a>
+{% endif %}
         </div>
     </div>
 
@@ -60,7 +76,11 @@
         <p class="mb-3 text-muted">
             The Emergency SOS directory is currently deactivated by the AoA Managing Committee.
         </p>
-        <a href="/resident" class="btn btn-outline-primary">🔙 Back to Resident Portal</a>
+        {% if is_standalone %}
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">✕ Close</button>
+{% else %}
+    <a href="/resident" class="btn btn-outline-primary">🔙 Back to Resident Portal</a>
+{% endif %}
     </div>
     {% else %}
     <!-- Quick Call Banner for Main Gate -->

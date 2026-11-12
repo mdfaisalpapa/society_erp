@@ -193,6 +193,11 @@ def get_child_common_cost_centers(company):
 
 
 def get_context(context):
+    context.is_standalone = bool(frappe.form_dict.get("standalone"))
+    if context.is_standalone:
+        context.no_header = True
+        context.no_sidebar = True
+
     """
     Renders the initial context for the Society Financials web page.
     - Enforces authentication and resident access control.

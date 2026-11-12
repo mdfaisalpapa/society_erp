@@ -5,6 +5,11 @@ from frappe import _
 
 
 def get_context(context):
+    context.is_standalone = bool(frappe.form_dict.get("standalone"))
+    if context.is_standalone:
+        context.no_header = True
+        context.no_sidebar = True
+
     # Require login
     if frappe.session.user == "Guest":
         frappe.local.flags.redirect_location = "/login"

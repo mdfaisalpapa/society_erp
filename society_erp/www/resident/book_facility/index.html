@@ -1,5 +1,17 @@
 {% extends "templates/web.html" %}
 
+{% block navbar %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
 {% block title %}Book Facility & Amenities{% endblock %}
 
 {% block header %}
@@ -97,9 +109,13 @@
             <button class="btn btn-primary" data-toggle="modal" data-target="#facilityModal" data-bs-toggle="modal" data-bs-target="#facilityModal">
                 ➕ New Booking
             </button>
-            <a href="/resident" class="btn btn-outline-secondary">
+            {% if is_standalone %}
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">✕ Close</button>
+{% else %}
+    <a href="/resident" class="btn btn-outline-secondary">
                 🔙 Back to Resident Portal
             </a>
+{% endif %}
         </div>
     </div>
 
@@ -107,7 +123,11 @@
     <div class="alert alert-warning text-center">
         <h4>Access Restricted</h4>
         <p>No verified resident record found for your user account. Please contact the society office.</p>
-        <a href="/resident" class="btn btn-outline-secondary mt-2">Back to Resident Portal</a>
+        {% if is_standalone %}
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">✕ Close</button>
+{% else %}
+    <a href="/resident" class="btn btn-outline-secondary mt-2">Back to Resident Portal</a>
+{% endif %}
     </div>
     {% else %}
 
