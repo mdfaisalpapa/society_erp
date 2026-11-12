@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import nowdate, now_datetime, get_datetime, time_diff_in_hours
+from frappe.utils import nowdate, now_datetime, get_datetime, time_diff_in_hours, add_days
 
 
 @frappe.whitelist()
@@ -557,13 +557,16 @@ def generate_reconciliation_purchase_invoice(reconciliation_id: str) -> dict:
 
 
 @frappe.whitelist()
-def cleanup_reconciled_muster_photos() -> dict:
+def cleanup_reconciled_muster_photos(retention_days: int = 30) -> dict:
     """
     Automated retention cleanup:
     Deletes shift muster photos for billing months whose Facility Invoice Reconciliation
-    has been verified/approved by the Committee and is in the subsequent month or older.
+    has been verified/approved by the Committee AND where the shift date is at least
+    1 month (default: 30 days) older than current date.
     Keeps the text muster audit record (headcount, notes, date, shift) while freeing disk space.
     """
+    cutoff_date = add_days(nowdate(), -abs(int(retention_days)))
+
     # 1. Find verified reconciliations
     verified_reconciliations = frappe.get_all(
         "Facility Invoice Reconciliation",
@@ -578,12 +581,15 @@ def cleanup_reconciled_muster_photos() -> dict:
         if not rec.to_date:
             continue
 
-        # Look for muster records on or before rec.to_date that still retain photos
+        # Target date threshold: whichever is earlier between the invoice end date and the 30-day retention cutoff
+        effective_threshold = min(str(rec.to_date), str(cutoff_date))
+
+        # Look for muster records older than 1 month (cutoff_date) that still retain photos
         musters = frappe.get_all(
             "Facility Shift Muster",
             filters={
                 "agency": rec.agency,
-                "shift_date": ["<=", rec.to_date],
+                "shift_date": ["<=", effective_threshold],
                 "muster_photo": ["is", "set"]
             },
             fields=["name", "muster_photo", "shift_date", "shift"]
@@ -603,7 +609,7 @@ def cleanup_reconciled_muster_photos() -> dict:
                 # Update muster record to flag photo as purged while preserving audit trail
                 frappe.db.set_value("Facility Shift Muster", m.name, {
                     "muster_photo": "DELETED_POST_BILLING_VERIFICATION",
-                    "briefing_notes": f"{(m.briefing_notes or '').strip()} [Photo purged after bill verification {rec.billing_month} {rec.billing_year}]".strip()
+                    "briefing_notes": f"{(m.briefing_notes or '').strip()} [Photo purged after 30-day post-billing retention - {rec.billing_month} {rec.billing_year}]".strip()
                 })
                 deleted_count += 1
                 cleaned_musters.append(m.name)
@@ -613,7 +619,8 @@ def cleanup_reconciled_muster_photos() -> dict:
 
     return {
         "status": "success",
+        "retention_cutoff_date": cutoff_date,
         "deleted_count": deleted_count,
         "cleaned_musters": cleaned_musters,
-        "message": _("Purged {0} verified shift muster photos.").format(deleted_count)
+        "message": _("Purged {0} shift muster photos older than 1 month ({1}).").format(deleted_count, cutoff_date)
     }
