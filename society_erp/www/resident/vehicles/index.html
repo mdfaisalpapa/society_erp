@@ -3,21 +3,36 @@
 {% block page_content %}
 <div class="container my-4">
     {% if not_a_resident %}
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+            <div>
+                <h2 class="mb-1 font-weight-bold">🚗 My Vehicles</h2>
+            </div>
+            <div>
+                <a href="/resident" class="btn btn-outline-secondary btn-sm">🔙 Back to Resident Portal</a>
+            </div>
+        </div>
         <div class="alert alert-danger">Your account is not linked to an active flat.</div>
     {% else %}
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>🚗 My Vehicles</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
             <div>
-                <a href="/resident" class="btn btn-outline-secondary mr-2">🔙 Back to Portal</a>
-                
+                <h2 class="mb-1 font-weight-bold">🚗 My Vehicles</h2>
+                <p class="text-muted mb-0">Manage registered resident vehicles and parking allocations.</p>
+            </div>
+            <div class="mt-2 mt-md-0 d-flex align-items-center">
                 {% if car_eligible > 0 or bike_eligible > 0 %}
-                    <!-- Disable button if they owe a sticker -->
                     {% if unreturned_stickers %}
-                        <button class="btn btn-secondary" disabled title="Return pending stickers to unlock">➕ Add New Vehicle (Blocked)</button>
+                        <button class="btn btn-secondary btn-sm mr-2 font-weight-bold" disabled title="Return pending stickers to unlock">
+                            ➕ Add New Vehicle (Blocked)
+                        </button>
                     {% else %}
-                        <button class="btn btn-primary" data-toggle="modal" data-target="#addVehicleModal">➕ Add New Vehicle</button>
+                        <button class="btn btn-primary btn-sm mr-2 shadow-sm font-weight-bold" data-toggle="modal" data-target="#addVehicleModal">
+                            ➕ Add New Vehicle
+                        </button>
                     {% endif %}
                 {% endif %}
+                <a href="/resident" class="btn btn-outline-secondary btn-sm">
+                    🔙 Back to Resident Portal
+                </a>
             </div>
         </div>
 
