@@ -265,6 +265,7 @@
             </div>
 
             <!-- 15. Emergency SOS & Contacts (Common) -->
+            {% if enable_emergency_sos %}
             <div class="col-4 col-md-3 mb-4">
                 <a href="/resident/emergency" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover border-danger" style="background: linear-gradient(180deg, #fff5f5 0%, #fff 100%);">
@@ -276,6 +277,7 @@
                     </div>
                 </a>
             </div>
+            {% endif %}
         </div>
 
         <!-- Footer Actions -->

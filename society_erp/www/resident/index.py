@@ -122,5 +122,9 @@ def get_context(context):
             "corpus_fund": flat_doc.get("corpus_fund_contribution"),
         }
 
+    # Emergency SOS feature toggle
+    enable_sos = frappe.db.get_single_value("Society ERP Settings", "enable_emergency_sos")
+    context.enable_emergency_sos = bool(int(enable_sos)) if enable_sos is not None else True
+
     return context
 

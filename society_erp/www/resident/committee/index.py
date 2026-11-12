@@ -126,6 +126,11 @@ def get_context(context):
             {"signatory": comm_member_name, "signature_status": "Pending"}
         )
 
+    # Emergency SOS feature status and contacts count
+    enable_sos = frappe.db.get_single_value("Society ERP Settings", "enable_emergency_sos")
+    context.enable_emergency_sos = bool(int(enable_sos)) if enable_sos is not None else True
+    context.emergency_contacts_count = frappe.db.count("Emergency Contact", {"enabled": 1})
+
     return context
 
 
@@ -457,6 +462,14 @@ def get_committee_data(module_type="all"):
             "Resolution Signatory",
             {"signatory": comm_member_name, "signature_status": "Pending"}
         )
+
+    enable_sos = frappe.db.get_single_value("Society ERP Settings", "enable_emergency_sos")
+    data["enable_emergency_sos"] = bool(int(enable_sos)) if enable_sos is not None else True
+    data["emergency_contacts"] = frappe.get_all(
+        "Emergency Contact",
+        fields=["name", "title", "category", "phone", "operating_hours", "icon", "description", "enabled", "sort_order"],
+        order_by="sort_order asc, title asc"
+    )
 
     data["counts"] = {
         "tenants_pending": frappe.db.count("Tenants", {"registration_status": "Pending"}),
@@ -892,3 +905,58 @@ def reveal_contact_details(doctype, docname):
         "person_name": target_person,
         "message": _("Contact details unmasked and logged for audit compliance.")
     }
+
+
+@frappe.whitelist()
+def toggle_emergency_sos_feature(enabled):
+    """
+    Committee endpoint to enable or disable the Emergency SOS & Contacts feature for residents.
+    """
+    has_access, member_info = check_committee_access()
+    if not has_access:
+        frappe.throw(_("Permission Denied: Only AoA Committee Members can update portal settings."), frappe.PermissionError)
+
+    val = 1 if (str(enabled).lower() in ("1", "true")) else 0
+    frappe.db.set_single_value("Society ERP Settings", "enable_emergency_sos", val)
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "enabled": bool(val),
+        "message": _("Emergency SOS feature has been {0} for residents.").format("ENABLED" if val else "DISABLED")
+    }
+
+
+@frappe.whitelist()
+def save_emergency_contact(title, phone, category="Society Security", operating_hours="24x7", icon="📞", description=None, contact_name=None, enabled=1):
+    """
+    Committee endpoint to create or update an Emergency / SOS contact entry.
+    """
+    has_access, member_info = check_committee_access()
+    if not has_access:
+        frappe.throw(_("Permission Denied: Only AoA Committee Members can manage emergency contacts."), frappe.PermissionError)
+
+    if not title or not phone:
+        frappe.throw(_("Title and Phone Number are required."))
+
+    if contact_name and frappe.db.exists("Emergency Contact", contact_name):
+        doc = frappe.get_doc("Emergency Contact", contact_name)
+    else:
+        doc = frappe.new_doc("Emergency Contact")
+
+    doc.title = title.strip()
+    doc.phone = phone.strip()
+    doc.category = category
+    doc.operating_hours = operating_hours or "24x7"
+    doc.icon = icon or "📞"
+    doc.description = (description or "").strip()
+    doc.enabled = 1 if str(enabled).lower() in ("1", "true") else 0
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "contact_name": doc.name,
+        "message": _("Emergency contact saved successfully.")
+    }
+

@@ -1081,6 +1081,102 @@ frappe.ready(function () {
         $cont.html(html);
     }
 
+    // --- 9. Emergency SOS & Contacts Settings Module ---
+    function renderEmergency(items) {
+        const $cont = $("#container-emergency").empty();
+        const isEnabled = committeeData.enable_emergency_sos;
+
+        let html = `
+            <div class="card mb-4 shadow-sm border-0 bg-white">
+                <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <div class="d-flex align-items-center mb-1">
+                            <span style="font-size: 1.5rem;" class="mr-2">🚨</span>
+                            <h5 class="font-weight-bold mb-0 text-dark">Resident Emergency SOS Feature Switch</h5>
+                        </div>
+                        <p class="text-muted small mb-0">
+                            When enabled, the <strong>🚨 Emergency SOS</strong> tile and quick-dial contact directory are visible to all residents on the Resident Portal.
+                        </p>
+                    </div>
+                    <div class="mt-3 mt-md-0 d-flex align-items-center">
+                        <span class="mr-3 font-weight-bold ${isEnabled ? 'text-success' : 'text-danger'}" id="emergency-status-label">
+                            ${isEnabled ? '✅ Enabled for Residents' : '⛔ Disabled (Hidden from Residents)'}
+                        </span>
+                        <div class="custom-control custom-switch" style="transform: scale(1.3); transform-origin: right center;">
+                            <input type="checkbox" class="custom-control-input" id="switch-emergency-sos-toggle" ${isEnabled ? 'checked' : ''}>
+                            <label class="custom-control-label cursor-pointer" for="switch-emergency-sos-toggle"></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                <div>
+                    <h6 class="font-weight-bold text-dark mb-0">📞 Emergency & Duty Contact Directory (${(items || []).length} Contacts)</h6>
+                    <small class="text-muted">Manage 24x7 gate security, facility staff, electricians, and public emergency numbers.</small>
+                </div>
+                <div class="mt-2 mt-md-0">
+                    <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm font-weight-bold" id="btn-add-emergency-contact">
+                        ➕ Add Emergency Contact
+                    </button>
+                </div>
+            </div>
+        `;
+
+        if (!items || !items.length) {
+            html += `
+                <div class="text-center py-5 bg-white rounded border">
+                    <div style="font-size: 2.2rem;">📞</div>
+                    <h6 class="font-weight-bold mt-2">No Contacts Configured</h6>
+                    <p class="text-muted small mb-3">Add contacts like Main Gate Security, Estate Manager, Fire, or Police.</p>
+                </div>
+            `;
+            $cont.html(html);
+            return;
+        }
+
+        html += `<div class="row">`;
+        items.forEach(c => {
+            const isContactActive = c.enabled;
+            html += `
+                <div class="col-12 col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 shadow-sm border p-3 d-flex flex-column justify-content-between" style="border-left: 4px solid ${isContactActive ? '#0d6efd' : '#adb5bd'} !important;">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span style="font-size: 1.8rem;">${escapeHtml(c.icon || '📞')}</span>
+                                <div>
+                                    <span class="badge ${isContactActive ? 'badge-success' : 'badge-secondary'} mr-1">${isContactActive ? 'Active' : 'Inactive'}</span>
+                                    <span class="badge badge-light border text-muted">${escapeHtml(c.operating_hours || '24x7')}</span>
+                                </div>
+                            </div>
+                            <h6 class="font-weight-bold text-dark mb-1">${escapeHtml(c.title)}</h6>
+                            <span class="badge badge-info bg-info text-white mb-2" style="font-size: 0.72rem;">${escapeHtml(c.category)}</span>
+                            <p class="small text-muted mb-2">${escapeHtml(c.description || 'No description provided')}</p>
+                        </div>
+                        <div class="pt-2 border-top d-flex justify-content-between align-items-center">
+                            <span class="font-weight-bold text-dark small">📞 ${escapeHtml(c.phone)}</span>
+                            <div>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2 btn-edit-emergency"
+                                    data-name="${escapeHtml(c.name)}"
+                                    data-title="${escapeHtml(c.title)}"
+                                    data-category="${escapeHtml(c.category)}"
+                                    data-phone="${escapeHtml(c.phone)}"
+                                    data-hours="${escapeHtml(c.operating_hours || '')}"
+                                    data-icon="${escapeHtml(c.icon || '')}"
+                                    data-desc="${escapeHtml(c.description || '')}"
+                                    data-enabled="${c.enabled ? 1 : 0}">
+                                    ✏️ Edit
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $cont.html(html);
+    }
+
     // --- Search & Filter Logic ---
     function applyFilterAndRender() {
         const query = $searchInput.val().trim().toLowerCase();
@@ -1134,6 +1230,7 @@ frappe.ready(function () {
             });
         });
         renderResolutions(filteredResolutions);
+        renderEmergency(committeeData.emergency_contacts || []);
     }
 
     // --- Data Fetching ---
@@ -1547,13 +1644,90 @@ frappe.ready(function () {
                             frappe.show_alert({ message: __("Contact details revealed & logged."), indicator: "green" }, 4);
                         }
                     },
-                    error: function (err) {
-                        $btn.prop("disabled", false).text(origText);
-                        const errMsg = err && err.message ? err.message : "Failed to unmask contact.";
-                        frappe.msgprint({ title: __("Error"), message: errMsg, indicator: "red" });
-                    }
-                });
+    // --- Emergency SOS Switch & Management Handlers ---
+    $(document).on("change", "#switch-emergency-sos-toggle", function () {
+        const isChecked = $(this).is(":checked");
+        const $label = $("#emergency-status-label");
+        
+        $label.text(isChecked ? "Updating…" : "Updating…");
+
+        frappe.call({
+            method: "society_erp.www.resident.committee.index.toggle_emergency_sos_feature",
+            args: { enabled: isChecked ? 1 : 0 },
+            callback: function (r) {
+                if (r && r.message && r.message.status === "success") {
+                    committeeData.enable_emergency_sos = isChecked;
+                    $label.attr("class", isChecked ? "mr-3 font-weight-bold text-success" : "mr-3 font-weight-bold text-danger")
+                          .text(isChecked ? "✅ Enabled for Residents" : "⛔ Disabled (Hidden from Residents)");
+                    frappe.show_alert({
+                        message: __(r.message.message),
+                        indicator: isChecked ? "green" : "orange"
+                    }, 5);
+                }
+            },
+            error: function () {
+                // Revert
+                $("#switch-emergency-sos-toggle").prop("checked", !isChecked);
+                $label.text(!isChecked ? "✅ Enabled for Residents" : "⛔ Disabled (Hidden from Residents)");
             }
-        );
+        });
+    });
+
+    $(document).on("click", "#btn-add-emergency-contact", function () {
+        $("#form-emergency-contact")[0].reset();
+        $("#emergency-contact-name").val("");
+        $("#modalEmergencyTitle").text("➕ Add Emergency / SOS Contact");
+        $("#emergency-icon").val("📞");
+        $("#emergency-hours").val("24x7");
+        $("#emergency-enabled").prop("checked", true);
+        $("#modal-emergency-contact").modal("show");
+    });
+
+    $(document).on("click", ".btn-edit-emergency", function () {
+        const $b = $(this);
+        $("#form-emergency-contact")[0].reset();
+        $("#emergency-contact-name").val($b.data("name"));
+        $("#emergency-title").val($b.data("title"));
+        $("#emergency-category").val($b.data("category"));
+        $("#emergency-phone").val($b.data("phone"));
+        $("#emergency-hours").val($b.data("hours") || "24x7");
+        $("#emergency-icon").val($b.data("icon") || "📞");
+        $("#emergency-description").val($b.data("desc") || "");
+        $("#emergency-enabled").prop("checked", $b.data("enabled") == 1);
+        $("#modalEmergencyTitle").text("✏️ Edit Emergency Contact");
+        $("#modal-emergency-contact").modal("show");
+    });
+
+    $(document).on("submit", "#form-emergency-contact", function (e) {
+        e.preventDefault();
+        const $btn = $("#btn-save-emergency");
+        $btn.prop("disabled", true).text("Saving…");
+
+        frappe.call({
+            method: "society_erp.www.resident.committee.index.save_emergency_contact",
+            args: {
+                contact_name: $("#emergency-contact-name").val(),
+                title: $("#emergency-title").val(),
+                category: $("#emergency-category").val(),
+                phone: $("#emergency-phone").val(),
+                operating_hours: $("#emergency-hours").val(),
+                icon: $("#emergency-icon").val(),
+                description: $("#emergency-description").val(),
+                enabled: $("#emergency-enabled").is(":checked") ? 1 : 0
+            },
+            callback: function (r) {
+                $btn.prop("disabled", false).text("Save Contact");
+                if (r && r.message && r.message.status === "success") {
+                    $("#modal-emergency-contact").modal("hide");
+                    showAlert(r.message.message, "success");
+                    loadCommitteeData();
+                }
+            },
+            error: function (err) {
+                $btn.prop("disabled", false).text("Save Contact");
+                const errMsg = err && err.message ? err.message : "Failed to save contact.";
+                frappe.msgprint({ title: __("Error"), message: errMsg, indicator: "red" });
+            }
+        });
     });
 });

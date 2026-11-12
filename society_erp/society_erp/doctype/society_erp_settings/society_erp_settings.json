@@ -13,7 +13,9 @@
   "voting_section",
   "voting_engine_active",
   "default_dues_threshold",
-  "default_maintenance_accounts"
+  "default_maintenance_accounts",
+  "portal_features_section",
+  "enable_emergency_sos"
  ],
  "fields": [
   {
@@ -64,13 +66,24 @@
    "fieldname": "default_maintenance_accounts",
    "fieldtype": "Small Text",
    "label": "Default Maintenance Accounts"
+  },
+  {
+   "fieldname": "portal_features_section",
+   "fieldtype": "Section Break",
+   "label": "Resident Portal Feature Switches"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_emergency_sos",
+   "fieldtype": "Check",
+   "label": "Enable Emergency SOS & Contacts for Residents"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-05 10:00:00.000000",
+ "modified": "2026-11-12 15:15:00.000000",
  "modified_by": "Administrator",
  "module": "Society Erp",
  "name": "Society ERP Settings",

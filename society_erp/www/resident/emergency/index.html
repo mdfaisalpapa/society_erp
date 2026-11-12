@@ -54,6 +54,15 @@
         </div>
     </div>
 
+    {% if not feature_enabled %}
+    <div class="alert alert-warning shadow-sm py-4 text-center my-4">
+        <h4 class="alert-heading font-weight-bold mb-2">⚠️ Emergency Directory Disabled</h4>
+        <p class="mb-3 text-muted">
+            The Emergency SOS directory is currently deactivated by the AoA Managing Committee.
+        </p>
+        <a href="/resident" class="btn btn-outline-primary">🔙 Back to Resident Portal</a>
+    </div>
+    {% else %}
     <!-- Quick Call Banner for Main Gate -->
     <div class="card mb-4 bg-danger text-white border-0 shadow">
         <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap">
@@ -116,5 +125,6 @@
         </div>
         {% endfor %}
     </div>
+    {% endif %}
 </div>
 {% endblock %}

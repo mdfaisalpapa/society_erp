@@ -91,6 +91,11 @@
                             <span class="tab-icon">⚖️</span><span class="tab-label">Resolutions</span> <span class="badge badge-warning ml-1" id="badge-resolutions">{{ counts.resolutions_pending }}</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link font-weight-bold text-danger" id="tab-emergency" data-toggle="pill" href="#pane-emergency" role="tab" data-module="emergency">
+                            <span class="tab-icon">🚨</span><span class="tab-label">Emergency SOS</span>
+                        </a>
+                    </li>
                 </ul>
 
                 <button class="btn btn-outline-secondary btn-sm ml-auto d-md-none mt-2" type="button" data-toggle="collapse" data-target="#committeeFilterCollapse" aria-expanded="false" aria-controls="committeeFilterCollapse">
@@ -196,6 +201,11 @@
             <!-- 8. Board Resolutions Pane -->
             <div class="tab-pane fade" id="pane-resolutions" role="tabpanel">
                 <div id="container-resolutions"></div>
+            </div>
+
+            <!-- 9. Emergency SOS & Directory Settings Pane -->
+            <div class="tab-pane fade" id="pane-emergency" role="tabpanel">
+                <div id="container-emergency"></div>
             </div>
         </div>
 
@@ -373,6 +383,70 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 4: Add / Edit Emergency Contact -->
+        <div class="modal fade" id="modal-emergency-contact" tabindex="-1" role="dialog" aria-labelledby="modalEmergencyTitle" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-white border-bottom align-items-center">
+                        <h5 class="modal-title font-weight-bold text-dark" id="modalEmergencyTitle">
+                            ➕ Add Emergency / SOS Contact
+                        </h5>
+                        <button type="button" class="close text-muted" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <form id="form-emergency-contact">
+                        <input type="hidden" id="emergency-contact-name">
+                        <div class="modal-body p-4">
+                            <div class="form-group mb-3">
+                                <label for="emergency-title" class="font-weight-bold small text-dark">Contact Title / Designation *</label>
+                                <input type="text" class="form-control" id="emergency-title" placeholder="e.g. Security Main Gate, Electrician Desk" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 form-group mb-3">
+                                    <label for="emergency-category" class="font-weight-bold small text-dark">Category *</label>
+                                    <select class="form-control" id="emergency-category" required>
+                                        <option value="Society Security">Society Security</option>
+                                        <option value="Estate Office">Estate Office</option>
+                                        <option value="Maintenance & Utilities">Maintenance & Utilities</option>
+                                        <option value="Public Emergency">Public Emergency</option>
+                                        <option value="Medical & Health">Medical & Health</option>
+                                        <option value="Other Helpline">Other Helpline</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 form-group mb-3">
+                                    <label for="emergency-phone" class="font-weight-bold small text-dark">Phone Number *</label>
+                                    <input type="text" class="form-control" id="emergency-phone" placeholder="e.g. 080-23456781 or 108" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 form-group mb-3">
+                                    <label for="emergency-hours" class="font-weight-bold small text-dark">Operating Hours / Badge</label>
+                                    <input type="text" class="form-control" id="emergency-hours" placeholder="e.g. 24x7 SOS, 09:00 - 18:00">
+                                </div>
+                                <div class="col-md-6 form-group mb-3">
+                                    <label for="emergency-icon" class="font-weight-bold small text-dark">Icon (Emoji)</label>
+                                    <input type="text" class="form-control" id="emergency-icon" placeholder="e.g. 👮, 🏢, 🚑, 🚨" value="📞">
+                                </div>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="emergency-description" class="font-weight-bold small text-dark">Description / Purpose</label>
+                                <textarea class="form-control" id="emergency-description" rows="2" placeholder="Brief note on when residents should call this number"></textarea>
+                            </div>
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="emergency-enabled" checked>
+                                <label class="custom-control-label font-weight-bold text-dark small" for="emergency-enabled">Enabled (Visible in SOS Directory)</label>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light border-top">
+                            <button type="button" class="btn btn-secondary btn-sm px-3" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary btn-sm px-4 font-weight-bold" id="btn-save-emergency">Save Contact</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
