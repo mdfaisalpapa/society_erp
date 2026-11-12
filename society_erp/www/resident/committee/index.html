@@ -1,5 +1,17 @@
 {% extends "templates/web.html" %}
 
+{% block navbar %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+{% if not is_standalone %}
+    {{ super() }}
+{% endif %}
+{% endblock %}
+
 {% block page_content %}
 <div class="container my-4 committee-portal-root {% if is_standalone %}committee-standalone-view{% endif %}">
     {% if access_denied %}
@@ -67,7 +79,8 @@
 
         <!-- Sticky Segmented Control / Pill Navigation (Hidden in Standalone View) -->
         <div class="committee-sticky-nav mb-3">
-            <div class="d-flex align-items-center justify-content-between flex-wrap py-2 border-bottom bg-white {% if is_standalone %}d-none{% endif %}">
+            {% if not is_standalone %}
+            <div class="d-flex align-items-center justify-content-between flex-wrap py-2 border-bottom bg-white">
                 <ul class="nav nav-pills committee-nav-pills" id="committeeTabs" role="tablist">
                     {% if tiles.get('tenants', True) %}
                     <li class="nav-item">
@@ -150,9 +163,10 @@
                     ⚙️ Search & Filters
                 </button>
             </div>
+            {% endif %}
 
-            <!-- Compact Action & Search Bar (collapsible on mobile) -->
-            <div class="collapse d-md-block mt-2" id="committeeFilterCollapse">
+            <!-- Compact Action & Search Bar (collapsible on mobile, always open in standalone) -->
+            <div class="{% if is_standalone %}d-block{% else %}collapse d-md-block{% endif %} mt-2" id="committeeFilterCollapse">
                 <div class="row align-items-center">
                     <div class="col-12 col-md-6 mb-2 mb-md-0">
                         <div class="input-group input-group-sm">
