@@ -69,7 +69,7 @@
    "fieldname": "id_proof_type",
    "fieldtype": "Select",
    "label": "ID Proof Type",
-   "options": "Aadhaar\nPassport\nVoter ID\nDriving Licence\nOther"
+   "options": "Masked Aadhaar (Last 4 digits visible)\nPassport\nVoter ID\nDriving Licence\nCGHS / Govt ID\nOther Government ID"
   },
   {
    "fieldname": "id_proof_document",
