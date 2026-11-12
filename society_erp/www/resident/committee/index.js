@@ -696,6 +696,7 @@ frappe.ready(function () {
                         <tr>
                             <th>Flat</th>
                             <th>Facility</th>
+                            <th>Shift / Slot</th>
                             <th>Date of Booking</th>
                             <th>Status</th>
                             <th>Notes</th>
@@ -716,6 +717,7 @@ frappe.ready(function () {
                 <tr class="${isPending ? 'table-warning-row' : ''}">
                     <td><span class="comm-flat-badge">${escapeHtml(b.resident)}</span></td>
                     <td><strong>${escapeHtml(b.facility)}</strong></td>
+                    <td><span class="badge badge-light border">${escapeHtml(b.shift || 'Full Day')}</span></td>
                     <td>${escapeHtml(b.formatted_booking_date || b.booking_date)}</td>
                     <td>${getStatusBadge(b.status)}</td>
                     <td class="small text-muted">${escapeHtml(b.remarks || '-')}</td>
@@ -740,6 +742,9 @@ frappe.ready(function () {
                             <span class="font-weight-bold text-dark">${escapeHtml(b.facility)}</span>
                         </div>
                         ${getStatusBadge(b.status)}
+                    </div>
+                    <div class="small text-muted mb-1">
+                        ⏰ <strong>Shift:</strong> ${escapeHtml(b.shift || 'Full Day')}
                     </div>
                     <div class="small text-muted mb-2">
                         📅 <strong>Date:</strong> ${escapeHtml(b.formatted_booking_date || b.booking_date)}

@@ -13,6 +13,69 @@
     .status-confirmed, .status-approved { background-color: #d1e7dd; color: #0f5132; }
     .status-pending { background-color: #fff3cd; color: #664d03; }
     .status-rejected, .status-cancelled { background-color: #f8d7da; color: #842029; }
+
+    /* Calendar Grid Styling */
+    .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+    }
+    .cal-header-day {
+        text-align: center;
+        font-weight: 700;
+        font-size: 0.8rem;
+        color: #6c757d;
+        padding: 4px 0;
+    }
+    .cal-day-cell {
+        aspect-ratio: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        cursor: pointer;
+        position: relative;
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
+        border: 1px solid #e9ecef;
+    }
+    .cal-day-cell:hover:not(.cal-day-past) {
+        transform: scale(1.04);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    }
+    .cal-day-available {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+        border-color: #a5d6a7;
+    }
+    .cal-day-booked {
+        background-color: #ffebee;
+        color: #c62828;
+        border-color: #ef9a9a;
+        cursor: not-allowed;
+    }
+    .cal-day-past {
+        background-color: #f8f9fa;
+        color: #adb5bd;
+        border-color: #e9ecef;
+        cursor: not-allowed;
+    }
+    .cal-day-selected {
+        border: 2px solid #0d6efd !important;
+        box-shadow: 0 0 0 2px rgba(13,110,253,0.3) !important;
+    }
+    .cal-legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 4px;
+    }
+    .dot-available { background-color: #2e7d32; }
+    .dot-booked { background-color: #c62828; }
+    .dot-past { background-color: #adb5bd; }
 </style>
 {% endblock %}
 
@@ -22,7 +85,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
         <div>
             <h2 class="mb-1">🏛️ Facility & Amenities Booking</h2>
-            <p class="text-muted mb-0">Reserve common amenities like Community Hall for Flat: <strong>{{ flat_number }}</strong></p>
+            <p class="text-muted mb-0">Reserve Community Halls, Clubhouse, or Party Lawn for Flat: <strong>{{ flat_number }}</strong></p>
         </div>
         <div class="mt-2 mt-md-0 d-flex gap-2">
             <button class="btn btn-primary" data-toggle="modal" data-target="#facilityModal" data-bs-toggle="modal" data-bs-target="#facilityModal">
@@ -44,7 +107,7 @@
 
     <div class="row">
         <!-- Main: Booking History -->
-        <div class="col-lg-8 mb-4">
+        <div class="col-lg-7 mb-4">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 text-dark">📋 Your Reservations</h5>
@@ -59,6 +122,7 @@
                                 <tr>
                                     <th>Booking #</th>
                                     <th>Facility</th>
+                                    <th>Shift / Slot</th>
                                     <th>Date</th>
                                     <th>Status</th>
                                     <th>Action</th>
@@ -72,6 +136,9 @@
                                     </td>
                                     <td>
                                         <span class="font-weight-bold">{{ b.facility }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-light border text-dark">{{ b.shift or 'Full Day' }}</span>
                                     </td>
                                     <td>
                                         <span>{{ b.formatted_booking_date }}</span>
@@ -124,6 +191,9 @@
                                     <span class="booking-status status-cancelled">Cancelled</span>
                                 {% endif %}
                             </div>
+                            <div class="small text-muted mb-1">
+                                ⏰ <strong>Shift:</strong> {{ b.shift or 'Full Day' }}
+                            </div>
                             <div class="small text-muted mb-2">
                                 📅 <strong>Booking Date:</strong> {{ b.formatted_booking_date }}
                             </div>
@@ -155,31 +225,58 @@
             </div>
         </div>
 
-        <!-- Sidebar: Upcoming Bookings / Availability Awareness -->
-        <div class="col-lg-4 mb-4">
+        <!-- Sidebar: Interactive Shift Calendar & Availability -->
+        <div class="col-lg-5 mb-4">
             <div class="card shadow-sm border-0 mb-3">
-                <div class="card-header bg-white py-3 border-bottom">
-                    <h5 class="mb-0 text-dark">📅 Booked Dates Calendar</h5>
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center flex-wrap">
+                    <h5 class="mb-0 text-dark">📅 Availability Calendar</h5>
+                    <div class="d-flex align-items-center gap-1 mt-1 mt-sm-0">
+                        <button type="button" class="btn btn-sm btn-light border py-0 px-2" id="btnCalPrev">‹</button>
+                        <span class="font-weight-bold small px-2" id="calCurrentMonthLabel">Month</span>
+                        <button type="button" class="btn btn-sm btn-light border py-0 px-2" id="btnCalNext">›</button>
+                    </div>
                 </div>
                 <div class="card-body">
-                    {% if upcoming_bookings %}
-                    <p class="text-muted small mb-2">The following dates are already reserved:</p>
-                    <ul class="list-group list-group-flush">
-                        {% for ub in upcoming_bookings %}
-                        <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
-                            <div>
-                                <span class="font-weight-bold">{{ ub.facility }}</span>
-                                <div class="text-muted small">{{ ub.formatted_booking_date }}</div>
-                            </div>
-                            <span class="badge badge-warning bg-warning text-dark">Reserved</span>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <div class="text-center py-3 text-muted">
-                        <p class="mb-0">No upcoming booked dates. All dates are currently open!</p>
+                    <!-- Facility & Shift Switchers -->
+                    <div class="form-group mb-2">
+                        <label class="small font-weight-bold text-muted mb-1">Select Facility / Hall:</label>
+                        <select id="calFacilitySelect" class="form-control form-control-sm form-select">
+                            {% for f in facilities %}
+                            <option value="{{ f }}">{{ f }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    {% endif %}
+
+                    <div class="form-group mb-3">
+                        <label class="small font-weight-bold text-muted mb-1">Switch Shift / Time Slot:</label>
+                        <select id="calShiftSelect" class="form-control form-control-sm form-select">
+                            <option value="ALL">All Slots (Full Availability)</option>
+                            {% for s in shifts %}
+                            <option value="{{ s }}">{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Calendar Grid -->
+                    <div class="cal-grid mb-2">
+                        <div class="cal-header-day">Su</div>
+                        <div class="cal-header-day">Mo</div>
+                        <div class="cal-header-day">Tu</div>
+                        <div class="cal-header-day">We</div>
+                        <div class="cal-header-day">Th</div>
+                        <div class="cal-header-day">Fr</div>
+                        <div class="cal-header-day">Sa</div>
+                    </div>
+                    <div id="calDayCells" class="cal-grid mb-3">
+                        <!-- Rendered by JS -->
+                    </div>
+
+                    <!-- Legend -->
+                    <div class="d-flex justify-content-around align-items-center pt-2 border-top small text-muted">
+                        <div><span class="cal-legend-dot dot-available"></span> Available</div>
+                        <div><span class="cal-legend-dot dot-booked"></span> Booked</div>
+                        <div><span class="cal-legend-dot dot-past"></span> Past</div>
+                    </div>
                 </div>
             </div>
 
@@ -187,9 +284,9 @@
                 <div class="card-body">
                     <h6 class="font-weight-bold">ℹ️ Booking Guidelines</h6>
                     <ul class="small text-muted pl-3 mb-0">
-                        <li>Bookings are confirmed on a first-come, first-served basis.</li>
+                        <li>Bookings are confirmed on a first-come, first-served basis by shifts.</li>
                         <li>Cleanliness and decorum must be maintained during events.</li>
-                        <li>Cancellations should be made at least 24 hours in advance.</li>
+                        <li>All bookings require Managing Committee verification.</li>
                     </ul>
                 </div>
             </div>
@@ -209,8 +306,8 @@
             <form id="facilityBookingForm">
                 <div class="modal-body">
                     <div class="form-group mb-3">
-                        <label class="form-label font-weight-bold">Select Facility *</label>
-                        <select name="facility" class="form-control form-select" required>
+                        <label class="form-label font-weight-bold">Select Facility / Hall *</label>
+                        <select name="facility" id="modalFacilityInput" class="form-control form-select" required>
                             {% for f in facilities %}
                             <option value="{{ f }}">{{ f }}</option>
                             {% endfor %}
@@ -218,9 +315,18 @@
                     </div>
 
                     <div class="form-group mb-3">
+                        <label class="form-label font-weight-bold">Shift / Time Slot *</label>
+                        <select name="shift" id="modalShiftInput" class="form-control form-select" required>
+                            {% for s in shifts %}
+                            <option value="{{ s }}">{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group mb-3">
                         <label class="form-label font-weight-bold">Date of Booking *</label>
-                        <input type="date" name="booking_date" class="form-control" min="{{ today_date }}" value="{{ today_date }}" required>
-                        <small class="text-muted">Select an available date.</small>
+                        <input type="date" name="booking_date" id="modalDateInput" class="form-control" min="{{ today_date }}" value="{{ today_date }}" required>
+                        <small class="text-muted">Check green dates on the calendar for availability.</small>
                     </div>
 
                     <div class="alert alert-info py-2 px-3 small mb-0">
@@ -237,29 +343,160 @@
 </div>
 
 <script>
+// Frappe Modal Confirm for Cancel Booking
 function cancelBooking(bookingId) {
-    if (!confirm("Are you sure you want to cancel this booking?")) return;
+    frappe.confirm(
+        `Are you sure you want to cancel Facility Reservation <strong>#${bookingId}</strong>?`,
+        function() {
+            frappe.call({
+                method: "society_erp.www.resident.book_facility.index.cancel_booking",
+                args: { booking_id: bookingId },
+                callback: function(r) {
+                    if (r.message && r.message.status === "success") {
+                        frappe.msgprint({
+                            title: "Cancelled",
+                            indicator: "green",
+                            message: r.message.message
+                        });
+                        setTimeout(() => window.location.reload(), 1500);
+                    }
+                },
+                error: function(err) {
+                    frappe.msgprint(err.message || "Failed to cancel booking.");
+                }
+            });
+        }
+    );
+}
+
+// Calendar State & Logic
+let currentCalDate = new Date();
+let bookedScheduleCache = {};
+
+function getMonthYearStr(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+}
+
+function formatDateStr(y, m, d) {
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function loadCalendarAvailability() {
+    const facility = document.getElementById("calFacilitySelect").value;
+    const monthYear = getMonthYearStr(currentCalDate);
 
     frappe.call({
-        method: "society_erp.www.resident.book_facility.index.cancel_booking",
-        args: { booking_id: bookingId },
-        callback: function(r) {
-            if (r.message && r.message.status === "success") {
-                frappe.msgprint({
-                    title: "Cancelled",
-                    indicator: "green",
-                    message: r.message.message
-                });
-                setTimeout(() => window.location.reload(), 1500);
-            }
+        method: "society_erp.www.resident.book_facility.index.get_availability",
+        args: {
+            facility: facility,
+            month_year: monthYear
         },
-        error: function(err) {
-            frappe.msgprint(err.message || "Failed to cancel booking.");
+        callback: function(r) {
+            if (r.message && r.message.booked_schedule) {
+                bookedScheduleCache = r.message.booked_schedule;
+                renderCalendar();
+            }
         }
     });
 }
 
+function renderCalendar() {
+    const container = document.getElementById("calDayCells");
+    if (!container) return;
+    container.innerHTML = "";
+
+    const year = currentCalDate.getFullYear();
+    const month = currentCalDate.getMonth();
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    document.getElementById("calCurrentMonthLabel").innerText = `${monthNames[month]} ${year}`;
+
+    const selectedShift = document.getElementById("calShiftSelect").value;
+    const todayStr = "{{ today_date }}";
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    // Pad blank days
+    for (let i = 0; i < firstDay; i++) {
+        const blank = document.createElement("div");
+        blank.className = "cal-day-cell cal-day-past";
+        blank.style.opacity = "0.3";
+        container.appendChild(blank);
+    }
+
+    // Days of month
+    for (let day = 1; day <= totalDays; day++) {
+        const dateStr = formatDateStr(year, month, day);
+        const cell = document.createElement("div");
+        cell.className = "cal-day-cell";
+        cell.innerText = day;
+        cell.setAttribute("data-date", dateStr);
+
+        if (dateStr < todayStr) {
+            cell.classList.add("cal-day-past");
+        } else {
+            // Check booking schedule
+            const dayBookings = bookedScheduleCache[dateStr] || [];
+            let isBooked = false;
+
+            if (selectedShift === "ALL") {
+                // If any booking exists on this day
+                isBooked = dayBookings.length > 0;
+            } else {
+                // If specific shift or full day is booked
+                isBooked = dayBookings.some(b => {
+                    return b.shift.includes("Full Day") || selectedShift.includes("Full Day") || b.shift === selectedShift;
+                });
+            }
+
+            if (isBooked) {
+                cell.classList.add("cal-day-booked");
+                cell.title = "Booked / Reserved";
+            } else {
+                cell.classList.add("cal-day-available");
+                cell.title = "Available for booking";
+                cell.onclick = function() {
+                    openBookingModalWithDate(dateStr);
+                };
+            }
+        }
+        container.appendChild(cell);
+    }
+}
+
+function openBookingModalWithDate(dateStr) {
+    const facility = document.getElementById("calFacilitySelect").value;
+    const shift = document.getElementById("calShiftSelect").value;
+
+    document.getElementById("modalFacilityInput").value = facility;
+    if (shift !== "ALL") {
+        document.getElementById("modalShiftInput").value = shift;
+    }
+    document.getElementById("modalDateInput").value = dateStr;
+
+    $("#facilityModal").modal("show");
+}
+
 document.addEventListener("DOMContentLoaded", function() {
+    // Initial calendar load
+    loadCalendarAvailability();
+
+    document.getElementById("calFacilitySelect").addEventListener("change", loadCalendarAvailability);
+    document.getElementById("calShiftSelect").addEventListener("change", renderCalendar);
+
+    document.getElementById("btnCalPrev").addEventListener("click", function() {
+        currentCalDate.setMonth(currentCalDate.getMonth() - 1);
+        loadCalendarAvailability();
+    });
+
+    document.getElementById("btnCalNext").addEventListener("click", function() {
+        currentCalDate.setMonth(currentCalDate.getMonth() + 1);
+        loadCalendarAvailability();
+    });
+
+    // Form submission
     const form = document.getElementById("facilityBookingForm");
     if (!form) return;
 
@@ -272,6 +509,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const formData = new FormData(form);
         const data = {
             facility: formData.get("facility"),
+            shift: formData.get("shift"),
             booking_date: formData.get("booking_date")
         };
 
@@ -283,7 +521,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 submitBtn.innerText = "Confirm Reservation";
                 if (r.message && r.message.status === "success") {
                     frappe.msgprint({
-                        title: "Booking Confirmed",
+                        title: "Booking Submitted",
                         indicator: "green",
                         message: r.message.message
                     });

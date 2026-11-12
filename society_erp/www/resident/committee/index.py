@@ -408,6 +408,7 @@ def get_committee_data(module_type="all"):
             fields=[
                 "name",
                 "facility",
+                "shift",
                 "resident",
                 "booking_date",
                 "status",
@@ -567,18 +568,26 @@ def update_item_status(doctype, docname, action, remarks=None):
 
     elif doctype == "Facility Booking":
         if action in ("Approved", "Confirmed"):
-            # Check if date is already booked by another confirmed booking
-            conflict = frappe.db.exists(
+            # Check if shift/date is already booked by another confirmed booking
+            conflicts = frappe.get_all(
                 "Facility Booking",
-                {
+                filters={
                     "facility": doc.facility,
                     "booking_date": doc.booking_date,
                     "status": ["in", ["Confirmed", "Approved"]],
                     "name": ["!=", doc.name],
                 },
+                fields=["shift", "name"],
             )
-            if conflict:
-                frappe.throw(_("Facility '{0}' is already booked and approved for another resident on {1}.").format(doc.facility, format_date(doc.booking_date, "dd-MM-yyyy")))
+            for c in conflicts:
+                c_shift = c.shift or "Full Day (9:00 AM - 10:00 PM)"
+                d_shift = doc.shift or "Full Day (9:00 AM - 10:00 PM)"
+                if "Full Day" in c_shift or "Full Day" in d_shift or c_shift == d_shift:
+                    frappe.throw(
+                        _("Facility '{0}' is already booked and approved on {1} for {2}.").format(
+                            doc.facility, format_date(doc.booking_date, "dd-MM-yyyy"), c_shift
+                        )
+                    )
             doc.status = "Confirmed"
         elif action in ("Rejected", "Cancelled"):
             doc.status = action
