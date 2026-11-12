@@ -54,7 +54,13 @@ frappe.ready(function () {
 
     function formatDate(val) {
         if (!val) return "-";
-        return val.split(" ")[0];
+        // Parse YYYY-MM-DD or ISO string and format as DD-MM-YYYY
+        const clean = val.split(" ")[0].split("T")[0];
+        const parts = clean.split("-");
+        if (parts.length === 3 && parts[0].length === 4) {
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        return clean;
     }
 
     function getStatusBadge(status) {
