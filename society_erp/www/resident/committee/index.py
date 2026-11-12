@@ -136,6 +136,13 @@ def get_context(context):
     tile_cfg = get_tile_settings()
     context.tiles = tile_cfg.get("committee", {})
 
+    # Detect standalone / WebApp view mode
+    context.is_standalone = bool(frappe.form_dict.get("standalone"))
+    context.target_tab = (frappe.form_dict.get("tab") or "").strip().lower()
+    if context.is_standalone:
+        context.no_header = True
+        context.no_sidebar = True
+
     return context
 
 

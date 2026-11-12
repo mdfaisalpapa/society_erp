@@ -55,7 +55,7 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
     # 1. Tenants
     if comm_tiles.get("tenants", True):
         c = counts.get("tenants_pending", 0)
-        route = "/resident/committee?tab=tenants#pane-tenants"
+        route = "/resident/committee?tab=tenants&standalone=1#pane-tenants"
         sso = create_portal_link(user_email, target_route=route)
         sub_tiles.append({
             "id": "comm_tenants",
@@ -73,7 +73,7 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
     # 2. Vehicles
     if comm_tiles.get("vehicles", True):
         c = counts.get("vehicles_pending", 0)
-        route = "/resident/committee?tab=vehicles#pane-vehicles"
+        route = "/resident/committee?tab=vehicles&standalone=1#pane-vehicles"
         sso = create_portal_link(user_email, target_route=route)
         sub_tiles.append({
             "id": "comm_vehicles",
@@ -91,7 +91,7 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
     # 3. Work Permits
     if comm_tiles.get("work_permits", True):
         c = counts.get("permits_pending", 0)
-        route = "/resident/committee?tab=work_permits#pane-work_permits"
+        route = "/resident/committee?tab=work_permits&standalone=1#pane-work_permits"
         sso = create_portal_link(user_email, target_route=route)
         sub_tiles.append({
             "id": "comm_permits",
@@ -109,7 +109,7 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
     # 4. Family Members
     if comm_tiles.get("family", True):
         c = counts.get("family_pending", 0)
-        route = "/resident/committee?tab=family#pane-family"
+        route = "/resident/committee?tab=family&standalone=1#pane-family"
         sso = create_portal_link(user_email, target_route=route)
         sub_tiles.append({
             "id": "comm_family",
@@ -127,7 +127,7 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
     # 5. Resident Pets
     if comm_tiles.get("pets", True):
         c = counts.get("pets_pending", 0)
-        route = "/resident/committee?tab=pets#pane-pets"
+        route = "/resident/committee?tab=pets&standalone=1#pane-pets"
         sso = create_portal_link(user_email, target_route=route)
         sub_tiles.append({
             "id": "comm_pets",
@@ -145,7 +145,7 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
     # 6. Maintenance Tickets
     if comm_tiles.get("maintenance", True):
         c = counts.get("tickets_open", 0)
-        route = "/resident/committee?tab=tickets#pane-tickets"
+        route = "/resident/committee?tab=tickets&standalone=1#pane-tickets"
         sso = create_portal_link(user_email, target_route=route)
         sub_tiles.append({
             "id": "comm_tickets",
@@ -163,7 +163,7 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
     # 7. Hall Bookings
     if comm_tiles.get("book_facility", True):
         c = counts.get("facility_bookings_pending", 0)
-        route = "/resident/committee?tab=facility_bookings#pane-facility_bookings"
+        route = "/resident/committee?tab=facility_bookings&standalone=1#pane-facility_bookings"
         sso = create_portal_link(user_email, target_route=route)
         sub_tiles.append({
             "id": "comm_facilities",
@@ -181,7 +181,7 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
     # 8. Classifieds
     if comm_tiles.get("classifieds", True):
         c = counts.get("classifieds_pending", 0)
-        route = "/resident/committee?tab=classifieds#pane-classifieds"
+        route = "/resident/committee?tab=classifieds&standalone=1#pane-classifieds"
         sso = create_portal_link(user_email, target_route=route)
         sub_tiles.append({
             "id": "comm_classifieds",
@@ -198,7 +198,7 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
 
     # 9. Notice Board
     if comm_tiles.get("notices", True):
-        route = "/resident/committee?tab=notices#pane-notices"
+        route = "/resident/committee?tab=notices&standalone=1#pane-notices"
         sso = create_portal_link(user_email, target_route=route)
         sub_tiles.append({
             "id": "comm_notices",
@@ -215,7 +215,7 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
 
     # 10. Resolutions
     c = counts.get("resolutions_pending", 0)
-    route = "/resident/committee?tab=resolutions#pane-resolutions"
+    route = "/resident/committee?tab=resolutions&standalone=1#pane-resolutions"
     sso = create_portal_link(user_email, target_route=route)
     sub_tiles.append({
         "id": "comm_resolutions",
@@ -232,7 +232,7 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
 
     # 11. Emergency SOS
     if enable_emergency_sos and comm_tiles.get("emergency", True):
-        route = "/resident/committee?tab=emergency#pane-emergency"
+        route = "/resident/committee?tab=emergency&standalone=1#pane-emergency"
         sso = create_portal_link(user_email, target_route=route)
         sub_tiles.append({
             "id": "comm_emergency",

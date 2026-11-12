@@ -1,7 +1,7 @@
 {% extends "templates/web.html" %}
 
 {% block page_content %}
-<div class="container my-4 committee-portal-root">
+<div class="container my-4 committee-portal-root {% if is_standalone %}committee-standalone-view{% endif %}">
     {% if access_denied %}
         <div class="alert alert-danger shadow-sm py-4 text-center">
             <h4 class="alert-heading font-weight-bold mb-2">🚫 Access Restricted</h4>
@@ -11,6 +11,33 @@
             <a href="/resident" class="btn btn-outline-danger">🔙 Return to Resident Portal</a>
         </div>
     {% else %}
+        {% if is_standalone %}
+        <!-- Standalone Minimal Module Header for WebApp -->
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+            <div>
+                <h5 class="mb-0 font-weight-bold text-dark" id="standalone-title">
+                    {% if target_tab == 'tenants' %}🏠 Tenants Management
+                    {% elif target_tab == 'vehicles' %}🚗 Resident Vehicles
+                    {% elif target_tab == 'work_permits' %}👷 Work Permits
+                    {% elif target_tab == 'family' %}👨‍👩‍👦 Family Registrations
+                    {% elif target_tab == 'pets' %}🐾 Pets Registry
+                    {% elif target_tab == 'tickets' %}🛠️ Maintenance Tickets
+                    {% elif target_tab == 'facility_bookings' %}🏛️ Hall & Facility Bookings
+                    {% elif target_tab == 'classifieds' %}📢 Classifieds Approvals
+                    {% elif target_tab == 'notices' %}📋 Notice Board
+                    {% elif target_tab == 'resolutions' %}⚖️ Board Resolutions
+                    {% elif target_tab == 'emergency' %}🚨 Emergency Directory
+                    {% else %}🏛️ Committee Approvals{% endif %}
+                </h5>
+                <small class="text-muted">{{ committee_member.owner_name }} &bull; {{ committee_member.flat }}</small>
+            </div>
+            <div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.close(); if (window.Telegram && window.Telegram.WebApp) { window.Telegram.WebApp.close(); }">
+                    ✕ Close
+                </button>
+            </div>
+        </div>
+        {% else %}
         <!-- Header & Committee Member Banner -->
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
             <div>
@@ -36,10 +63,11 @@
                 </a>
             </div>
         </div>
+        {% endif %}
 
-        <!-- Sticky Segmented Control / Pill Navigation -->
+        <!-- Sticky Segmented Control / Pill Navigation (Hidden in Standalone View) -->
         <div class="committee-sticky-nav mb-3">
-            <div class="d-flex align-items-center justify-content-between flex-wrap py-2 border-bottom bg-white">
+            <div class="d-flex align-items-center justify-content-between flex-wrap py-2 border-bottom bg-white {% if is_standalone %}d-none{% endif %}">
                 <ul class="nav nav-pills committee-nav-pills" id="committeeTabs" role="tablist">
                     {% if tiles.get('tenants', True) %}
                     <li class="nav-item">

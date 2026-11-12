@@ -1235,8 +1235,17 @@ frappe.ready(function () {
 
                     if (paramTab) {
                         const $targetTab = $(`#tab-${paramTab}`);
-                        if ($targetTab.length && $targetTab.is(":visible")) {
+                        if ($targetTab.length) {
                             $targetTab.tab("show");
+                        }
+                        // Also ensure the target pane is shown
+                        $(`#pane-${paramTab}`).addClass("show active").siblings().removeClass("show active");
+                        if (paramTab === "resolutions") {
+                            $filterResGroup.removeClass("d-none");
+                            $filterPendingSwitchGroup.addClass("d-none");
+                        } else {
+                            $filterResGroup.addClass("d-none");
+                            $filterPendingSwitchGroup.removeClass("d-none");
                         }
                     } else if (!$("#committeeTabs .nav-link.active").is(":visible")) {
                         const $firstVisible = $("#committeeTabs .nav-link:visible").first();
