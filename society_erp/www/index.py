@@ -10,6 +10,29 @@ def get_context(context):
     return context
 
 
+def mask_name(name):
+    """
+    Mask individual name for privacy preserving initials and outline.
+    e.g. 'USHA T' -> 'U**A T*'
+         'MAHENDRAKAR VASUNDHARA' -> 'MA********R VA*******A'
+         'G ARCHANA' -> 'G* AR****A'
+    """
+    if not name or not isinstance(name, str):
+        return ""
+    parts = name.strip().split()
+    if not parts:
+        return ""
+    masked_parts = []
+    for p in parts:
+        if len(p) <= 2:
+            masked_parts.append(p[0] + "*")
+        elif len(p) <= 4:
+            masked_parts.append(p[0] + "*" * (len(p) - 2) + p[-1])
+        else:
+            masked_parts.append(p[:2] + "*" * (len(p) - 3) + p[-1])
+    return " ".join(masked_parts)
+
+
 def mask_email(email):
     """
     Mask email address for privacy preserving first characters and domain.
@@ -49,20 +72,53 @@ def mask_mobile(mobile):
 def get_owner_contact_status():
     """
     Publicly accessible endpoint (no login required) to check AoA contact details status.
-    Returns categorized lists of active owners with masked email/mobile:
-      1. fully_updated: Both mobile and email registered
+    Excludes owners who have already logged into the portal (email already confirmed).
+    Masks owner names, emails, and mobile numbers for privacy.
+    Returns categorized lists:
+      1. fully_updated: Both mobile and email registered (unconfirmed/not yet logged in)
       2. missing_email: Mobile registered, but email is missing
       3. missing_mobile: Email registered, but mobile is missing
       4. missing_both: Both email and mobile are missing
       5. duplicate_contact: Active owners sharing the same mobile or email across multiple flats
     """
-    # Active Owners from Owners DocType
-    owners = frappe.get_all(
+    # 1. Fetch set of users who have already logged in (last_login or last_active is set)
+    logged_in_users = frappe.db.sql(
+        """
+        SELECT name, email
+        FROM `tabUser`
+        WHERE (last_login IS NOT NULL AND last_login != '')
+           OR last_active IS NOT NULL
+        """,
+        as_dict=True,
+    )
+    logged_in_identifiers = set()
+    for u in logged_in_users:
+        if u.name:
+            logged_in_identifiers.add(u.name.strip().lower())
+        if u.email:
+            logged_in_identifiers.add(u.email.strip().lower())
+
+    # 2. Active Owners from Owners DocType
+    all_owners = frappe.get_all(
         "Owners",
         filters={"active": 1},
-        fields=["name", "flat", "owner_name", "email", "mobile_no"],
+        fields=["name", "flat", "owner_name", "email", "mobile_no", "linked_user"],
         order_by="flat asc, name asc",
     )
+
+    # Filter out owners who have already logged in (their contact is already verified)
+    owners = []
+    already_logged_in_count = 0
+    for o in all_owners:
+        user_key = (o.get("linked_user") or "").strip().lower()
+        email_key = (o.get("email") or "").strip().lower()
+
+        if (user_key and user_key in logged_in_identifiers) or (
+            email_key and email_key in logged_in_identifiers
+        ):
+            already_logged_in_count += 1
+            continue
+        owners.append(o)
 
     fully_updated = []
     missing_email = []
@@ -85,7 +141,7 @@ def get_owner_contact_status():
         record = {
             "name": o.get("name"),
             "flat_no": flat_no,
-            "owner_name": owner_name,
+            "owner_name": mask_name(owner_name) if owner_name else "",
             "masked_email": mask_email(email) if has_email else "",
             "masked_mobile": mask_mobile(raw_mobile) if has_mobile else "",
         }
@@ -152,7 +208,7 @@ def get_owner_contact_status():
             {
                 "name": o.get("name"),
                 "flat_no": flat_no,
-                "owner_name": owner_name,
+                "owner_name": mask_name(owner_name) if owner_name else "",
                 "masked_email": mask_email(email) if email else "",
                 "masked_mobile": mask_mobile(raw_mobile) if raw_mobile else "",
                 "shared_flats": sorted(list(val["shared_flats"])),
@@ -174,6 +230,8 @@ def get_owner_contact_status():
             "missing_mobile": len(missing_mobile),
             "missing_both": len(missing_both),
             "duplicate_contact": len(duplicate_contact),
-            "total": len(owners),
+            "already_logged_in": already_logged_in_count,
+            "total_pending": len(owners),
+            "total": len(all_owners),
         },
     }

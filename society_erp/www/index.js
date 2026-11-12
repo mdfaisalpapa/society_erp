@@ -172,7 +172,8 @@ frappe.ready(function () {
             if (r && r.message) {
                 statusData = r.message;
                 const counts = statusData.counts || {};
-                $totalBadge.text(`Total Active Flats: ${counts.total || 0}`);
+                const verifiedCount = counts.already_logged_in || 0;
+                $totalBadge.html(`Pending: <strong>${counts.total_pending || 0}</strong> &bull; Verified: <strong>${verifiedCount}</strong> / ${counts.total || 0}`);
                 renderStatusLists("");
             } else {
                 $totalBadge.text("Unable to load records");
