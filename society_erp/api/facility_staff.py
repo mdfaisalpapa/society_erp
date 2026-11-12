@@ -1,0 +1,204 @@
+import frappe
+from frappe import _
+from frappe.utils import nowdate, now_datetime, get_datetime, time_diff_in_hours
+
+
+@frappe.whitelist()
+def punch_attendance(
+    staff_id: str,
+    shift: str = None,
+    gate: str = "Main Gate",
+    method: str = "Supervisor Punch",
+    punch_type: str = "auto",  # 'in', 'out', or 'auto'
+    verified_by: str = None,
+    remarks: str = None
+) -> dict:
+    """
+    Records a punch-in or punch-out for an agency facility staff member.
+    If 'auto' is selected:
+      - If no attendance record exists for today: creates punch-in.
+      - If attendance record exists without out_time: fills punch-out.
+      - If already has out_time: creates new shift punch or updates.
+    """
+    if not staff_id or not frappe.db.exists("Facility Staff", staff_id):
+        frappe.throw(_("Invalid staff ID: {0}").format(staff_id))
+
+    staff = frappe.get_doc("Facility Staff", staff_id)
+    if staff.status != "Active":
+        frappe.throw(_("Staff member {0} is currently '{1}' and cannot be punched in.").format(staff.full_name, staff.status))
+
+    today = nowdate()
+    now_dt = now_datetime()
+    verifier = verified_by or frappe.session.user
+
+    # Auto-detect active shift if not provided
+    if not shift:
+        shift = get_active_shift_for_time()
+
+    # Look for open punch for today
+    existing = frappe.db.get_value(
+        "Facility Staff Attendance",
+        {"staff": staff_id, "attendance_date": today, "out_time": ("is", "not set")},
+        ["name", "in_time", "shift"],
+        as_dict=True
+    )
+
+    if punch_type == "in" or (punch_type == "auto" and not existing):
+        # Create Punch-In
+        doc = frappe.get_doc({
+            "doctype": "Facility Staff Attendance",
+            "staff": staff_id,
+            "attendance_date": today,
+            "shift": shift or existing.get("shift") if existing else shift,
+            "status": "Present",
+            "in_time": now_dt,
+            "verification_method": method,
+            "gate": gate,
+            "verified_by": verifier,
+            "remarks": remarks
+        })
+        doc.insert(ignore_permissions=True)
+        return {
+            "status": "success",
+            "action": "punch_in",
+            "message": _("{0} punched IN successfully at {1}").format(staff.full_name, now_dt.strftime("%H:%M:%S")),
+            "attendance_id": doc.name,
+            "staff_name": staff.full_name,
+            "role": staff.role,
+            "in_time": str(now_dt)
+        }
+
+    else:
+        # Punch-Out
+        att_name = existing.name if existing else frappe.db.get_value(
+            "Facility Staff Attendance",
+            {"staff": staff_id, "attendance_date": today},
+            "name",
+            order_by="creation desc"
+        )
+
+        if not att_name:
+            frappe.throw(_("No attendance record found for {0} today to punch out.").format(staff.full_name))
+
+        doc = frappe.get_doc("Facility Staff Attendance", att_name)
+        doc.out_time = now_dt
+        if remarks:
+            doc.remarks = ((doc.remarks or "") + " | " + remarks).strip(" | ")
+        doc.save(ignore_permissions=True)
+
+        return {
+            "status": "success",
+            "action": "punch_out",
+            "message": _("{0} punched OUT successfully at {1} (Hours worked: {2})").format(staff.full_name, now_dt.strftime("%H:%M:%S"), doc.hours_worked),
+            "attendance_id": doc.name,
+            "staff_name": staff.full_name,
+            "role": staff.role,
+            "out_time": str(now_dt),
+            "hours_worked": doc.hours_worked
+        }
+
+
+@frappe.whitelist()
+def get_daily_roster(date: str = None, agency: str = None, shift: str = None) -> dict:
+    """
+    Returns today's deployment roster with real-time punch status for each staff member.
+    """
+    target_date = date or nowdate()
+    filters = {"status": "Active"}
+    if agency:
+        filters["agency"] = agency
+
+    all_staff = frappe.get_all(
+        "Facility Staff",
+        filters=filters,
+        fields=["name", "full_name", "agency", "role", "contact_number", "gate_assigned", "photo", "police_verification_status", "rfid_badge_id"],
+        order_by="role asc, full_name asc"
+    )
+
+    # Get today's attendances
+    att_filters = {"attendance_date": target_date}
+    if shift:
+        att_filters["shift"] = shift
+
+    attendances = frappe.get_all(
+        "Facility Staff Attendance",
+        filters=att_filters,
+        fields=["name", "staff", "shift", "status", "in_time", "out_time", "hours_worked", "gate", "verification_method"]
+    )
+    att_by_staff = {a.staff: a for a in attendances}
+
+    roster = []
+    present_count = 0
+    total_count = len(all_staff)
+
+    for s in all_staff:
+        att = att_by_staff.get(s.name)
+        is_on_duty = bool(att and att.in_time and not att.out_time)
+        if att and att.status == "Present":
+            present_count += 1
+
+        roster.append({
+            "staff_id": s.name,
+            "full_name": s.full_name,
+            "agency": s.agency,
+            "role": s.role,
+            "contact_number": s.contact_number,
+            "gate_assigned": s.gate_assigned,
+            "photo": s.photo,
+            "police_status": s.police_verification_status,
+            "rfid_badge_id": s.rfid_badge_id,
+            "attendance_id": att.name if att else None,
+            "status": att.status if att else "Not Marked",
+            "is_on_duty": is_on_duty,
+            "in_time": str(att.in_time) if att and att.in_time else None,
+            "out_time": str(att.out_time) if att and att.out_time else None,
+            "hours_worked": att.hours_worked if att else 0.0,
+            "gate": att.gate if att else s.gate_assigned,
+            "shift": att.shift if att else shift
+        })
+
+    return {
+        "date": target_date,
+        "total_active_staff": total_count,
+        "present_count": present_count,
+        "on_duty_count": sum(1 for r in roster if r["is_on_duty"]),
+        "roster": roster
+    }
+
+
+def get_active_shift_for_time(target_dt=None) -> str:
+    """Helper to detect active shift based on current time."""
+    from datetime import datetime, time, timedelta
+
+    target = target_dt or now_datetime()
+    now_time = target.time()
+
+    shifts = frappe.get_all(
+        "Facility Shift",
+        filters={"enabled": 1},
+        fields=["name", "start_time", "end_time", "is_night_shift"]
+    )
+
+    def to_time_obj(val):
+        if isinstance(val, time):
+            return val
+        if isinstance(val, timedelta):
+            total_sec = int(val.total_seconds()) % 86400
+            return time(hour=total_sec // 3600, minute=(total_sec % 3600) // 60, second=total_sec % 60)
+        if isinstance(val, str):
+            parts = val.split(":")
+            return time(hour=int(parts[0]), minute=int(parts[1]), second=int(float(parts[2])) if len(parts) > 2 else 0)
+        return time(0, 0, 0)
+
+    for s in shifts:
+        st = to_time_obj(s.start_time)
+        et = to_time_obj(s.end_time)
+
+        if s.is_night_shift:
+            if now_time >= st or now_time <= et:
+                return s.name
+        else:
+            if st <= now_time <= et:
+                return s.name
+
+    return shifts[0].name if shifts else None

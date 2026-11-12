@@ -1,0 +1,194 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "FSA-.YYYY.-.#####",
+ "creation": "2026-11-13 03:14:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "staff",
+  "staff_name",
+  "agency",
+  "role",
+  "column_break_attendance",
+  "attendance_date",
+  "shift",
+  "status",
+  "section_break_timings",
+  "in_time",
+  "out_time",
+  "hours_worked",
+  "overtime_hours",
+  "column_break_verification",
+  "verification_method",
+  "gate",
+  "verified_by",
+  "section_break_notes",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "staff",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Staff Member",
+   "options": "Facility Staff",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "staff.full_name",
+   "fieldname": "staff_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Staff Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "staff.agency",
+   "fieldname": "agency",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Agency",
+   "options": "Facility Agency",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "staff.role",
+   "fieldname": "role",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Role",
+   "options": "Security Supervisor\nSecurity Guard\nLady Security Guard\nHousekeeping Supervisor\nHousekeeping Staff\nGardener\nElectrician\nPlumber\nSTP/WTP Operator\nOther",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_attendance",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "attendance_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Attendance Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Shift",
+   "options": "Facility Shift",
+   "reqd": 1
+  },
+  {
+   "default": "Present",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Attendance Status",
+   "options": "Present\nHalf Day\nAbsent\nOn Leave\nOvertime",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_timings",
+   "fieldtype": "Section Break",
+   "label": "Punch Timings & Hours"
+  },
+  {
+   "fieldname": "in_time",
+   "fieldtype": "Datetime",
+   "label": "Punch In Time"
+  },
+  {
+   "fieldname": "out_time",
+   "fieldtype": "Datetime",
+   "label": "Punch Out Time"
+  },
+  {
+   "fieldname": "hours_worked",
+   "fieldtype": "Float",
+   "label": "Hours Worked",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "overtime_hours",
+   "fieldtype": "Float",
+   "label": "Overtime Hours",
+   "precision": "2"
+  },
+  {
+   "fieldname": "column_break_verification",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Supervisor Punch",
+   "fieldname": "verification_method",
+   "fieldtype": "Select",
+   "label": "Verification Method",
+   "options": "Supervisor Punch\nQR Kiosk Scan\nRFID Badge Scan\nBiometric Device\nManual Regularization"
+  },
+  {
+   "default": "Main Gate",
+   "fieldname": "gate",
+   "fieldtype": "Select",
+   "label": "Gate / Post",
+   "options": "Main Gate\nBack Gate\nTower Concierge\nBasement Parking\nClubhouse\nEstate Office"
+  },
+  {
+   "fieldname": "verified_by",
+   "fieldtype": "Data",
+   "label": "Verified By (User / Supervisor)"
+  },
+  {
+   "fieldname": "section_break_notes",
+   "fieldtype": "Section Break",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks / Incident Note"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-13 03:14:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society ERP",
+ "name": "Facility Staff Attendance",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "staff, staff_name, agency, role, attendance_date, shift, status",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
