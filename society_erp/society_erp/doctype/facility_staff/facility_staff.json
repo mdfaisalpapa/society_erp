@@ -15,6 +15,7 @@
   "contact_number",
   "emergency_contact_number",
   "gate_assigned",
+  "default_duty_post",
   "photo",
   "section_break_approval",
   "approved_by",
@@ -22,6 +23,7 @@
   "rejection_remarks",
   "section_break_verification",
   "rfid_badge_id",
+  "qr_code_id",
   "government_id_type",
   "government_id_number",
   "column_break_police",
@@ -182,6 +184,20 @@
    "fieldname": "notes",
    "fieldtype": "Text",
    "label": "General Notes"
+  },
+  {
+   "fieldname": "qr_code_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Staff QR / Badge ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "default_duty_post",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Default Physical Post",
+   "options": "Facility Duty Post"
   }
  ],
  "image_field": "photo",

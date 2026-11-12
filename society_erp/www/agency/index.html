@@ -32,8 +32,14 @@
                     <p class="small text-muted mb-0">Supervisor: <strong>{{ frappe.session.user }}</strong> &bull; Date: <strong>{{ today_date }}</strong></p>
                 </div>
                 <div class="mt-3 mt-md-0 d-flex gap-2">
+                    <button type="button" class="btn btn-primary font-weight-bold shadow-sm mr-2" id="btn-open-qr-scanner">
+                        📷 Scan ID QR
+                    </button>
+                    <button type="button" class="btn btn-info font-weight-bold shadow-sm mr-2" id="btn-open-muster-modal">
+                        📸 Record Shift Muster Photo
+                    </button>
                     <button type="button" class="btn btn-success font-weight-bold shadow-sm" id="btn-open-onboard-modal">
-                        ➕ Onboard New Staff
+                        ➕ Onboard Staff
                     </button>
                     {% if is_standalone %}
                     <button type="button" class="btn btn-outline-light ml-2" onclick="window.close(); if(window.Telegram && window.Telegram.WebApp){ window.Telegram.WebApp.close(); }">
@@ -184,10 +190,123 @@
                 </div>
             </div>
         </div>
+
+        <!-- MODAL: Shift Lineup / Group Photo Muster -->
+        <div class="modal fade" id="modal-muster" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-dark text-white align-items-center">
+                        <h5 class="modal-title font-weight-bold">📸 Record Shift Lineup Group Photo</h5>
+                        <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <form id="form-record-muster">
+                        <div class="modal-body p-4">
+                            <div class="alert alert-info small py-2 mb-3">
+                                ℹ️ Snap or upload the roll call group photo of all guards / staff assembled in uniform at shift start.
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 form-group mb-3">
+                                    <label class="font-weight-bold small">Shift *</label>
+                                    <select class="form-control" id="muster-shift" required>
+                                        <option value="Security Shift A (Morning)">Security Shift A (Morning)</option>
+                                        <option value="Security Shift B (Evening)">Security Shift B (Evening)</option>
+                                        <option value="Security Shift C (Night)">Security Shift C (Night)</option>
+                                        <option value="Housekeeping General Shift">Housekeeping General Shift</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 form-group mb-3">
+                                    <label class="font-weight-bold small">Department *</label>
+                                    <select class="form-control" id="muster-category" required>
+                                        <option value="Security">Security Guards</option>
+                                        <option value="Housekeeping">Housekeeping Staff</option>
+                                        <option value="Technical / Plant">Technical / STP-WTP</option>
+                                        <option value="Combined Staff">Combined Muster</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold small">Physical Headcount Counted *</label>
+                                <input type="number" class="form-control" id="muster-count" min="1" placeholder="Number of personnel present" required>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold small">Lineup / Group Photo *</label>
+                                <input type="file" class="form-control-file border p-2 rounded" id="muster-photo-file" accept="image/*" capture="environment" required>
+                                <small class="text-muted">Take photo with camera or attach image file.</small>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold small">Briefing Notes / Instructions</label>
+                                <textarea class="form-control" id="muster-notes" rows="2" placeholder="e.g. Visitor parking checks, block cleaning targets..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light border-top">
+                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-info btn-sm px-4 font-weight-bold" id="btn-submit-muster">
+                                📸 Save Muster Photo
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: QR Scanner -->
+        <div class="modal fade" id="modal-qr-scanner" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-dark text-white align-items-center">
+                        <h5 class="modal-title font-weight-bold">📷 Scan Staff Badge QR Code</h5>
+                        <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body p-4 text-center">
+                        <p class="small text-muted mb-3">Point camera at the staff member's ID card QR code to instantly verify and punch attendance.</p>
+                        <div id="qr-reader" style="width: 100%; min-height: 250px; background: #000;" class="rounded overflow-hidden"></div>
+                        <div id="qr-reader-results" class="mt-3 font-weight-bold small text-success"></div>
+                    </div>
+                    <div class="modal-footer bg-light border-top">
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal" id="btn-close-qr">Close Camera</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Assign Duty Post -->
+        <div class="modal fade" id="modal-assign-post" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-dark text-white align-items-center">
+                        <h5 class="modal-title font-weight-bold">📍 Assign Physical Duty Post</h5>
+                        <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="small text-muted text-uppercase font-weight-bold">Staff Member</label>
+                            <div class="h6 font-weight-bold text-dark" id="assign-staff-name">-</div>
+                            <small class="text-muted" id="assign-staff-role">-</small>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="font-weight-bold small">Select Physical Post / Block *</label>
+                            <select class="form-control font-weight-bold" id="select-duty-post" required></select>
+                        </div>
+                        <div class="p-3 bg-light rounded border small">
+                            <strong>Associated Cost Center:</strong>
+                            <div class="text-primary font-weight-bold mt-1" id="assign-cost-center-display">-</div>
+                            <small class="text-muted">Staff hours will be automatically apportioned to this block/facility cost center.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light border-top">
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary btn-sm px-4 font-weight-bold" id="btn-save-post-assignment">
+                            Save Post Assignment
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     {% endif %}
 </div>
 {% endblock %}
 
 {% block script %}
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script src="/agency/index.js"></script>
 {% endblock %}

@@ -1,0 +1,126 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:post_name",
+ "creation": "2026-11-13 04:35:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "post_name",
+  "category",
+  "zone_type",
+  "cost_center",
+  "column_break_1",
+  "is_active",
+  "description",
+  "target_staff_quota"
+ ],
+ "fields": [
+  {
+   "fieldname": "post_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Post Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Department / Category",
+   "options": "Security\nHousekeeping\nTechnical / Plant\nGardening\nGeneral",
+   "reqd": 1
+  },
+  {
+   "fieldname": "zone_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Zone Type",
+   "options": "Residential Block\nCommon Facility\nSecurity Gate\nUtility Plant\nRoad & Perimeter",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Active"
+  },
+  {
+   "default": "1",
+   "fieldname": "target_staff_quota",
+   "fieldtype": "Int",
+   "label": "Target Staff Quota"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description / Scope of Work"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-13 04:35:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society ERP",
+ "name": "Facility Duty Post",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Facility Agency Manager",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "post_name",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 1
+}

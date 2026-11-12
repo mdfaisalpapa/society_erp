@@ -21,6 +21,8 @@
   "overtime_hours",
   "column_break_verification",
   "verification_method",
+  "duty_post",
+  "cost_center",
   "gate",
   "verified_by",
   "section_break_notes",
@@ -151,6 +153,21 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks / Incident Note"
+  },
+  {
+   "fieldname": "duty_post",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Assigned Physical Post",
+   "options": "Facility Duty Post"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "fetch_from": "duty_post.cost_center"
   }
  ],
  "index_web_pages_for_search": 1,

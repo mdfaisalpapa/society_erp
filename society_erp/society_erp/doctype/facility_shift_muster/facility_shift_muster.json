@@ -1,0 +1,146 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:MUSTER-{shift_date}-{shift}-{###}",
+ "creation": "2026-11-13 04:36:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "agency",
+  "shift_date",
+  "shift",
+  "category",
+  "column_break_1",
+  "muster_photo",
+  "supervisor_in_charge",
+  "reported_count",
+  "verified_punch_count",
+  "section_remarks",
+  "briefing_notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "agency",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Facility Agency",
+   "options": "Facility Agency",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "shift_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Shift",
+   "options": "Facility Shift",
+   "reqd": 1
+  },
+  {
+   "default": "Security",
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Department / Service",
+   "options": "Security\nHousekeeping\nTechnical / Plant\nCombined Staff",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "muster_photo",
+   "fieldtype": "Attach Image",
+   "in_list_view": 1,
+   "label": "Shift Lineup / Group Photo",
+   "reqd": 1
+  },
+  {
+   "fieldname": "supervisor_in_charge",
+   "fieldtype": "Data",
+   "label": "Supervisor In Charge"
+  },
+  {
+   "default": "0",
+   "fieldname": "reported_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Physical Headcount"
+  },
+  {
+   "default": "0",
+   "fieldname": "verified_punch_count",
+   "fieldtype": "Int",
+   "label": "Electronic Punched Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_remarks",
+   "fieldtype": "Section Break",
+   "label": "Shift Handover & Notes"
+  },
+  {
+   "fieldname": "briefing_notes",
+   "fieldtype": "Small Text",
+   "label": "Roll Call Briefing Notes"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-13 04:36:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society ERP",
+ "name": "Facility Shift Muster",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Facility Agency Manager",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

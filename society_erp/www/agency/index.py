@@ -55,6 +55,14 @@ def get_agency_dashboard_data():
     roster_data = get_daily_roster(agency=agency)
 
     shifts = frappe.get_all("Facility Shift", filters={"enabled": 1}, fields=["name", "start_time", "end_time", "duration_hours"])
+    posts = frappe.get_all("Facility Duty Post", filters={"is_active": 1}, fields=["name", "post_name", "category", "zone_type", "cost_center"], order_by="zone_type asc, post_name asc")
+
+    today_musters = frappe.get_all(
+        "Facility Shift Muster",
+        filters={"agency": agency, "shift_date": nowdate()},
+        fields=["name", "shift", "category", "muster_photo", "reported_count", "creation"],
+        order_by="creation desc"
+    )
 
     return {
         "agency": agency,
@@ -62,5 +70,7 @@ def get_agency_dashboard_data():
         "total_active_staff": roster_data.get("total_active_staff", 0),
         "on_duty_count": roster_data.get("on_duty_count", 0),
         "pending_approval_count": roster_data.get("pending_approval_count", 0),
-        "shifts": shifts
+        "shifts": shifts,
+        "duty_posts": posts,
+        "today_musters": today_musters
     }

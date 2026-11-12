@@ -1217,6 +1217,12 @@ frappe.ready(function () {
                                 📞 Contact: <strong>${escapeHtml(st.contact_number || 'N/A')}</strong><br>
                                 🪪 Police Verification: <span class="badge ${st.police_status === 'Verified' ? 'badge-success' : 'badge-warning'}">${escapeHtml(st.police_status || 'Pending')}</span>
                             </div>
+                            ${st.duty_post ? `
+                                <div class="mb-2">
+                                    <span class="badge badge-primary px-2 py-1">📍 Post: ${escapeHtml(st.duty_post)}</span>
+                                    ${st.cost_center ? `<div class="small text-muted font-family-monospace mt-1">💼 CC: ${escapeHtml(st.cost_center)}</div>` : ''}
+                                </div>
+                            ` : ''}
                             ${st.in_time ? `
                                 <div class="bg-light p-2 rounded small text-muted mb-2">
                                     ⏱️ Punch In: <strong>${escapeHtml(st.in_time.substring(11, 16))}</strong>

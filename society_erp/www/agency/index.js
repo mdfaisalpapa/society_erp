@@ -1,5 +1,8 @@
 frappe.ready(function() {
     let allRoster = [];
+    let allPosts = [];
+    let html5QrCode = null;
+    let selectedStaffForPost = null;
 
     // Load initial dashboard data
     loadAgencyDashboard();
@@ -10,7 +13,9 @@ frappe.ready(function() {
         renderRosterTable(allRoster.filter(item => {
             return (item.full_name && item.full_name.toLowerCase().includes(query)) ||
                    (item.role && item.role.toLowerCase().includes(query)) ||
+                   (item.duty_post && item.duty_post.toLowerCase().includes(query)) ||
                    (item.gate_assigned && item.gate_assigned.toLowerCase().includes(query)) ||
+                   (item.cost_center && item.cost_center.toLowerCase().includes(query)) ||
                    (item.status && item.status.toLowerCase().includes(query)) ||
                    (item.approval_status && item.approval_status.toLowerCase().includes(query));
         }));
@@ -20,6 +25,12 @@ frappe.ready(function() {
     $('#btn-open-onboard-modal').on('click', function() {
         $('#form-onboard-staff')[0].reset();
         $('#modal-onboard-staff').modal('show');
+    });
+
+    // Open Muster Modal
+    $('#btn-open-muster-modal').on('click', function() {
+        $('#form-record-muster')[0].reset();
+        $('#modal-muster').modal('show');
     });
 
     // Form submit: Onboard Staff
@@ -53,13 +64,217 @@ frappe.ready(function() {
                     frappe.msgprint(__('Failed to onboard staff.'));
                 }
             },
-            error: function(err) {
+            error: function() {
                 submitBtn.prop('disabled', false).text('Submit for Committee Approval');
             }
         });
     });
 
-    // Handle Punch Action
+    // Form submit: Muster Photo Upload
+    $('#form-record-muster').on('submit', function(e) {
+        e.preventDefault();
+        const submitBtn = $('#btn-submit-muster');
+        const fileInput = document.getElementById('muster-photo-file');
+        if (!fileInput.files || !fileInput.files[0]) {
+            frappe.msgprint(__('Please attach or take a shift group photo.'));
+            return;
+        }
+
+        submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Uploading photo…');
+        const file = fileInput.files[0];
+        const agencyName = $('h3.font-weight-bold').first().text().trim();
+        const shiftVal = $('#muster-shift').val();
+        const catVal = $('#muster-category').val();
+        const countVal = parseInt($('#muster-count').val(), 10) || 0;
+        const notesVal = $('#muster-notes').val().trim();
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('is_private', 0);
+        formData.append('folder', 'Home');
+
+        fetch('/api/method/upload_file', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Frappe-CSRF-Token': frappe.csrf_token
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message && data.message.file_url) {
+                const fileUrl = data.message.file_url;
+                frappe.call({
+                    method: 'society_erp.api.facility_staff.record_shift_muster',
+                    args: {
+                        agency: agencyName,
+                        shift: shiftVal,
+                        category: catVal,
+                        muster_photo: fileUrl,
+                        reported_count: countVal,
+                        notes: notesVal
+                    },
+                    callback: function(r) {
+                        submitBtn.prop('disabled', false).text('📸 Save Muster Photo');
+                        if (r.message && r.message.status === 'success') {
+                            $('#modal-muster').modal('hide');
+                            showAlert('success', '📸 ' + r.message.message);
+                            loadAgencyDashboard();
+                        } else {
+                            frappe.msgprint(__('Failed to record shift muster.'));
+                        }
+                    }
+                });
+            } else {
+                submitBtn.prop('disabled', false).text('📸 Save Muster Photo');
+                frappe.msgprint(__('File upload failed.'));
+            }
+        })
+        .catch(err => {
+            submitBtn.prop('disabled', false).text('📸 Save Muster Photo');
+            frappe.msgprint(__('Error uploading photo: ' + err));
+        });
+    });
+
+    // Open QR Scanner
+    $('#btn-open-qr-scanner').on('click', function() {
+        $('#modal-qr-scanner').modal('show');
+        $('#qr-reader-results').text('');
+        startQrScanner();
+    });
+
+    $('#modal-qr-scanner').on('hidden.bs.modal', function() {
+        stopQrScanner();
+    });
+
+    function startQrScanner() {
+        if (typeof Html5Qrcode === 'undefined') {
+            $('#qr-reader-results').text('QR Scanner library not loaded. Please ensure internet access.');
+            return;
+        }
+
+        html5QrCode = new Html5Qrcode("qr-reader");
+        const qrConfig = { fps: 10, qrbox: { width: 220, height: 220 } };
+
+        html5QrCode.start(
+            { facingMode: "environment" },
+            qrConfig,
+            onScanSuccess
+        ).catch(err => {
+            console.error("Unable to start scanner", err);
+            $('#qr-reader-results').html(`<span class="text-danger">Camera error: ${err.message || err}. Please ensure camera permissions are granted.</span>`);
+        });
+    }
+
+    function stopQrScanner() {
+        if (html5QrCode) {
+            html5QrCode.stop().then(() => {
+                html5QrCode.clear();
+                html5QrCode = null;
+            }).catch(err => {
+                console.error("Failed to stop scanner", err);
+            });
+        }
+    }
+
+    function onScanSuccess(decodedText) {
+        // QR detected
+        $('#qr-reader-results').html(`<div class="spinner-border spinner-border-sm text-success"></div> Scanned: <code>${decodedText}</code>. Punching...`);
+        stopQrScanner();
+
+        frappe.call({
+            method: 'society_erp.api.facility_staff.punch_attendance',
+            args: {
+                qr_code: decodedText,
+                punch_type: 'auto',
+                method: 'QR Kiosk Scan'
+            },
+            callback: function(r) {
+                $('#modal-qr-scanner').modal('hide');
+                if (r.message && r.message.status === 'success') {
+                    showAlert('success', '⏱️ [QR Punch] ' + r.message.message);
+                    loadAgencyDashboard();
+                } else {
+                    frappe.msgprint(__('Failed to process QR attendance: ' + (r.message ? r.message.message : 'Unknown error')));
+                }
+            },
+            error: function(err) {
+                $('#modal-qr-scanner').modal('hide');
+            }
+        });
+    }
+
+    // Dynamic Post Assignment Modal
+    $(document).on('click', '.btn-assign-duty', function() {
+        const btn = $(this);
+        const staffId = btn.data('id');
+        const staffName = btn.data('name');
+        const staffRole = btn.data('role');
+        const currentPost = btn.data('post') || '';
+        const attId = btn.data('att-id') || '';
+
+        selectedStaffForPost = { staffId, attId };
+
+        $('#assign-staff-name').text(staffName);
+        $('#assign-staff-role').text(staffRole + ' (' + staffId + ')');
+
+        // Populate Duty Posts
+        const select = $('#select-duty-post');
+        select.empty();
+        select.append('<option value="">-- Select Post / Block --</option>');
+        allPosts.forEach(p => {
+            const isSel = (p.name === currentPost) ? 'selected' : '';
+            select.append(`<option value="${p.name}" data-cost-center="${p.cost_center}" ${isSel}>${p.post_name} [${p.zone_type}]</option>`);
+        });
+
+        updateCostCenterDisplay();
+        $('#modal-assign-post').modal('show');
+    });
+
+    $('#select-duty-post').on('change', function() {
+        updateCostCenterDisplay();
+    });
+
+    function updateCostCenterDisplay() {
+        const selOpt = $('#select-duty-post option:selected');
+        const cc = selOpt.data('cost-center') || 'None Selected';
+        $('#assign-cost-center-display').text(cc);
+    }
+
+    $('#btn-save-post-assignment').on('click', function() {
+        const chosenPost = $('#select-duty-post').val();
+        if (!chosenPost) {
+            frappe.msgprint(__('Please select a valid duty post.'));
+            return;
+        }
+
+        const btn = $(this);
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving…');
+
+        frappe.call({
+            method: 'society_erp.api.facility_staff.assign_duty_post',
+            args: {
+                attendance_id: selectedStaffForPost.attId,
+                staff_id: selectedStaffForPost.staffId,
+                duty_post: chosenPost
+            },
+            callback: function(r) {
+                btn.prop('disabled', false).text('Save Post Assignment');
+                if (r.message && r.message.status === 'success') {
+                    $('#modal-assign-post').modal('hide');
+                    showAlert('success', '📍 ' + r.message.message);
+                    loadAgencyDashboard();
+                } else {
+                    frappe.msgprint(__('Failed to assign duty post.'));
+                }
+            },
+            error: function() {
+                btn.prop('disabled', false).text('Save Post Assignment');
+            }
+        });
+    });
+
+    // Manual Punch In/Out button
     $(document).on('click', '.btn-agency-punch', function() {
         const btn = $(this);
         const staffId = btn.data('id');
@@ -100,6 +315,7 @@ frappe.ready(function() {
                     $('#stat-pending').text(data.pending_approval_count || 0);
                     $('#stat-total').text(data.total_active_staff || 0);
 
+                    allPosts = data.duty_posts || [];
                     allRoster = data.roster || [];
                     renderRosterTable(allRoster);
                 }
@@ -114,7 +330,7 @@ frappe.ready(function() {
                 <div class="text-center py-5 text-muted">
                     <p class="mb-2" style="font-size: 2rem;">👤</p>
                     <p class="mb-0">No staff members found in roster.</p>
-                    <small>Click <strong>"➕ Onboard New Staff"</strong> above to register staff.</small>
+                    <small>Click <strong>"➕ Onboard Staff"</strong> above to register staff.</small>
                 </div>
             `);
             return;
@@ -126,9 +342,9 @@ frappe.ready(function() {
                     <thead class="thead-light">
                         <tr>
                             <th>Staff Member</th>
-                            <th>Role & Gate</th>
-                            <th>Status & Approval</th>
-                            <th>Today's Shift</th>
+                            <th>Role & Scannable QR</th>
+                            <th>Physical Post & Cost Center</th>
+                            <th>Status & Shift</th>
                             <th class="text-right">Action</th>
                         </tr>
                     </thead>
@@ -154,50 +370,62 @@ frappe.ready(function() {
                 : '<span class="badge badge-secondary px-2 py-1">⚪ Off Duty</span>';
 
             let punchTimes = '<span class="text-muted small">No punch today</span>';
-            if (punch && punch.in_time) {
-                const inTimeFormatted = punch.in_time.substring(11, 16);
-                const outTimeFormatted = punch.out_time ? punch.out_time.substring(11, 16) : null;
+            if (st.in_time) {
+                const inTimeFormatted = st.in_time.substring(11, 16);
+                const outTimeFormatted = st.out_time ? st.out_time.substring(11, 16) : null;
                 if (outTimeFormatted) {
                     punchTimes = `<span class="small text-muted font-weight-bold">In: ${inTimeFormatted} &bull; Out: ${outTimeFormatted}</span>`;
                 } else {
-                    punchTimes = `<span class="small text-success font-weight-bold">In: ${inTimeFormatted} (Active Shift)</span>`;
+                    punchTimes = `<span class="small text-success font-weight-bold">In: ${inTimeFormatted} (Active)</span>`;
                 }
             }
 
+            const postDisplay = st.duty_post 
+                ? `<span class="font-weight-bold text-dark">📍 ${frappe.utils.escape_html(st.duty_post)}</span>`
+                : `<span class="text-muted small font-italic">Unassigned Post</span>`;
+
+            const ccDisplay = st.cost_center 
+                ? `<div class="small text-primary font-family-monospace font-weight-bold">💼 ${frappe.utils.escape_html(st.cost_center)}</div>`
+                : `<div class="small text-muted font-family-monospace">No Cost Center</div>`;
+
             let actionBtn = '';
             if (!isApproved) {
-                actionBtn = `<small class="text-muted font-italic">Awaiting Committee Sign-off</small>`;
-            } else if (isOnDuty) {
-                actionBtn = `
-                    <button class="btn btn-sm btn-outline-danger btn-agency-punch font-weight-bold" data-id="${st.name}" data-punch="in">
-                        ⏹️ Punch Out
-                    </button>
-                `;
+                actionBtn = `<small class="text-muted font-italic">Awaiting Committee Approval</small>`;
             } else {
-                actionBtn = `
-                    <button class="btn btn-sm btn-success btn-agency-punch font-weight-bold" data-id="${st.name}" data-punch="out">
-                        ▶️ Punch In
+                const punchBtn = isOnDuty
+                    ? `<button class="btn btn-sm btn-outline-danger btn-agency-punch font-weight-bold mr-1" data-id="${st.staff_id}" data-punch="in">⏹️ Punch Out</button>`
+                    : `<button class="btn btn-sm btn-success btn-agency-punch font-weight-bold mr-1" data-id="${st.staff_id}" data-punch="out">▶️ Punch In</button>`;
+                
+                const assignBtn = `
+                    <button class="btn btn-sm btn-outline-primary btn-assign-duty font-weight-bold" 
+                            data-id="${st.staff_id}" 
+                            data-name="${frappe.utils.escape_html(st.full_name)}" 
+                            data-role="${frappe.utils.escape_html(st.role)}"
+                            data-post="${frappe.utils.escape_html(st.duty_post || '')}"
+                            data-att-id="${st.attendance_id || ''}">
+                        📍 Assign Post
                     </button>
                 `;
+                actionBtn = punchBtn + assignBtn;
             }
 
             html += `
                 <tr>
                     <td>
                         <div class="font-weight-bold text-dark">${frappe.utils.escape_html(st.full_name)}</div>
-                        <small class="text-muted font-family-monospace">${st.name} &bull; 📞 ${frappe.utils.escape_html(st.contact_number || 'N/A')}</small>
+                        <small class="text-muted font-family-monospace">${st.staff_id} &bull; 📞 ${frappe.utils.escape_html(st.contact_number || 'N/A')}</small>
                     </td>
                     <td>
                         <div class="font-weight-bold">${frappe.utils.escape_html(st.role)}</div>
-                        <small class="text-muted">📍 ${frappe.utils.escape_html(st.gate_assigned || 'All Gates')}</small>
+                        <div class="mt-1"><span class="badge badge-light border font-family-monospace text-secondary">🪪 ${frappe.utils.escape_html(st.qr_code_id || 'N/A')}</span></div>
                     </td>
                     <td>
-                        <div class="mb-1">${badgeApproval}</div>
-                        <div>${dutyBadge}</div>
+                        <div>${postDisplay}</div>
+                        ${ccDisplay}
                     </td>
                     <td>
+                        <div class="mb-1">${dutyBadge} &bull; ${badgeApproval}</div>
                         <div>${punchTimes}</div>
-                        ${punch && punch.shift ? `<small class="text-muted">${punch.shift}</small>` : ''}
                     </td>
                     <td class="text-right">
                         ${actionBtn}

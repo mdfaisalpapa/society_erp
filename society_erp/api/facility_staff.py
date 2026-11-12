@@ -5,8 +5,10 @@ from frappe.utils import nowdate, now_datetime, get_datetime, time_diff_in_hours
 
 @frappe.whitelist()
 def punch_attendance(
-    staff_id: str,
+    staff_id: str = None,
+    qr_code: str = None,
     shift: str = None,
+    duty_post: str = None,
     gate: str = "Main Gate",
     method: str = "Supervisor Punch",
     punch_type: str = "auto",  # 'in', 'out', or 'auto'
@@ -15,11 +17,17 @@ def punch_attendance(
 ) -> dict:
     """
     Records a punch-in or punch-out for an agency facility staff member.
-    If 'auto' is selected:
-      - If no attendance record exists for today: creates punch-in.
-      - If attendance record exists without out_time: fills punch-out.
-      - If already has out_time: creates new shift punch or updates.
+    Can identify staff either via staff_id (e.g. FS-2026-00001) or qr_code (e.g. KVC3-STAFF-FS-2026-00001).
+    Also assigns dynamic physical duty post and derives Cost Center.
     """
+    if qr_code and not staff_id:
+        staff_id = frappe.db.get_value("Facility Staff", {"qr_code_id": qr_code.strip()}, "name")
+        if not staff_id:
+            if frappe.db.exists("Facility Staff", qr_code.strip()):
+                staff_id = qr_code.strip()
+            else:
+                frappe.throw(_("Invalid or unrecognized Staff QR Code: {0}").format(qr_code))
+
     if not staff_id or not frappe.db.exists("Facility Staff", staff_id):
         frappe.throw(_("Invalid staff ID: {0}").format(staff_id))
 
@@ -35,11 +43,17 @@ def punch_attendance(
     if not shift:
         shift = get_active_shift_for_time()
 
+    # Determine duty post and cost center
+    post_name = duty_post or staff.default_duty_post
+    cost_center = None
+    if post_name and frappe.db.exists("Facility Duty Post", post_name):
+        cost_center = frappe.db.get_value("Facility Duty Post", post_name, "cost_center")
+
     # Look for open punch for today
     existing = frappe.db.get_value(
         "Facility Staff Attendance",
         {"staff": staff_id, "attendance_date": today, "out_time": ("is", "not set")},
-        ["name", "in_time", "shift"],
+        ["name", "in_time", "shift", "duty_post", "cost_center"],
         as_dict=True
     )
 
@@ -49,10 +63,12 @@ def punch_attendance(
             "doctype": "Facility Staff Attendance",
             "staff": staff_id,
             "attendance_date": today,
-            "shift": shift or existing.get("shift") if existing else shift,
+            "shift": shift or (existing.get("shift") if existing else shift),
             "status": "Present",
             "in_time": now_dt,
             "verification_method": method,
+            "duty_post": post_name,
+            "cost_center": cost_center,
             "gate": gate,
             "verified_by": verifier,
             "remarks": remarks
@@ -65,6 +81,8 @@ def punch_attendance(
             "attendance_id": doc.name,
             "staff_name": staff.full_name,
             "role": staff.role,
+            "duty_post": post_name,
+            "cost_center": cost_center,
             "in_time": str(now_dt)
         }
 
@@ -121,8 +139,8 @@ def get_daily_roster(date: str = None, agency: str = None, shift: str = None, in
         filters=filters,
         fields=[
             "name", "full_name", "agency", "role", "contact_number",
-            "gate_assigned", "photo", "police_verification_status",
-            "rfid_badge_id", "approval_status", "status"
+            "gate_assigned", "default_duty_post", "photo", "police_verification_status",
+            "rfid_badge_id", "qr_code_id", "approval_status", "status"
         ],
         order_by="approval_status desc, role asc, full_name asc"
     )
@@ -135,9 +153,17 @@ def get_daily_roster(date: str = None, agency: str = None, shift: str = None, in
     attendances = frappe.get_all(
         "Facility Staff Attendance",
         filters=att_filters,
-        fields=["name", "staff", "shift", "status", "in_time", "out_time", "hours_worked", "gate", "verification_method"]
+        fields=["name", "staff", "shift", "status", "in_time", "out_time", "hours_worked", "gate", "duty_post", "cost_center", "verification_method"],
+        order_by="creation desc"
     )
-    att_by_staff = {a.staff: a for a in attendances}
+    # Map latest attendance per staff member
+    att_by_staff = {}
+    for a in attendances:
+        if a.staff not in att_by_staff:
+            att_by_staff[a.staff] = a
+        elif a.in_time and not a.out_time:
+            # Prefer active on-duty punch
+            att_by_staff[a.staff] = a
 
     roster = []
     present_count = 0
@@ -149,6 +175,11 @@ def get_daily_roster(date: str = None, agency: str = None, shift: str = None, in
         if att and att.status == "Present":
             present_count += 1
 
+        duty_post = att.duty_post if (att and att.duty_post) else s.default_duty_post
+        cost_center = att.cost_center if (att and att.cost_center) else None
+        if not cost_center and duty_post:
+            cost_center = frappe.db.get_value("Facility Duty Post", duty_post, "cost_center")
+
         roster.append({
             "staff_id": s.name,
             "full_name": s.full_name,
@@ -156,9 +187,13 @@ def get_daily_roster(date: str = None, agency: str = None, shift: str = None, in
             "role": s.role,
             "contact_number": s.contact_number,
             "gate_assigned": s.gate_assigned,
+            "default_duty_post": s.default_duty_post,
+            "duty_post": duty_post,
+            "cost_center": cost_center,
             "photo": s.photo,
             "police_status": s.police_verification_status,
             "rfid_badge_id": s.rfid_badge_id,
+            "qr_code_id": s.qr_code_id or f"KVC3-STAFF-{s.name}",
             "attendance_id": att.name if att else None,
             "status": att.status if att else "Not Marked",
             "approval_status": s.approval_status or "Approved",
@@ -355,3 +390,66 @@ def review_facility_staff(staff_id: str, action: str, remarks: str = None) -> di
     }
 
 
+
+@frappe.whitelist()
+def assign_duty_post(attendance_id: str = None, staff_id: str = None, duty_post: str = None) -> dict:
+    """
+    Dynamically assign or update physical post and cost center for a staff attendance record.
+    """
+    if not duty_post or not frappe.db.exists("Facility Duty Post", duty_post):
+        frappe.throw(_("Invalid Duty Post: {0}").format(duty_post))
+
+    cost_center = frappe.db.get_value("Facility Duty Post", duty_post, "cost_center")
+
+    if not attendance_id and staff_id:
+        attendance_id = frappe.db.get_value(
+            "Facility Staff Attendance",
+            {"staff": staff_id, "attendance_date": nowdate(), "out_time": ("is", "not set")},
+            "name"
+        )
+
+    if attendance_id:
+        frappe.db.set_value("Facility Staff Attendance", attendance_id, {
+            "duty_post": duty_post,
+            "cost_center": cost_center
+        })
+
+    if staff_id:
+        # Also update staff default
+        frappe.db.set_value("Facility Staff", staff_id, "default_duty_post", duty_post)
+
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "duty_post": duty_post,
+        "cost_center": cost_center,
+        "message": _("Duty post assigned to {0} (Cost Center: {1})").format(duty_post, cost_center)
+    }
+
+
+@frappe.whitelist()
+def record_shift_muster(agency: str, shift: str, category: str, muster_photo: str, reported_count: int = 0, notes: str = None) -> dict:
+    """
+    Records a shift lineup group photo and muster headcount before/during roll call.
+    """
+    user = frappe.session.user
+    doc = frappe.get_doc({
+        "doctype": "Facility Shift Muster",
+        "agency": agency,
+        "shift_date": nowdate(),
+        "shift": shift,
+        "category": category,
+        "muster_photo": muster_photo,
+        "reported_count": reported_count,
+        "supervisor_in_charge": user,
+        "briefing_notes": notes
+    })
+    doc.insert(ignore_permissions=True)
+
+    return {
+        "status": "success",
+        "muster_id": doc.name,
+        "photo": doc.muster_photo,
+        "message": _("Shift Lineup Group Photo saved successfully for {0}.").format(shift)
+    }
