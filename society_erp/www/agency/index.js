@@ -10,10 +10,13 @@ frappe.ready(function() {
     // Load initial dashboard data
     loadAgencyDashboard();
 
-    // Muster shortcut button
-    $('#btn-open-muster-modal-2').on('click', function() {
-        $('#btn-open-muster-modal').click();
-    });
+    // Open Muster Modal
+    function openMusterModal() {
+        $('#form-record-muster')[0].reset();
+        $('#modal-muster').modal('show');
+    }
+    $('#btn-open-muster-modal').on('click', openMusterModal);
+    $('#btn-open-muster-modal-2').on('click', openMusterModal);
 
     // Scan QR button next to target muster
     $('#btn-open-qr-scanner-muster').on('click', function() {
@@ -717,7 +720,7 @@ frappe.ready(function() {
             container.html(`
                 <div class="alert alert-warning py-3 mb-0 small d-flex justify-content-between align-items-center flex-wrap">
                     <div>⚠️ <strong>No Shift Muster photo recorded yet today.</strong> Please record the shift lineup photo before punching in staff.</div>
-                    <button class="btn btn-warning btn-sm font-weight-bold ml-md-2 mt-2 mt-md-0" onclick="$('#btn-open-muster-modal').click();">📸 Record Muster Now</button>
+                    <button class="btn btn-warning btn-sm font-weight-bold ml-md-2 mt-2 mt-md-0" onclick="$('#modal-muster').modal('show');">📸 Record Muster Now</button>
                 </div>
             `);
             return;

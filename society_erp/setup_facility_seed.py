@@ -427,7 +427,7 @@ def ensure_vapid_keys():
         print("  ✔ Injected VAPID keys into site_config.json.")
 
 
-def create_test_agency_user(email="agency@premierfacility.in", password="Agency@123", full_name="Premier Agency Supervisor"):
+def create_test_agency_user(email="agency@qpms.in", password="Agency@123", full_name="QPMS Agency Supervisor"):
     """
     Provisions a dedicated agency operator account, sets password,
     assigns the 'Facility Agency Manager' role, and links it to the active Facility Agency.
