@@ -49,7 +49,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Department / Service",
-   "options": "Security\nHousekeeping\nTechnical / Plant\nCombined Staff",
+   "options": "Security\nHousekeeping\nMaintenance\nTechnical / Plant\nCombined Staff",
    "reqd": 1
   },
   {
@@ -61,7 +61,7 @@
    "fieldtype": "Attach Image",
    "in_list_view": 1,
    "label": "Shift Lineup / Group Photo",
-   "reqd": 1
+   "reqd": 0
   },
   {
    "fieldname": "supervisor_in_charge",

@@ -514,6 +514,80 @@ def record_shift_muster(agency: str, shift: str, category: str, muster_photo: st
 
 
 @frappe.whitelist()
+def ensure_daily_shift_musters(agency: str = None, shift_date: str = None) -> list:
+    """
+    Ensures the 3 standard departmental Muster sessions are created and ready for the given date:
+    1. Security Muster (Security & Maintenance Shift - Day / Night)
+    2. Housekeeping Muster (Housekeeping Shift - Morning)
+    3. Maintenance Staff Muster (Plumbers, Electricians, Operators)
+    Auto-creates placeholder Muster records if not already generated, allowing immediate ID scanning.
+    """
+    target_date = shift_date or nowdate()
+    target_agency = agency
+    if not target_agency:
+        target_agency = frappe.db.get_value("Facility Agency", {"contract_status": "Active"}, "agency_name")
+        if not target_agency:
+            target_agency = frappe.db.get_value("Facility Agency", {}, "agency_name")
+
+    if not target_agency:
+        return []
+
+    active_shift = get_active_shift_for_time()
+    is_night = "Night" in (active_shift or "")
+
+    sec_shift = "Security & Maintenance Shift (Night)" if is_night else "Security & Maintenance Shift (Day)"
+    hk_shift = "Housekeeping Shift (Morning)"
+    maint_shift = "Security & Maintenance Shift (Night)" if is_night else "Security & Maintenance Shift (Day)"
+
+    dept_definitions = [
+        {"category": "Security", "shift": sec_shift, "default_count": 8, "notes": "Security Guards & Gate Supervisors Roll Call"},
+        {"category": "Housekeeping", "shift": hk_shift, "default_count": 6, "notes": "Housekeeping Staff Floor Cleaning Roll Call"},
+        {"category": "Maintenance", "shift": maint_shift, "default_count": 3, "notes": "Electricians, Plumbers & Plant Operators Roll Call"}
+    ]
+
+    ready_musters = []
+    for dept in dept_definitions:
+        existing = frappe.get_all(
+            "Facility Shift Muster",
+            filters={
+                "agency": target_agency,
+                "shift_date": target_date,
+                "category": dept["category"],
+                "shift": dept["shift"]
+            },
+            fields=["name", "shift_date", "shift", "category", "muster_photo", "reported_count", "verified_punch_count", "creation"],
+            limit=1
+        )
+        if existing:
+            ready_musters.append(existing[0])
+        else:
+            doc = frappe.get_doc({
+                "doctype": "Facility Shift Muster",
+                "agency": target_agency,
+                "shift_date": target_date,
+                "shift": dept["shift"],
+                "category": dept["category"],
+                "reported_count": dept["default_count"],
+                "supervisor_in_charge": frappe.session.user or "System Auto-Scheduler",
+                "briefing_notes": dept["notes"]
+            })
+            doc.insert(ignore_permissions=True)
+            ready_musters.append({
+                "name": doc.name,
+                "shift_date": doc.shift_date,
+                "shift": doc.shift,
+                "category": doc.category,
+                "muster_photo": doc.muster_photo,
+                "reported_count": doc.reported_count,
+                "verified_punch_count": doc.verified_punch_count or 0,
+                "creation": doc.creation
+            })
+
+    frappe.db.commit()
+    return ready_musters
+
+
+@frappe.whitelist()
 def auto_close_stale_attendances(max_hours: float = 14.0) -> dict:
     """
     Automated cron job to automatically close open attendances exceeding max_hours (e.g. 14 hours).

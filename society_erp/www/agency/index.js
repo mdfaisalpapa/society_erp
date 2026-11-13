@@ -611,6 +611,26 @@ frappe.ready(function() {
             const isSelected = (m.name === selectedMusterId);
             const borderStyle = isSelected ? 'border: 2px solid #007bff; background: #f0f7ff;' : 'border: 1px solid #dee2e6; background: #fff;';
             
+            // Dept icons
+            let deptIcon = '🛡️';
+            if (m.category === 'Housekeeping') deptIcon = '🧹';
+            else if (m.category === 'Maintenance' || m.category === 'Technical / Plant') deptIcon = '🔧';
+
+            let photoBox = '';
+            if (m.muster_photo && m.muster_photo !== 'DELETED_POST_BILLING_VERIFICATION') {
+                photoBox = `
+                    <a href="${m.muster_photo}" target="_blank" class="mr-2">
+                        <img src="${m.muster_photo}" class="rounded border shadow-sm" style="width: 60px; height: 60px; object-fit: cover;" alt="Muster">
+                    </a>
+                `;
+            } else {
+                photoBox = `
+                    <div class="mr-2 rounded border bg-light d-flex align-items-center justify-content-center text-muted" style="width: 60px; height: 60px; font-size: 1.5rem;" title="Muster auto-scheduled; lineup photo optional">
+                        ${deptIcon}
+                    </div>
+                `;
+            }
+
             // If active target muster, place the "📷 Scan ID QR" button directly next to it
             let actionHtml = '';
             if (isSelected) {
@@ -634,13 +654,11 @@ frappe.ready(function() {
                 <div class="col-12 col-md-6 col-lg-4 mb-2">
                     <div class="card p-2 shadow-sm rounded h-100" style="${borderStyle}">
                         <div class="d-flex align-items-center">
-                            <a href="${m.muster_photo}" target="_blank" class="mr-2">
-                                <img src="${m.muster_photo}" class="rounded border shadow-sm" style="width: 60px; height: 60px; object-fit: cover;" alt="Muster">
-                            </a>
+                            ${photoBox}
                             <div class="flex-grow-1 min-width-0">
-                                <div class="font-weight-bold text-dark text-truncate small">${frappe.utils.escape_html(m.shift)}</div>
-                                <div class="text-muted small">${frappe.utils.escape_html(m.category)} &bull; Lineup: <strong>${m.reported_count || 0}</strong></div>
-                                <div class="small text-success font-weight-bold">✅ Verified Punches: <strong>${m.verified_punch_count || 0}</strong></div>
+                                <div class="font-weight-bold text-dark text-truncate small">${deptIcon} ${frappe.utils.escape_html(m.category)} Muster</div>
+                                <div class="text-muted small text-truncate">${frappe.utils.escape_html(m.shift)}</div>
+                                <div class="small text-success font-weight-bold">✅ Verified Punches: <strong>${m.verified_punch_count || 0}</strong> / ${m.reported_count || 0}</div>
                             </div>
                         </div>
                         <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top flex-wrap">

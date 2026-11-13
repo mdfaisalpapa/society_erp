@@ -87,6 +87,10 @@ def get_agency_dashboard_data():
     shifts = frappe.get_all("Facility Shift", filters={"enabled": 1}, fields=["name", "start_time", "end_time", "duration_hours"])
     posts = frappe.get_all("Facility Duty Post", filters={"is_active": 1}, fields=["name", "post_name", "category", "zone_type", "cost_center"], order_by="zone_type asc, post_name asc")
 
+    # Auto-ensure 3 standard Department Musters (Security, Housekeeping, Maintenance) are ready for today
+    from society_erp.api.facility_staff import ensure_daily_shift_musters
+    ensure_daily_shift_musters(agency=agency, shift_date=nowdate())
+
     today_musters = frappe.get_all(
         "Facility Shift Muster",
         filters={"agency": agency, "shift_date": nowdate()},
