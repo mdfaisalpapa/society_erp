@@ -32,16 +32,22 @@
                     <p class="small text-muted mb-0">Supervisor: <strong>{{ frappe.session.user }}</strong> &bull; Date: <strong>{{ today_date }}</strong></p>
                 </div>
                 <div class="mt-3 mt-md-0 d-flex flex-wrap gap-2">
+                    {% if tiles.get('water_log', True) %}
                     <button type="button" class="btn btn-warning text-dark font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-water-modal">
                         💧 Log Sump & Pump
                     </button>
+                    {% endif %}
+                    {% if tiles.get('water_tanker', True) %}
                     <button type="button" class="btn btn-primary font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-tanker-modal">
                         🚚 Log Water Tanker
                     </button>
+                    {% endif %}
+                    {% if tiles.get('tank_cleaning', True) %}
                     <button type="button" class="btn btn-info font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-tank-cleaning-modal">
                         🚰 Log Tank Cleaning
                     </button>
-                    {% if is_supervisor or not is_pump_operator %}
+                    {% endif %}
+                    {% if (is_supervisor or not is_pump_operator) and tiles.get('facility_staff', True) %}
                     <button type="button" class="btn btn-primary font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-qr-scanner">
                         📷 Scan ID QR
                     </button>
@@ -93,6 +99,25 @@
                     <div class="h2 font-weight-bold text-info my-1" id="stat-total">0</div>
                     <small class="text-muted">Approved personnel master</small>
                 </div>
+            </div>
+        </div>
+
+        <!-- Shift Muster Sessions for Today (Master Record) -->
+        <div class="card border-0 shadow-sm p-3 bg-white mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
+                <div>
+                    <h5 class="font-weight-bold mb-0 text-dark">📸 Today's Shift Muster Records (Master Lineups)</h5>
+                    <small class="text-muted">Select an active Shift Muster to punch in staff directly under that muster</small>
+                </div>
+                <div class="mt-2 mt-md-0">
+                    <button type="button" class="btn btn-outline-info btn-sm font-weight-bold" id="btn-open-muster-modal-2">
+                        📸 Record New Shift Muster
+                    </button>
+                </div>
+            </div>
+
+            <div id="muster-sessions-container">
+                <div class="text-center py-3 text-muted small">Loading today's shift musters…</div>
             </div>
         </div>
 

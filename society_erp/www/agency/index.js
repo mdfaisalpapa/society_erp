@@ -1,11 +1,18 @@
 frappe.ready(function() {
     let allRoster = [];
     let allPosts = [];
+    let allMusters = [];
+    let selectedMusterId = null;
     let html5QrCode = null;
     let selectedStaffForPost = null;
 
     // Load initial dashboard data
     loadAgencyDashboard();
+
+    // Muster shortcut button
+    $('#btn-open-muster-modal-2').on('click', function() {
+        $('#btn-open-muster-modal').click();
+    });
 
     // Search filter
     $('#agency-search').on('input', function() {
@@ -419,6 +426,7 @@ frappe.ready(function() {
             args: {
                 qr_code: decodedText,
                 punch_type: 'auto',
+                muster_id: selectedMusterId,
                 method: 'QR Kiosk Scan'
             },
             callback: function(r) {
@@ -520,6 +528,7 @@ frappe.ready(function() {
             args: {
                 staff_id: staffId,
                 punch_type: nextAction,
+                muster_id: selectedMusterId,
                 method: 'Supervisor Punch'
             },
             callback: function(r) {
@@ -560,11 +569,68 @@ frappe.ready(function() {
 
                     allPosts = data.duty_posts || [];
                     allRoster = data.roster || [];
+                    allMusters = data.today_musters || [];
+
+                    // Auto-select latest muster if none selected
+                    if (!selectedMusterId && allMusters.length > 0) {
+                        selectedMusterId = allMusters[0].name;
+                    }
+
+                    renderMustersList(allMusters);
                     renderRosterTable(allRoster);
                 }
             }
         });
     }
+
+    function renderMustersList(musters) {
+        const container = $('#muster-sessions-container');
+        if (!musters || musters.length === 0) {
+            container.html(`
+                <div class="alert alert-warning py-2 mb-0 small d-flex justify-content-between align-items-center">
+                    <div>⚠️ <strong>No Shift Muster photo recorded yet today.</strong> Please record the shift lineup photo before punching in staff.</div>
+                    <button class="btn btn-warning btn-sm font-weight-bold ml-2" onclick="$('#btn-open-muster-modal').click();">📸 Record Muster Now</button>
+                </div>
+            `);
+            return;
+        }
+
+        let html = `<div class="row">`;
+        musters.forEach(m => {
+            const isSelected = (m.name === selectedMusterId);
+            const borderStyle = isSelected ? 'border: 2px solid #007bff; background: #f0f7ff;' : 'border: 1px solid #dee2e6; background: #fff;';
+            const badgeSelected = isSelected ? '<span class="badge badge-primary px-2 py-1">Active Target Muster</span>' : '<button class="btn btn-outline-primary btn-sm py-0 px-2 btn-select-muster" data-id="' + m.name + '">Select</button>';
+
+            html += `
+                <div class="col-12 col-md-6 col-lg-4 mb-2">
+                    <div class="card p-2 shadow-sm rounded h-100" style="${borderStyle}">
+                        <div class="d-flex align-items-center">
+                            <a href="${m.muster_photo}" target="_blank" class="mr-2">
+                                <img src="${m.muster_photo}" class="rounded border" style="width: 60px; height: 60px; object-fit: cover;" alt="Muster">
+                            </a>
+                            <div class="flex-grow-1 min-width-0">
+                                <div class="font-weight-bold text-dark text-truncate small">${frappe.utils.escape_html(m.shift)}</div>
+                                <div class="text-muted small">${frappe.utils.escape_html(m.category)} &bull; Lineup: <strong>${m.reported_count || 0}</strong></div>
+                                <div class="small text-success font-weight-bold">✅ Verified Punches: <strong>${m.verified_punch_count || 0}</strong></div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top">
+                            <small class="text-muted font-family-monospace">${m.name.slice(-14)}</small>
+                            <div>${badgeSelected}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        container.html(html);
+    }
+
+    $(document).on('click', '.btn-select-muster', function() {
+        selectedMusterId = $(this).data('id');
+        renderMustersList(allMusters);
+        showAlert('info', '🎯 Active Shift Muster set to: ' + selectedMusterId);
+    });
 
     function renderRosterTable(roster) {
         const container = $('#agency-roster-container');

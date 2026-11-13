@@ -8,6 +8,7 @@ def punch_attendance(
     staff_id: str = None,
     qr_code: str = None,
     shift: str = None,
+    muster_id: str = None,
     duty_post: str = None,
     gate: str = "Main Gate",
     method: str = "Supervisor Punch",
@@ -58,12 +59,21 @@ def punch_attendance(
     )
 
     # Find active shift muster for this agency & date to link master record
-    latest_muster = frappe.db.get_value(
-        "Facility Shift Muster",
-        {"agency": staff.agency, "shift_date": today, "shift": shift},
-        "name",
-        order_by="creation desc"
-    )
+    latest_muster = muster_id
+    if not latest_muster:
+        latest_muster = frappe.db.get_value(
+            "Facility Shift Muster",
+            {"agency": staff.agency, "shift_date": today, "shift": shift},
+            "name",
+            order_by="creation desc"
+        )
+        if not latest_muster:
+            latest_muster = frappe.db.get_value(
+                "Facility Shift Muster",
+                {"agency": staff.agency, "shift_date": today},
+                "name",
+                order_by="creation desc"
+            )
 
     if punch_type == "in" or (punch_type == "auto" and not existing):
         # Create Punch-In

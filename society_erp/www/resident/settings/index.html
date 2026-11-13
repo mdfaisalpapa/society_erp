@@ -126,7 +126,7 @@
 
                                 <!-- 2. Committee Member Toggle -->
                                 {% if tile.applies_to_committee %}
-                                <div class="role-toggle-box d-flex justify-content-between align-items-center border">
+                                <div class="role-toggle-box d-flex justify-content-between align-items-center mb-2 border">
                                     <div>
                                         <span class="small font-weight-bold text-dark">🏛️ Committee Members</span>
                                         <div class="small status-label-committee-{{ tile.id }} {% if tile.enabled_committee %}text-success{% else %}text-danger{% endif %}" style="font-size: 0.72rem;">
@@ -140,6 +140,26 @@
                                             data-role="committee" 
                                             {% if tile.enabled_committee %}checked{% endif %}>
                                         <label class="custom-control-label cursor-pointer" for="switch-comm-{{ tile.id }}"></label>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- 3. Agency Portal Toggle -->
+                                {% if tile.applies_to_agency %}
+                                <div class="role-toggle-box d-flex justify-content-between align-items-center border">
+                                    <div>
+                                        <span class="small font-weight-bold text-dark">🛡️ Agency Operations Portal</span>
+                                        <div class="small status-label-agency-{{ tile.id }} {% if tile.enabled_agency %}text-success{% else %}text-danger{% endif %}" style="font-size: 0.72rem;">
+                                            {% if tile.enabled_agency %}Enabled{% else %}Disabled{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="custom-control custom-switch" style="transform: scale(1.15); transform-origin: right center;">
+                                        <input type="checkbox" class="custom-control-input tile-role-toggle" 
+                                            id="switch-agy-{{ tile.id }}" 
+                                            data-tile="{{ tile.id }}" 
+                                            data-role="agency" 
+                                            {% if tile.enabled_agency %}checked{% endif %}>
+                                        <label class="custom-control-label cursor-pointer" for="switch-agy-{{ tile.id }}"></label>
                                     </div>
                                 </div>
                                 {% endif %}

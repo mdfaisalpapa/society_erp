@@ -173,19 +173,82 @@ ALL_PORTAL_TILES = [
         "desc": "Flat ownership records, registered owner names and contacts",
         "default_resident": 1,
         "default_committee": 1,
+        "default_agency": 0,
         "applies_to_resident": True,
         "applies_to_committee": True,
+        "applies_to_agency": False,
         "note": "Owners / Committee"
+    },
+    {
+        "id": "facility_staff",
+        "title": "Security & Staff Roster",
+        "icon": "🛡️",
+        "desc": "Staff onboarding, QR badge scanning, duty roster & muster roll calls",
+        "default_resident": 0,
+        "default_committee": 1,
+        "default_agency": 1,
+        "applies_to_resident": False,
+        "applies_to_committee": True,
+        "applies_to_agency": True,
+    },
+    {
+        "id": "water_log",
+        "title": "Water Sump & Pump Telemetry",
+        "icon": "💧",
+        "desc": "Sump depth levels, gauge photos, and OHT pump run monitoring",
+        "default_resident": 0,
+        "default_committee": 1,
+        "default_agency": 1,
+        "applies_to_resident": False,
+        "applies_to_committee": True,
+        "applies_to_agency": True,
+    },
+    {
+        "id": "water_tanker",
+        "title": "Water Tanker Inflow",
+        "icon": "🚚",
+        "desc": "Commercial water tanker arrivals, delivery challans & capacity logs",
+        "default_resident": 0,
+        "default_committee": 1,
+        "default_agency": 1,
+        "applies_to_resident": False,
+        "applies_to_committee": True,
+        "applies_to_agency": True,
+    },
+    {
+        "id": "cleaning_log",
+        "title": "Housekeeping Floor Proofs",
+        "icon": "🧹",
+        "desc": "Corridor and common area cleaning before/after inspection photos",
+        "default_resident": 0,
+        "default_committee": 1,
+        "default_agency": 1,
+        "applies_to_resident": False,
+        "applies_to_committee": True,
+        "applies_to_agency": True,
+    },
+    {
+        "id": "tank_cleaning",
+        "title": "OHT & Sump Cleaning",
+        "icon": "🚰",
+        "desc": "Periodic rooftop Overhead Tank and ground sump desiltation proofs",
+        "default_resident": 0,
+        "default_committee": 1,
+        "default_agency": 1,
+        "applies_to_resident": False,
+        "applies_to_committee": True,
+        "applies_to_agency": True,
     }
 ]
 
 
 def get_tile_settings():
     """
-    Returns separate dictionaries for residents and committee members:
+    Returns separate dictionaries for residents, committee members, and agency portal:
     {
         "residents": { "book_facility": True/False, ... },
-        "committee": { "book_facility": True/False, ... }
+        "committee": { "book_facility": True/False, ... },
+        "agency": { "water_log": True/False, ... }
     }
     """
     val = frappe.db.get_single_value("Society ERP Settings", "enabled_portal_tiles")
@@ -198,6 +261,7 @@ def get_tile_settings():
 
     residents_dict = {}
     committee_dict = {}
+    agency_dict = {}
 
     for tile in ALL_PORTAL_TILES:
         tid = tile["id"]
@@ -212,12 +276,19 @@ def get_tile_settings():
         else:
             comm_val = settings.get(tid, tile.get("default_committee", 1))
 
+        if "agency" in settings and isinstance(settings["agency"], dict):
+            agy_val = settings["agency"].get(tid, tile.get("default_agency", 1))
+        else:
+            agy_val = settings.get(tid, tile.get("default_agency", 1))
+
         residents_dict[tid] = bool(int(res_val))
         committee_dict[tid] = bool(int(comm_val))
+        agency_dict[tid] = bool(int(agy_val))
 
     return {
         "residents": residents_dict,
-        "committee": committee_dict
+        "committee": committee_dict,
+        "agency": agency_dict
     }
 
 
@@ -253,6 +324,7 @@ def get_context(context):
             **tile,
             "enabled_resident": tile_statuses["residents"].get(tid, True),
             "enabled_committee": tile_statuses["committee"].get(tid, True),
+            "enabled_agency": tile_statuses["agency"].get(tid, True),
         })
     context.portal_tiles = tiles_list
     return context
@@ -261,14 +333,14 @@ def get_context(context):
 @frappe.whitelist()
 def save_tile_toggle(tile_id, target_role, enabled):
     """
-    Whitelisted API for System Managers to toggle a feature for 'residents' or 'committee'.
-    target_role must be 'residents' or 'committee'.
+    Whitelisted API for System Managers to toggle a feature for 'residents', 'committee', or 'agency'.
+    target_role must be 'residents', 'committee', or 'agency'.
     """
     if not is_system_manager():
         frappe.throw(_("Permission Denied: Only users with the System Manager role can configure portal tile switches."), frappe.PermissionError)
 
-    if target_role not in ("residents", "committee"):
-        frappe.throw(_("Invalid target role. Must be 'residents' or 'committee'."))
+    if target_role not in ("residents", "committee", "agency"):
+        frappe.throw(_("Invalid target role. Must be 'residents', 'committee', or 'agency'."))
 
     val = frappe.db.get_single_value("Society ERP Settings", "enabled_portal_tiles")
     settings = {}
@@ -282,10 +354,13 @@ def save_tile_toggle(tile_id, target_role, enabled):
         old_data = dict(settings)
         settings = {
             "residents": dict(old_data),
-            "committee": dict(old_data)
+            "committee": dict(old_data),
+            "agency": {}
         }
     if "committee" not in settings or not isinstance(settings["committee"], dict):
         settings["committee"] = {}
+    if "agency" not in settings or not isinstance(settings["agency"], dict):
+        settings["agency"] = {}
 
     val_int = 1 if (str(enabled).lower() in ("1", "true")) else 0
     settings[target_role][tile_id] = val_int
@@ -298,7 +373,12 @@ def save_tile_toggle(tile_id, target_role, enabled):
 
     frappe.db.commit()
 
-    role_label = "Residents" if target_role == "residents" else "Committee Members"
+    if target_role == "residents":
+        role_label = "Residents"
+    elif target_role == "committee":
+        role_label = "Committee Members"
+    else:
+        role_label = "Agency Portal"
     status_label = "ENABLED" if val_int else "DISABLED"
 
     return {

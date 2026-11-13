@@ -16,9 +16,11 @@ def get_context(context):
     is_supervisor = False
     is_pump_operator = False
 
-    if "System Manager" in roles or user == "Administrator" or "Facility Agency Manager" in roles:
+    if "System Manager" in roles or user == "Administrator" or "Facility Agency Manager" in roles or "Society Committee" in roles or "Society Committee Member" in roles:
         is_supervisor = True
         agency = frappe.db.get_value("Facility Agency", {"contract_status": "Active"}, "agency_name")
+        if not agency:
+            agency = frappe.db.get_value("Facility Agency", {}, "agency_name")
     else:
         # Check if agency supervisor
         agency = frappe.db.get_value("Facility Agency", {"portal_user": user}, "agency_name")
@@ -45,6 +47,11 @@ def get_context(context):
     context.is_pump_operator = is_pump_operator
     context.blocks = frappe.get_all("Block", fields=["name"], order_by="name asc")
 
+    # Portal tile master switch configuration (agency specific)
+    from society_erp.www.resident.settings.index import get_tile_settings
+    tile_cfg = get_tile_settings()
+    context.tiles = tile_cfg.get("agency", {})
+
     # Standalone support
     context.is_standalone = bool(frappe.form_dict.get("standalone"))
     if context.is_standalone:
@@ -60,10 +67,16 @@ def get_agency_dashboard_data():
     roles = frappe.get_roles(user)
 
     agency = None
-    if "System Manager" in roles or user == "Administrator":
+    if "System Manager" in roles or user == "Administrator" or "Society Committee" in roles or "Society Committee Member" in roles or "Facility Agency Manager" in roles:
         agency = frappe.db.get_value("Facility Agency", {"contract_status": "Active"}, "agency_name")
+        if not agency:
+            agency = frappe.db.get_value("Facility Agency", {}, "agency_name")
     else:
         agency = frappe.db.get_value("Facility Agency", {"portal_user": user}, "agency_name")
+        if not agency:
+            staff_doc = frappe.db.get_value("Facility Staff", {"user_id": user}, ["agency"], as_dict=True)
+            if staff_doc:
+                agency = staff_doc.agency
 
     if not agency and "System Manager" not in roles and user != "Administrator":
         frappe.throw(_("Unauthorized: No Facility Agency linked to your account."))
@@ -84,11 +97,14 @@ def get_agency_dashboard_data():
     # Calculate active shift quota requirement vs punched in
     from society_erp.api.facility_staff import get_active_shift_for_time
     active_shift = get_active_shift_for_time()
-    contract_quota = frappe.db.get_value(
-        "Facility Contract Quota",
-        {"parent": frappe.db.get_value("Facility Contract", {"agency": agency, "contract_status": "Active"}, "name"), "shift": active_shift},
-        "required_count"
-    ) or 0
+    active_contract = frappe.db.get_value("Facility Contract", {"agency": agency, "status": "Active"}, "name")
+    contract_quota = 0
+    if active_contract and active_shift:
+        contract_quota = frappe.db.get_value(
+            "Facility Contract Quota",
+            {"parent": active_contract, "shift": active_shift},
+            "required_count"
+        ) or 0
 
     return {
         "agency": agency,
