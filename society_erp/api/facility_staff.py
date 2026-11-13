@@ -98,10 +98,15 @@ def punch_attendance(
                 frappe.throw(_("Staff '{0}' with role '{1}' is not eligible for the active {2} Muster.").format(
                     staff.full_name, staff.role, muster_cat
                 ))
-        elif muster_cat in ("Maintenance", "Technical / Plant"):
-            if "security" in role_str or "housekeeping" in role_str:
-                frappe.throw(_("Staff '{0}' with role '{1}' is not eligible for the active {2} Muster.").format(
-                    staff.full_name, staff.role, muster_cat
+        elif muster_cat == "Maintenance":
+            if not ("electrician" in role_str or "plumber" in role_str or "carpenter" in role_str or "maintenance" in role_str or "gardener" in role_str):
+                frappe.throw(_("Staff '{0}' with role '{1}' is not eligible for the active Maintenance Staff Muster.").format(
+                    staff.full_name, staff.role
+                ))
+        elif muster_cat == "Technical / Plant":
+            if not ("stp" in role_str or "wtp" in role_str or "operator" in role_str or "pump" in role_str or "technician" in role_str):
+                frappe.throw(_("Staff '{0}' with role '{1}' is not eligible for the active Technical STP/WTP Muster.").format(
+                    staff.full_name, staff.role
                 ))
 
     if punch_type == "in" or (punch_type == "auto" and not existing):
@@ -602,7 +607,8 @@ def ensure_daily_shift_musters(agency: str = None, shift_date: str = None) -> li
     dept_definitions = [
         {"category": "Security", "shift": sec_shift, "default_count": 8, "notes": "Security Guards & Gate Supervisors Roll Call"},
         {"category": "Housekeeping", "shift": hk_shift, "default_count": 6, "notes": "Housekeeping Staff Floor Cleaning Roll Call"},
-        {"category": "Maintenance", "shift": maint_shift, "default_count": 3, "notes": "Electricians, Plumbers & Plant Operators Roll Call"}
+        {"category": "Maintenance", "shift": maint_shift, "default_count": 3, "notes": "Electricians, Plumbers & General Maintenance Roll Call"},
+        {"category": "Technical / Plant", "shift": maint_shift, "default_count": 2, "notes": "STP & WTP Plant Operators Roll Call"}
     ]
 
     ready_musters = []

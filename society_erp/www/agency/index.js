@@ -731,7 +731,8 @@ frappe.ready(function() {
             // Dept icons
             let deptIcon = '🛡️';
             if (m.category === 'Housekeeping') deptIcon = '🧹';
-            else if (m.category === 'Maintenance' || m.category === 'Technical / Plant') deptIcon = '🔧';
+            else if (m.category === 'Maintenance') deptIcon = '🔧';
+            else if (m.category === 'Technical / Plant') deptIcon = '⚙️';
 
             let photoBox = '';
             if (m.muster_photo && m.muster_photo !== 'DELETED_POST_BILLING_VERIFICATION') {
@@ -902,7 +903,8 @@ frappe.ready(function() {
         if (target) {
             let deptIcon = '🛡️';
             if (target.category === 'Housekeeping') deptIcon = '🧹';
-            else if (target.category === 'Maintenance' || target.category === 'Technical / Plant') deptIcon = '🔧';
+            else if (target.category === 'Maintenance') deptIcon = '🔧';
+            else if (target.category === 'Technical / Plant') deptIcon = '⚙️';
 
             $('#muster-modal-icon').text(deptIcon);
             $('#muster-modal-title').text(`${deptIcon} ${target.category} Muster Activated`);
@@ -940,8 +942,10 @@ frappe.ready(function() {
             return role.includes('security');
         } else if (category === 'Housekeeping') {
             return role.includes('housekeeping');
-        } else if (category === 'Maintenance' || category === 'Technical / Plant') {
-            return !role.includes('security') && !role.includes('housekeeping');
+        } else if (category === 'Maintenance') {
+            return role.includes('electrician') || role.includes('plumber') || role.includes('gardener') || role.includes('maintenance') || role.includes('carpenter');
+        } else if (category === 'Technical / Plant') {
+            return role.includes('stp') || role.includes('wtp') || role.includes('operator') || role.includes('pump') || role.includes('technician');
         }
         return true;
     }
