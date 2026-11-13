@@ -492,6 +492,20 @@ def get_committee_data(module_type="all"):
         from society_erp.api.facility_staff import get_daily_cleaning_summary
         data["cleaning_summary"] = get_daily_cleaning_summary()
 
+    # 14. Overhead Tank Cleaning Records
+    if module_type in ("all", "tank_cleaning"):
+        data["tank_cleanings"] = frappe.get_all(
+            "Tank Cleaning Log",
+            fields=[
+             "name", "block", "tank_type", "tank_location", "activity_date",
+             "cleaning_status", "cleaning_agency", "supervisor_in_charge",
+             "photo_before", "photo_after", "sediment_level_observed",
+             "chlorination_done", "next_due_date", "remarks"
+            ],
+            order_by="activity_date desc, creation desc",
+            limit_page_length=50
+        )
+
     # Counts summary
     res_pending_count = 0
     if comm_member_name:

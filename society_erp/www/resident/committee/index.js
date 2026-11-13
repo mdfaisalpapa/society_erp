@@ -1535,6 +1535,89 @@ frappe.ready(function () {
         $cont.html(html);
     }
 
+    // --- 13. Overhead Tank (OHT) Cleaning Records Module ---
+    function renderTankCleaning(items) {
+        const $cont = $("#container-tank_cleaning");
+        if (!items || !items.length) {
+            $cont.html(`
+                <div class="text-center py-5 bg-white rounded border">
+                    <div style="font-size: 2.5rem;">🚰</div>
+                    <h6 class="font-weight-bold mt-2">No Overhead Tank Cleaning Records Found</h6>
+                    <p class="text-muted small">Periodic tank cleaning proofs and chlorination records across residential blocks will appear here.</p>
+                </div>
+            `);
+            return;
+        }
+
+        let html = `
+            <div class="card mb-3 border-0 bg-light p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <h6 class="font-weight-bold text-dark mb-1">🚰 Overhead Tank (OHT) & Sump Cleaning Records</h6>
+                        <small class="text-muted">Periodic desiltation, scrubbing, and chlorination inspection proofs across residential blocks</small>
+                    </div>
+                    <span class="badge badge-info px-2 py-1 font-weight-bold">
+                        ${items.length} Cleaning Cycles Logged
+                    </span>
+                </div>
+            </div>
+            <div class="row">
+        `;
+
+        items.forEach(c => {
+            const chlorinationBadge = c.chlorination_done 
+                ? '<span class="badge badge-success">✅ Disinfected / Chlorinated</span>' 
+                : '<span class="badge badge-secondary">⚪ No Chlorination</span>';
+
+            html += `
+                <div class="col-12 col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 shadow-sm border p-3 d-flex flex-column justify-content-between" style="border-left: 4px solid #17a2b8 !important;">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="font-weight-bold text-dark mb-0">🏢 Block ${escapeHtml(c.block)} &bull; ${escapeHtml(c.tank_type)}</h6>
+                                <span class="badge badge-light border">${escapeHtml(c.activity_date || '')}</span>
+                            </div>
+                            <div class="small text-muted mb-2">📍 ${escapeHtml(c.tank_location || 'Rooftop OHT')} &bull; Agency: <strong>${escapeHtml(c.cleaning_agency || 'Contractor')}</strong></div>
+
+                            <!-- Before and After Inspection Images -->
+                            <div class="row mb-2">
+                                <div class="col-6">
+                                    <small class="text-muted d-block font-weight-bold">Before Cleaning:</small>
+                                    ${c.photo_before ? `
+                                        <a href="${c.photo_before}" target="_blank">
+                                            <img src="${c.photo_before}" class="img-fluid rounded border shadow-sm" style="height: 100px; width: 100%; object-fit: cover;" alt="Before">
+                                        </a>
+                                    ` : '<div class="text-center py-4 bg-light text-muted small border rounded">No Photo</div>'}
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-success d-block font-weight-bold">After Scrubbing:</small>
+                                    ${c.photo_after ? `
+                                        <a href="${c.photo_after}" target="_blank">
+                                            <img src="${c.photo_after}" class="img-fluid rounded border shadow-sm" style="height: 100px; width: 100%; object-fit: cover;" alt="After">
+                                        </a>
+                                    ` : '<div class="text-center py-4 bg-light text-muted small border rounded">No Photo</div>'}
+                                </div>
+                            </div>
+
+                            <div class="p-2 mb-2 bg-light rounded small">
+                                <div><strong>Silt Level:</strong> ${escapeHtml(c.sediment_level_observed || 'Moderate')}</div>
+                                <div class="mt-1">${chlorinationBadge}</div>
+                                ${c.next_due_date ? `<div class="mt-1 text-muted"><strong>Next Due:</strong> <span class="text-dark font-weight-bold">${escapeHtml(c.next_due_date)}</span></div>` : ''}
+                            </div>
+
+                            ${c.remarks ? `
+                                <div class="small text-muted font-italic bg-white p-1 rounded border">${escapeHtml(c.remarks)}</div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        $cont.html(html);
+    }
+
     // --- Search & Filter Logic ---
     function applyFilterAndRender() {
         const query = $searchInput.val().trim().toLowerCase();

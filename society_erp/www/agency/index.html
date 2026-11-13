@@ -38,6 +38,9 @@
                     <button type="button" class="btn btn-primary font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-tanker-modal">
                         🚚 Log Water Tanker
                     </button>
+                    <button type="button" class="btn btn-info font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-tank-cleaning-modal">
+                        🚰 Log Tank Cleaning
+                    </button>
                     {% if is_supervisor or not is_pump_operator %}
                     <button type="button" class="btn btn-primary font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-qr-scanner">
                         📷 Scan ID QR
@@ -63,25 +66,32 @@
 
         <!-- Metric KPI Cards -->
         <div class="row mb-4">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <div class="card border-0 shadow-sm p-3 bg-white" style="border-left: 5px solid #28a745 !important;">
                     <div class="text-muted small font-weight-bold text-uppercase">Currently On Duty</div>
                     <div class="h2 font-weight-bold text-success my-1" id="stat-on-duty">0</div>
-                    <small class="text-muted">Security & Housekeeping checked-in</small>
+                    <small class="text-muted">Security & HK checked-in</small>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
+                <div class="card border-0 shadow-sm p-3 bg-white" style="border-left: 5px solid #6f42c1 !important;">
+                    <div class="text-muted small font-weight-bold text-uppercase">Active Shift Quota</div>
+                    <div class="h2 font-weight-bold text-purple my-1" id="stat-shift-compliance" style="color: #6f42c1;">0 / 0</div>
+                    <small class="text-muted" id="stat-shift-name">Current shift compliance</small>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
                 <div class="card border-0 shadow-sm p-3 bg-white" style="border-left: 5px solid #ffc107 !important;">
-                    <div class="text-muted small font-weight-bold text-uppercase">Awaiting Committee Approval</div>
+                    <div class="text-muted small font-weight-bold text-uppercase">Pending Approval</div>
                     <div class="h2 font-weight-bold text-warning my-1" id="stat-pending">0</div>
-                    <small class="text-muted">New staff submitted to Society AoA</small>
+                    <small class="text-muted">Staff awaiting AoA review</small>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <div class="card border-0 shadow-sm p-3 bg-white" style="border-left: 5px solid #17a2b8 !important;">
                     <div class="text-muted small font-weight-bold text-uppercase">Total Active Roster</div>
                     <div class="h2 font-weight-bold text-info my-1" id="stat-total">0</div>
-                    <small class="text-muted">Verified & approved personnel</small>
+                    <small class="text-muted">Approved personnel master</small>
                 </div>
             </div>
         </div>
@@ -482,6 +492,94 @@
                             <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
                             <button type="submit" class="btn btn-primary btn-sm px-4 font-weight-bold" id="btn-submit-water-log">
                                 💧 Save Water Log
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Log Overhead Tank / Sump Cleaning -->
+        <div class="modal fade" id="modal-tank-cleaning" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-dark text-white align-items-center">
+                        <h5 class="modal-title font-weight-bold">🚰 Log Tank Cleaning Activity</h5>
+                        <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <form id="form-tank-cleaning">
+                        <div class="modal-body p-4">
+                            <div class="row">
+                                <div class="col-md-6 form-group">
+                                    <label class="small text-muted font-weight-bold">Residential Block *</label>
+                                    <select class="form-control form-control-sm font-weight-bold" id="tc-block" required>
+                                        <option value="">-- Select Block --</option>
+                                        {% for b in blocks %}
+                                            <option value="{{ b.name }}">{{ b.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 form-group">
+                                    <label class="small text-muted font-weight-bold">Tank Type *</label>
+                                    <select class="form-control form-control-sm font-weight-bold" id="tc-tank-type" required>
+                                        <option value="Domestic OHT">Domestic OHT (Rooftop)</option>
+                                        <option value="Flush OHT">Flush OHT (Rooftop)</option>
+                                        <option value="Ground Domestic Sump">Ground Domestic Sump</option>
+                                        <option value="Ground Flush Sump">Ground Flush Sump</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 form-group">
+                                    <label class="small text-muted font-weight-bold">Cleaning Date *</label>
+                                    <input type="date" class="form-control form-control-sm" id="tc-date" value="{{ today_date }}" required>
+                                </div>
+                                <div class="col-md-6 form-group">
+                                    <label class="small text-muted font-weight-bold">Cleaning Agency / Team</label>
+                                    <input type="text" class="form-control form-control-sm" id="tc-agency" placeholder="e.g. Cleantech / In-house HK">
+                                </div>
+                            </div>
+
+                            <!-- Inspection Photos -->
+                            <div class="card p-3 mb-3 border bg-light">
+                                <div class="font-weight-bold text-dark mb-2">📸 Inspection & Quality Proofs</div>
+                                <div class="form-group mb-2">
+                                    <label class="small text-muted font-weight-bold">Tank Inside — Before Cleaning (Silt Proof)</label>
+                                    <input type="file" class="form-control-file border p-1 rounded bg-white" id="tc-photo-before" accept="image/*" capture="environment">
+                                </div>
+                                <div class="form-group mb-0">
+                                    <label class="small text-success font-weight-bold">Tank Inside — After Cleaning & Scrubbing Proof</label>
+                                    <input type="file" class="form-control-file border p-1 rounded bg-white" id="tc-photo-after" accept="image/*" capture="environment">
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 form-group">
+                                    <label class="small text-muted font-weight-bold">Observed Silt Level</label>
+                                    <select class="form-control form-control-sm" id="tc-sediment-level">
+                                        <option value="Clean / Minimal">Clean / Minimal Silt</option>
+                                        <option value="Moderate Silt" selected>Moderate Silt</option>
+                                        <option value="Heavy Algae / Sediment">Heavy Algae / Sediment</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 form-group d-flex align-items-center mt-3">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="tc-chlorination" checked>
+                                        <label class="custom-control-label small font-weight-bold text-dark" for="tc-chlorination">Disinfection / Chlorination Done</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group mb-0">
+                                <label class="small text-muted font-weight-bold">Observations / Remarks</label>
+                                <textarea class="form-control form-control-sm" id="tc-remarks" rows="2" placeholder="e.g. Tank structural condition normal, ball valve checked..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light border-top">
+                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-info btn-sm px-4 font-weight-bold" id="btn-submit-tank-cleaning">
+                                🚰 Save Cleaning Record
                             </button>
                         </div>
                     </form>

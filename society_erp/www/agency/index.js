@@ -175,6 +175,84 @@ frappe.ready(function() {
         })();
     });
 
+    // Open Tank Cleaning Modal
+    $('#btn-open-tank-cleaning-modal').on('click', function() {
+        $('#form-tank-cleaning')[0].reset();
+        $('#modal-tank-cleaning').modal('show');
+    });
+
+    // Submit Tank Cleaning Log
+    $('#form-tank-cleaning').on('submit', function(e) {
+        e.preventDefault();
+        const btn = $('#btn-submit-tank-cleaning');
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
+
+        const block = $('#tc-block').val();
+        const tankType = $('#tc-tank-type').val();
+        const activityDate = $('#tc-date').val();
+        const agencyName = $('#tc-agency').val();
+        const sediment = $('#tc-sediment-level').val();
+        const chlorination = $('#tc-chlorination').is(':checked') ? 1 : 0;
+        const remarks = $('#tc-remarks').val().trim();
+
+        const beforeInput = document.getElementById('tc-photo-before');
+        const afterInput = document.getElementById('tc-photo-after');
+
+        async function uploadIfPresent(fileInput) {
+            if (fileInput && fileInput.files && fileInput.files[0]) {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('is_private', 0);
+                formData.append('folder', 'Home');
+                const resp = await fetch('/api/method/upload_file', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token }
+                });
+                const d = await resp.json();
+                return d.message ? d.message.file_url : null;
+            }
+            return null;
+        }
+
+        (async () => {
+            try {
+                const beforeUrl = await uploadIfPresent(beforeInput);
+                const afterUrl = await uploadIfPresent(afterInput);
+
+                frappe.call({
+                    method: 'society_erp.api.water.log_tank_cleaning',
+                    args: {
+                        block: block,
+                        tank_type: tankType,
+                        activity_date: activityDate,
+                        cleaning_agency: agencyName,
+                        photo_before: beforeUrl,
+                        photo_after: afterUrl,
+                        sediment_level_observed: sediment,
+                        chlorination_done: chlorination,
+                        remarks: remarks
+                    },
+                    callback: function(r) {
+                        btn.prop('disabled', false).text('🚰 Save Cleaning Record');
+                        if (r.message && r.message.success) {
+                            $('#modal-tank-cleaning').modal('hide');
+                            showAlert('success', '🚰 ' + r.message.message);
+                        } else {
+                            frappe.msgprint(__('Failed to save tank cleaning record.'));
+                        }
+                    },
+                    error: function() {
+                        btn.prop('disabled', false).text('🚰 Save Cleaning Record');
+                    }
+                });
+            } catch (err) {
+                btn.prop('disabled', false).text('🚰 Save Cleaning Record');
+                frappe.msgprint(__('Error uploading cleaning inspection photos: ' + err));
+            }
+        })();
+    });
+
     // Open Onboard Modal
     $('#btn-open-onboard-modal').on('click', function() {
         $('#form-onboard-staff')[0].reset();
@@ -468,6 +546,17 @@ frappe.ready(function() {
                     $('#stat-on-duty').text(data.on_duty_count || 0);
                     $('#stat-pending').text(data.pending_approval_count || 0);
                     $('#stat-total').text(data.total_active_staff || 0);
+
+                    // Update shift compliance KPI
+                    const quota = data.active_shift_quota || 0;
+                    const onDuty = data.on_duty_count || 0;
+                    $('#stat-shift-compliance').text(`${onDuty} / ${quota}`);
+                    $('#stat-shift-name').text(data.active_shift ? `${data.active_shift.slice(0, 22)}...` : 'Active Shift');
+                    if (quota > 0 && onDuty < quota) {
+                        $('#stat-shift-compliance').removeClass('text-purple text-success').addClass('text-danger');
+                    } else if (quota > 0 && onDuty >= quota) {
+                        $('#stat-shift-compliance').removeClass('text-purple text-danger').addClass('text-success');
+                    }
 
                     allPosts = data.duty_posts || [];
                     allRoster = data.roster || [];

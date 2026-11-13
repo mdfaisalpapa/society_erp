@@ -504,6 +504,39 @@ def record_shift_muster(agency: str, shift: str, category: str, muster_photo: st
 
 
 @frappe.whitelist()
+def auto_close_stale_attendances(max_hours: float = 14.0) -> dict:
+    """
+    Automated cron job to automatically close open attendances exceeding max_hours (e.g. 14 hours).
+    Prevents perpetual on-duty status when a staff member forgets to scan out.
+    """
+    now_dt = now_datetime()
+    open_atts = frappe.get_all(
+        "Facility Staff Attendance",
+        filters={"out_time": ("is", "not set"), "status": "Present"},
+        fields=["name", "staff", "staff_name", "in_time", "hours_worked", "shift"]
+    )
+
+    closed_count = 0
+    for att in open_atts:
+        if att.in_time:
+            hours = time_diff_in_hours(now_dt, att.in_time)
+            if hours >= max_hours:
+                doc = frappe.get_doc("Facility Staff Attendance", att.name)
+                # Cap worked hours to standard shift (e.g. 12.0)
+                doc.out_time = add_days(doc.in_time, 0)
+                # Standard auto out time set to 12h post in_time
+                doc.hours_worked = 12.0 if hours >= 12.0 else round(hours, 2)
+                doc.remarks = ((doc.remarks or "") + f" | System Auto-Closed: Exceeded {max_hours}h without manual scan-out").strip(" | ")
+                doc.save(ignore_permissions=True)
+                closed_count += 1
+
+    if closed_count > 0:
+        frappe.db.commit()
+
+    return {"closed_count": closed_count, "evaluated_count": len(open_atts)}
+
+
+@frappe.whitelist()
 def generate_reconciliation_purchase_invoice(reconciliation_id: str) -> dict:
     """
     Creates an ERPNext Purchase Invoice from an approved Facility Invoice Reconciliation.

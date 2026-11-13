@@ -95,15 +95,42 @@ def log_block_water(
     if notes:
         doc.notes = notes
 
+    # Check for Low Water Alert threshold (< 30% capacity)
+    if (doc.domestic_capacity_pct is not None and doc.domestic_capacity_pct < 30.0) or \
+       (doc.flush_capacity_pct is not None and doc.flush_capacity_pct < 30.0):
+        doc.is_low_level_alert = 1
+    else:
+        doc.is_low_level_alert = 0
+
     doc.save(ignore_permissions=True)
     frappe.db.commit()
+
+    # Trigger instant Telegram notification to QRT if level drops below 30%
+    if doc.is_low_level_alert:
+        try:
+            from society_erp.api.qrt_maintenance import send_telegram_message
+            dom_str = f"{int(doc.domestic_capacity_pct)}%" if doc.domestic_capacity_pct is not None else "N/A"
+            flush_str = f"{int(doc.flush_capacity_pct)}%" if doc.flush_capacity_pct is not None else "N/A"
+            alert_msg = (
+                f"🚨 *CRITICAL WATER ALERT — Block {doc.block}*\n\n"
+                f"⚠️ Water level has dropped below critical 30% threshold!\n"
+                f"• Domestic Sump: *{dom_str}*\n"
+                f"• Flush Sump: *{flush_str}*\n"
+                f"• Pump Action: Domestic `{doc.domestic_pump_status}` | Flush `{doc.flush_pump_status}`\n\n"
+                f"👉 *Action Required:* Pump Operator to check WTP/Borewell input or schedule private water tanker replenishment."
+            )
+            send_telegram_message(alert_msg)
+        except Exception as e:
+            frappe.logger("society_erp").error(f"Failed to send low water telegram alert: {e}")
 
     return {
         "status": "success",
         "log_id": doc.name,
         "block": doc.block,
         "domestic_level_ft": doc.domestic_level_ft,
+        "domestic_capacity_pct": doc.domestic_capacity_pct,
         "flush_level_ft": doc.flush_level_ft,
+        "flush_capacity_pct": doc.flush_capacity_pct,
         "is_low_level_alert": doc.is_low_level_alert,
         "message": _("Water log recorded for Block {0}.").format(doc.block)
     }
@@ -257,4 +284,60 @@ def log_water_tanker(
         "message": f"Water Tanker {doc.vehicle_number} ({doc.capacity_kl} kL) logged successfully.",
         "tanker_log_id": doc.name
     }
+
+
+@frappe.whitelist()
+def log_tank_cleaning(
+    block: str,
+    tank_type: str = "Domestic OHT",
+    tank_location: str = "Rooftop / Terrace",
+    activity_date: str = None,
+    cleaning_agency: str = None,
+    supervisor_in_charge: str = None,
+    water_disruption_announced: int = 1,
+    photo_before: str = None,
+    photo_after: str = None,
+    sediment_level_observed: str = "Moderate Silt",
+    chlorination_done: int = 1,
+    remarks: str = None
+) -> dict:
+    """
+    Log periodic Overhead Tank (OHT) or Sump cleaning activity with before/after photo proofs.
+    Automatically schedules next cleaning due date 6 months from activity_date.
+    """
+    if not block:
+        frappe.throw(_("Residential Block is required"))
+
+    if not activity_date:
+        activity_date = nowdate()
+
+    doc = frappe.get_doc({
+        "doctype": "Tank Cleaning Log",
+        "block": block,
+        "tank_type": tank_type or "Domestic OHT",
+        "tank_location": tank_location or "Rooftop / Terrace",
+        "activity_date": activity_date,
+        "cleaning_status": "Completed",
+        "cleaning_agency": cleaning_agency or "Facility / Maintenance Team",
+        "supervisor_in_charge": supervisor_in_charge or frappe.session.user,
+        "water_disruption_announced": int(water_disruption_announced or 1),
+        "photo_before": photo_before,
+        "photo_after": photo_after,
+        "sediment_level_observed": sediment_level_observed or "Moderate Silt",
+        "chlorination_done": int(chlorination_done or 1),
+        "remarks": remarks
+    })
+
+    doc.insert(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {
+        "success": True,
+        "name": doc.name,
+        "block": doc.block,
+        "tank_type": doc.tank_type,
+        "next_due_date": str(doc.next_due_date),
+        "message": _("Tank Cleaning Log {0} recorded successfully for Block {1} ({2}).").format(doc.name, doc.block, doc.tank_type)
+    }
+
 

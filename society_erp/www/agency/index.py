@@ -43,6 +43,7 @@ def get_context(context):
     context.today_date = nowdate()
     context.is_supervisor = is_supervisor
     context.is_pump_operator = is_pump_operator
+    context.blocks = frappe.get_all("Block", fields=["name"], order_by="name asc")
 
     # Standalone support
     context.is_standalone = bool(frappe.form_dict.get("standalone"))
@@ -76,9 +77,18 @@ def get_agency_dashboard_data():
     today_musters = frappe.get_all(
         "Facility Shift Muster",
         filters={"agency": agency, "shift_date": nowdate()},
-        fields=["name", "shift", "category", "muster_photo", "reported_count", "creation"],
+        fields=["name", "shift", "category", "muster_photo", "reported_count", "verified_punch_count", "creation"],
         order_by="creation desc"
     )
+
+    # Calculate active shift quota requirement vs punched in
+    from society_erp.api.facility_staff import get_active_shift_for_time
+    active_shift = get_active_shift_for_time()
+    contract_quota = frappe.db.get_value(
+        "Facility Contract Quota",
+        {"parent": frappe.db.get_value("Facility Contract", {"agency": agency, "contract_status": "Active"}, "name"), "shift": active_shift},
+        "required_count"
+    ) or 0
 
     return {
         "agency": agency,
@@ -86,6 +96,8 @@ def get_agency_dashboard_data():
         "total_active_staff": roster_data.get("total_active_staff", 0),
         "on_duty_count": roster_data.get("on_duty_count", 0),
         "pending_approval_count": roster_data.get("pending_approval_count", 0),
+        "active_shift": active_shift,
+        "active_shift_quota": contract_quota,
         "shifts": shifts,
         "duty_posts": posts,
         "today_musters": today_musters
