@@ -69,6 +69,11 @@ doc_events = {
         "validate": [
             "society_erp.accounting.ineligible_itc.validate_purchase_invoice"
         ]
+    },
+    "Visitor Log": {
+        "after_insert": [
+            "society_erp.api.visitor.notify_resident_of_visitor_entry"
+        ]
     }
 }
 

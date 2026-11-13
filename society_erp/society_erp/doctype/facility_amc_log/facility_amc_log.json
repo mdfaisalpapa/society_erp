@@ -1,0 +1,208 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:AMC-{asset_category}-{YYYY}-{###}",
+ "creation": "2026-11-13 07:42:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "equipment_name",
+  "asset_category",
+  "location_or_block",
+  "service_type",
+  "service_date",
+  "column_break_vendor",
+  "vendor_agency",
+  "technician_name",
+  "technician_contact",
+  "service_cost",
+  "next_service_due_date",
+  "amc_contract_expiry",
+  "section_details",
+  "equipment_operational_status",
+  "service_report_document",
+  "equipment_photo",
+  "work_carried_out",
+  "parts_replaced",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "equipment_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Equipment / Asset Name",
+   "reqd": 1
+  },
+  {
+   "default": "Lift / Elevator",
+   "fieldname": "asset_category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Asset Category",
+   "options": "Lift / Elevator\nDiesel Generator (DG Set)\nFire Safety & Hydrant System\nSTP Blower & Aeration\nWTP Multi-Grade Filter & Pump\nBorewell Pump & Motor\nSolar Water / Lighting System\nCCTV Surveillance System\nBoom Barrier / Gate Motor\nGym & Clubhouse Equipment\nOther Common Asset",
+   "reqd": 1
+  },
+  {
+   "fieldname": "location_or_block",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Location / Block Bay"
+  },
+  {
+   "default": "Routine Scheduled AMC",
+   "fieldname": "service_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Service Type",
+   "options": "Routine Scheduled AMC\nBreakdown / Emergency Repair\nStatutory Safety Inspection & Certification\nPreventive Overhaul\nParts Replacement"
+  },
+  {
+   "default": "Today",
+   "fieldname": "service_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Service Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_vendor",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "vendor_agency",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Service Agency / AMC Vendor"
+  },
+  {
+   "fieldname": "technician_name",
+   "fieldtype": "Data",
+   "label": "Attending Service Engineer / Technician"
+  },
+  {
+   "fieldname": "technician_contact",
+   "fieldtype": "Data",
+   "label": "Technician Mobile No."
+  },
+  {
+   "default": "0.0",
+   "fieldname": "service_cost",
+   "fieldtype": "Currency",
+   "label": "Service Cost / Spares Invoiced"
+  },
+  {
+   "fieldname": "next_service_due_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Next Service Due Date"
+  },
+  {
+   "fieldname": "amc_contract_expiry",
+   "fieldtype": "Date",
+   "label": "Annual AMC Contract Expiry Date"
+  },
+  {
+   "fieldname": "section_details",
+   "fieldtype": "Section Break",
+   "label": "Service Report, Proofs & Findings"
+  },
+  {
+   "default": "Fully Operational",
+   "fieldname": "equipment_operational_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Equipment Status Post-Service",
+   "options": "Fully Operational\nOperational with Observation\nStandby Mode\nShutdown / Awaiting Spares\nDecommissioned"
+  },
+  {
+   "fieldname": "service_report_document",
+   "fieldtype": "Attach",
+   "label": "Signed Service Report / Job Card Sheet"
+  },
+  {
+   "fieldname": "equipment_photo",
+   "fieldtype": "Attach Image",
+   "label": "Equipment / Repair Photo"
+  },
+  {
+   "fieldname": "work_carried_out",
+   "fieldtype": "Small Text",
+   "label": "Summary of Work Carried Out & Tests Performed"
+  },
+  {
+   "fieldname": "parts_replaced",
+   "fieldtype": "Small Text",
+   "label": "Parts / Consumables Replaced"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks / Committee Recommendations"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-13 07:42:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society ERP",
+ "name": "Facility AMC Log",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Facility Agency Manager",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Facility Operations Staff",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "service_date",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

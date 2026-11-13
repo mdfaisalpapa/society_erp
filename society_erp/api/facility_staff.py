@@ -75,6 +75,26 @@ def punch_attendance(
                 order_by="creation desc"
             )
 
+    # Validate staff eligibility against the Target Muster Category when punching in
+    if (punch_type == "in" or (punch_type == "auto" and not existing)) and latest_muster:
+        muster_cat = frappe.db.get_value("Facility Shift Muster", latest_muster, "category")
+        role_str = (staff.role or "").lower()
+        if muster_cat == "Security":
+            if "security" not in role_str:
+                frappe.throw(_("Staff '{0}' with role '{1}' is not eligible for the active {2} Muster.").format(
+                    staff.full_name, staff.role, muster_cat
+                ))
+        elif muster_cat == "Housekeeping":
+            if "housekeeping" not in role_str:
+                frappe.throw(_("Staff '{0}' with role '{1}' is not eligible for the active {2} Muster.").format(
+                    staff.full_name, staff.role, muster_cat
+                ))
+        elif muster_cat in ("Maintenance", "Technical / Plant"):
+            if "security" in role_str or "housekeeping" in role_str:
+                frappe.throw(_("Staff '{0}' with role '{1}' is not eligible for the active {2} Muster.").format(
+                    staff.full_name, staff.role, muster_cat
+                ))
+
     if punch_type == "in" or (punch_type == "auto" and not existing):
         # Create Punch-In
         doc = frappe.get_doc({

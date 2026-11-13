@@ -138,6 +138,14 @@
                                     <span class="visitor-badge badge-denied">Denied</span>
                                 {% else %}
                                     <span class="visitor-badge badge-pending">{{ log.status or 'Pending' }}</span>
+                                    <div class="mt-1 d-flex gap-1">
+                                        <button type="button" class="btn btn-xs btn-success py-0 px-2 btn-respond-visitor" data-id="{{ log.name }}" data-action="approve" style="font-size:0.75rem;">
+                                            ✅ Allow
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2 btn-respond-visitor" data-id="{{ log.name }}" data-action="deny" style="font-size:0.75rem;">
+                                            ❌ Deny
+                                        </button>
+                                    </div>
                                 {% endif %}
                             </td>
                             <td class="small">
@@ -177,6 +185,14 @@
                                 <span class="visitor-badge badge-denied">Denied</span>
                             {% else %}
                                 <span class="visitor-badge badge-pending">{{ log.status or 'Pending' }}</span>
+                                <div class="mt-1 d-flex gap-1 justify-content-end">
+                                    <button type="button" class="btn btn-xs btn-success py-0 px-2 btn-respond-visitor" data-id="{{ log.name }}" data-action="approve" style="font-size:0.75rem;">
+                                        ✅ Allow
+                                    </button>
+                                    <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2 btn-respond-visitor" data-id="{{ log.name }}" data-action="deny" style="font-size:0.75rem;">
+                                        ❌ Deny
+                                    </button>
+                                </div>
                             {% endif %}
                         </div>
                     </div>
@@ -328,6 +344,40 @@ document.addEventListener("DOMContentLoaded", function() {
                 submitBtn.innerText = "Generate Gate Pass";
                 frappe.msgprint(err.message || "Failed to generate pass.");
             }
+        });
+    });
+
+    // Handle instant Allow / Deny buttons directly from page
+    document.querySelectorAll(".btn-respond-visitor").forEach(btn => {
+        btn.addEventListener("click", function() {
+            const visitorId = this.dataset.id;
+            const action = this.dataset.action;
+            const promptTitle = action === "approve" ? "Allow this visitor to enter?" : "Deny this visitor entry?";
+            
+            frappe.confirm(promptTitle, () => {
+                btn.disabled = true;
+                frappe.call({
+                    method: "society_erp.api.visitor.respond_visitor_entry",
+                    args: {
+                        visitor_log_id: visitorId,
+                        action: action
+                    },
+                    callback: function(r) {
+                        btn.disabled = false;
+                        if (r.message && r.message.status === "success") {
+                            frappe.show_alert({
+                                message: r.message.message,
+                                indicator: action === "approve" ? "green" : "red"
+                            }, 3);
+                            setTimeout(() => window.location.reload(), 1200);
+                        }
+                    },
+                    error: function(err) {
+                        btn.disabled = false;
+                        frappe.msgprint(err.message || "Action failed.");
+                    }
+                });
+            });
         });
     });
 });

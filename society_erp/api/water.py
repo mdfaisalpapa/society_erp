@@ -12,6 +12,8 @@ def log_block_water(
     flush_level_ft: float = None,
     flush_photo: str = None,
     flush_pump_action: str = None,
+    fresh_water_diverted_to_flush: int = 0,
+    fresh_water_diversion_reason: str = "Chemical / STP Treatment Shortage",
     notes: str = None,
     source: str = "Manual Staff Entry"
 ) -> dict:
@@ -94,6 +96,11 @@ def log_block_water(
 
     if notes:
         doc.notes = notes
+
+    # Record fresh water diversion to flush tanks
+    doc.fresh_water_diverted_to_flush = int(fresh_water_diverted_to_flush or 0)
+    if doc.fresh_water_diverted_to_flush:
+        doc.fresh_water_diversion_reason = fresh_water_diversion_reason or "Chemical / STP Treatment Shortage"
 
     # Check for Low Water Alert threshold (< 30% capacity)
     if (doc.domestic_capacity_pct is not None and doc.domestic_capacity_pct < 30.0) or \

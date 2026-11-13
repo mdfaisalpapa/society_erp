@@ -106,6 +106,7 @@ frappe.ready(function () {
         $("#badge-facility_bookings").text(counts.facility_bookings_pending || 0);
         $("#badge-classifieds").text(counts.classifieds_pending || 0);
         $("#badge-resolutions").text(counts.resolutions_pending || 0);
+        $("#badge-amc_log").text(counts.amc_logs_total || 0);
     }
 
     // --- Render Modules ---
@@ -1618,6 +1619,121 @@ frappe.ready(function () {
         $cont.html(html);
     }
 
+    // --- 14. Asset & Equipment AMC Logs Module ---
+    function renderAMCLogs(items) {
+        const $cont = $("#container-amc_log");
+        if (!items || !items.length) {
+            $cont.html(`
+                <div class="text-center py-5 bg-white rounded border">
+                    <div style="font-size: 2.5rem;">⚙️</div>
+                    <h6 class="font-weight-bold mt-2">No Asset AMC / Service Logs Recorded</h6>
+                    <p class="text-muted small">Periodic maintenance logs for Lifts, DG Sets, STP, WTP, and Fire Safety systems will appear here.</p>
+                </div>
+            `);
+            return;
+        }
+
+        let html = `
+            <div class="card mb-3 border-0 bg-light p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <h6 class="font-weight-bold text-dark mb-1">⚙️ Critical Asset AMC & Statutory Service Logs</h6>
+                        <small class="text-muted">Tracking service contracts, inspection certificates, and upcoming maintenance schedules</small>
+                    </div>
+                    <span class="badge badge-primary px-2 py-1 font-weight-bold">
+                        ${items.length} AMC Service Records
+                    </span>
+                </div>
+            </div>
+            <div class="row">
+        `;
+
+        items.forEach(a => {
+            const statusClass = a.equipment_operational_status === "Operational" ? "badge-success" : (a.equipment_operational_status === "Under Maintenance" ? "badge-warning text-dark" : "badge-danger");
+            const opStatus = a.equipment_operational_status || "Operational";
+
+            html += `
+                <div class="col-12 col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 shadow-sm border p-3 d-flex flex-column justify-content-between" style="border-left: 4px solid #6c757d !important;">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="font-weight-bold text-dark mb-0">${escapeHtml(a.equipment_name)}</h6>
+                                <span class="badge ${statusClass}">${escapeHtml(opStatus)}</span>
+                            </div>
+                            <div class="small text-muted mb-2">
+                                🏢 <strong>${escapeHtml(a.asset_category)}</strong> &bull; ${escapeHtml(a.location_or_block || 'Common Area')}
+                            </div>
+
+                            <div class="p-2 mb-2 bg-light rounded small">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Service Type:</span>
+                                    <span class="font-weight-bold text-dark">${escapeHtml(a.service_type || 'Routine Scheduled AMC')}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mt-1">
+                                    <span class="text-muted">Service Date:</span>
+                                    <span class="font-weight-bold text-dark">${formatDate(a.service_date)}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mt-1">
+                                    <span class="text-muted">Vendor Agency:</span>
+                                    <span class="font-weight-bold text-dark">${escapeHtml(a.vendor_agency || '-')}</span>
+                                </div>
+                                ${a.technician_name ? `
+                                <div class="d-flex justify-content-between mt-1">
+                                    <span class="text-muted">Technician:</span>
+                                    <span>${escapeHtml(a.technician_name)} ${a.technician_contact ? '(' + escapeHtml(a.technician_contact) + ')' : ''}</span>
+                                </div>` : ''}
+                                ${a.next_service_due_date ? `
+                                <div class="d-flex justify-content-between mt-1 pt-1 border-top">
+                                    <span class="text-danger font-weight-bold">Next Service Due:</span>
+                                    <span class="badge badge-warning text-dark font-weight-bold">${formatDate(a.next_service_due_date)}</span>
+                                </div>` : ''}
+                                ${a.amc_contract_expiry ? `
+                                <div class="d-flex justify-content-between mt-1">
+                                    <span class="text-muted">AMC Expiry:</span>
+                                    <span class="text-muted">${formatDate(a.amc_contract_expiry)}</span>
+                                </div>` : ''}
+                            </div>
+
+                            ${a.work_carried_out ? `
+                                <div class="small mb-2">
+                                    <strong class="text-muted d-block">Work Carried Out:</strong>
+                                    <div class="bg-white p-2 rounded border small">${escapeHtml(a.work_carried_out)}</div>
+                                </div>
+                            ` : ''}
+
+                            ${a.parts_replaced ? `
+                                <div class="small mb-2">
+                                    <strong class="text-muted d-block">Parts Replaced:</strong>
+                                    <div class="text-danger small font-weight-bold">${escapeHtml(a.parts_replaced)}</div>
+                                </div>
+                            ` : ''}
+
+                            <div class="row mt-2">
+                                ${a.service_report_document ? `
+                                    <div class="col-6">
+                                        <a href="${a.service_report_document}" target="_blank" class="btn btn-outline-primary btn-sm btn-block text-truncate">
+                                            📄 Service Sheet
+                                        </a>
+                                    </div>
+                                ` : ''}
+                                ${a.equipment_photo ? `
+                                    <div class="col-6">
+                                        <a href="${a.equipment_photo}" target="_blank" class="btn btn-outline-secondary btn-sm btn-block text-truncate">
+                                            📷 Asset Photo
+                                        </a>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        $cont.html(html);
+    }
+
     // --- Search & Filter Logic ---
     function applyFilterAndRender() {
         const query = $searchInput.val().trim().toLowerCase();
@@ -1675,6 +1791,8 @@ frappe.ready(function () {
         renderFacilityStaff(filterList(committeeData.facility_staff, "facility_staff", ["full_name", "agency", "role", "gate_assigned", "contact_number"]));
         renderWaterLog(committeeData.water_summary);
         renderCleaningLog(committeeData.cleaning_summary);
+        renderTankCleaning(committeeData.tank_cleanings || []);
+        renderAMCLogs(filterList(committeeData.amc_logs || [], "amc_log", ["equipment_name", "asset_category", "location_or_block", "vendor_agency", "technician_name", "service_type"]));
     }
 
     // --- Data Fetching ---

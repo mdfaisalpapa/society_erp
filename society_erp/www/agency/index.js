@@ -34,9 +34,19 @@ frappe.ready(function() {
         }));
     });
 
+    // Toggle fresh water diversion reason box
+    $('#water-divert-check').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#water-diversion-reason-box').removeClass('d-none');
+        } else {
+            $('#water-diversion-reason-box').addClass('d-none');
+        }
+    });
+
     // Open Water Sump & Pump Log Modal
     $('#btn-open-water-modal').on('click', function() {
         $('#form-water-log')[0].reset();
+        $('#water-diversion-reason-box').addClass('d-none');
         $('#modal-water-log').modal('show');
     });
 
@@ -166,6 +176,8 @@ frappe.ready(function() {
                         flush_level_ft: flushLevel,
                         flush_photo: flushPhotoUrl,
                         flush_pump_action: flushPump,
+                        fresh_water_diverted_to_flush: $('#water-divert-check').is(':checked') ? 1 : 0,
+                        fresh_water_diversion_reason: $('#water-diversion-reason').val(),
                         notes: notes
                     },
                     callback: function(r) {
@@ -767,17 +779,43 @@ frappe.ready(function() {
         selectedMusterId = $(this).data('id');
         renderMustersList(allMusters);
         renderPreviousMustersList(previousMusters);
+        renderRosterTable(allRoster);
         showAlert('info', '🎯 Active Shift Muster set to: ' + selectedMusterId);
     });
 
+    function getSelectedMusterCategory() {
+        if (!selectedMusterId) return null;
+        const target = allMusters.find(m => m.name === selectedMusterId) || previousMusters.find(m => m.name === selectedMusterId);
+        return target ? target.category : null;
+    }
+
+    function isStaffEligibleForCategory(staffRole, category) {
+        if (!category) return true;
+        const role = (staffRole || '').toLowerCase();
+        if (category === 'Security') {
+            return role.includes('security');
+        } else if (category === 'Housekeeping') {
+            return role.includes('housekeeping');
+        } else if (category === 'Maintenance' || category === 'Technical / Plant') {
+            return !role.includes('security') && !role.includes('housekeeping');
+        }
+        return true;
+    }
+
     function renderRosterTable(roster) {
         const container = $('#agency-roster-container');
-        if (!roster || roster.length === 0) {
+        const activeCategory = getSelectedMusterCategory();
+
+        // Filter roster strictly for the active target muster's department category
+        const filteredRoster = (roster || []).filter(st => isStaffEligibleForCategory(st.role, activeCategory));
+
+        if (!filteredRoster || filteredRoster.length === 0) {
             container.html(`
-                <div class="text-center py-5 text-muted">
+                <div class="text-center py-5 text-muted bg-light rounded border">
                     <p class="mb-2" style="font-size: 2rem;">👤</p>
-                    <p class="mb-0">No staff members found in roster.</p>
-                    <small>Click <strong>"➕ Onboard Staff"</strong> above to register staff.</small>
+                    <h6 class="font-weight-bold text-dark mb-1">No Staff Available for Active ${activeCategory || ''} Muster</h6>
+                    <p class="mb-0 small text-muted">Showing only personnel matching ${activeCategory || 'active'} department roles.</p>
+                    <small>Click <strong>"➕ Onboard Staff"</strong> above if you need to register staff in this category.</small>
                 </div>
             `);
             return;
@@ -802,7 +840,7 @@ frappe.ready(function() {
         // MOBILE CARD VIEW (Visible on d-block d-md-none)
         let mobileHtml = `<div class="d-block d-md-none">`;
 
-        roster.forEach(st => {
+        filteredRoster.forEach(st => {
             const isApproved = st.approval_status === 'Approved';
             const isOnDuty = st.is_on_duty;
 

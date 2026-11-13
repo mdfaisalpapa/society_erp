@@ -189,6 +189,13 @@
                         </a>
                     </li>
                     {% endif %}
+                    {% if tiles.get('amc_log', True) %}
+                    <li class="nav-item">
+                        <a class="nav-link font-weight-bold text-secondary" id="tab-amc_log" data-toggle="pill" href="#pane-amc_log" role="tab" data-module="amc_log">
+                            <span class="tab-icon">⚙️</span><span class="tab-label">Asset AMC</span> <span class="badge badge-info ml-1" id="badge-amc_log">{{ counts.amc_logs_total or 0 }}</span>
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
 
                 <button class="btn btn-outline-secondary btn-sm ml-auto d-md-none mt-2" type="button" data-toggle="collapse" data-target="#committeeFilterCollapse" aria-expanded="false" aria-controls="committeeFilterCollapse">
@@ -320,6 +327,11 @@
             <!-- 13. OHT Tank Cleaning Records Pane -->
             <div class="tab-pane fade" id="pane-tank_cleaning" role="tabpanel">
                 <div id="container-tank_cleaning"></div>
+            </div>
+
+            <!-- 14. Asset & Equipment AMC Logs Pane -->
+            <div class="tab-pane fade" id="pane-amc_log" role="tabpanel">
+                <div id="container-amc_log"></div>
             </div>
         </div>
 

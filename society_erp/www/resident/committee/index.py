@@ -119,6 +119,7 @@ def get_context(context):
             "Facility Staff Attendance", {"attendance_date": nowdate(), "status": "Present", "out_time": ("is", "not set")}
         ),
         "facility_staff_total": frappe.db.count("Facility Staff", {"status": "Active"}),
+        "amc_logs_total": frappe.db.count("Facility AMC Log"),
     }
 
     # Count pending resolutions for the current user
@@ -506,6 +507,22 @@ def get_committee_data(module_type="all"):
             limit_page_length=50
         )
 
+    # 15. Facility AMC & Equipment Logs (Lifts, DG, STP, Fire Safety)
+    if module_type in ("all", "amc_log"):
+        data["amc_logs"] = frappe.get_all(
+            "Facility AMC Log",
+            fields=[
+                "name", "equipment_name", "asset_category", "location_or_block",
+                "service_type", "service_date", "vendor_agency", "technician_name",
+                "technician_contact", "service_cost", "next_service_due_date",
+                "amc_contract_expiry", "equipment_operational_status",
+                "service_report_document", "equipment_photo", "work_carried_out",
+                "parts_replaced", "remarks"
+            ],
+            order_by="service_date desc, creation desc",
+            limit_page_length=60
+        )
+
     # Counts summary
     res_pending_count = 0
     if comm_member_name:
@@ -540,6 +557,7 @@ def get_committee_data(module_type="all"):
         "facility_on_duty": frappe.db.count("Facility Staff Attendance", {"attendance_date": nowdate(), "status": "Present", "out_time": ("is", "not set")}),
         "facility_staff_total": frappe.db.count("Facility Staff", {"status": "Active"}),
         "facility_staff_pending": frappe.db.count("Facility Staff", {"approval_status": "Pending"}),
+        "amc_logs_total": frappe.db.count("Facility AMC Log"),
     }
 
     return data

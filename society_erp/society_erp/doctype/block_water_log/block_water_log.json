@@ -27,6 +27,8 @@
   "flush_pump_start",
   "flush_pump_stop",
   "flush_run_hours",
+  "fresh_water_diverted_to_flush",
+  "fresh_water_diversion_reason",
   "section_remarks",
   "is_low_level_alert",
   "notes"
@@ -161,6 +163,21 @@
    "label": "Flush Motor Run Hours",
    "precision": "2",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "fresh_water_diverted_to_flush",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Fresh / Domestic Water Diverted to Flush Tank"
+  },
+  {
+   "default": "Chemical / STP Treatment Shortage",
+   "depends_on": "eval:doc.fresh_water_diverted_to_flush==1",
+   "fieldname": "fresh_water_diversion_reason",
+   "fieldtype": "Select",
+   "label": "Reason for Diversion",
+   "options": "Chemical / STP Treatment Shortage\nSTP Plant Maintenance / Breakdown\nLow STP Yield / Effluent Shortage\nEmergency Supply"
   },
   {
    "fieldname": "section_remarks",

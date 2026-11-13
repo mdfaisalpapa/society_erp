@@ -525,9 +525,28 @@
                                         </select>
                                     </div>
                                 </div>
-                                <div class="form-group mb-0">
+                                <div class="form-group mb-2">
                                     <label class="small text-muted font-weight-bold">Flush Sump Gauge Photo</label>
                                     <input type="file" class="form-control-file border p-1 rounded bg-white" id="water-flush-photo" accept="image/*" capture="environment">
+                                </div>
+
+                                <!-- Fresh Water Diversion Toggle (Part A: 3) -->
+                                <div class="p-2 border rounded bg-white mt-2">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="water-divert-check">
+                                        <label class="custom-control-label small font-weight-bold text-danger" for="water-divert-check">
+                                            ⚠️ Fresh / Domestic Water Diverted to Flush Tank
+                                        </label>
+                                    </div>
+                                    <div class="mt-2 d-none" id="water-diversion-reason-box">
+                                        <label class="small text-muted font-weight-bold">Reason for Diversion *</label>
+                                        <select class="form-control form-control-sm" id="water-diversion-reason">
+                                            <option value="Chemical / STP Treatment Shortage" selected>🧪 Chemical / STP Treatment Shortage</option>
+                                            <option value="STP Plant Maintenance / Breakdown">⚙️ STP Plant Maintenance / Breakdown</option>
+                                            <option value="Low STP Yield / Effluent Shortage">📉 Low STP Yield / Effluent Shortage</option>
+                                            <option value="Emergency Supply">🚨 Emergency Supply</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 

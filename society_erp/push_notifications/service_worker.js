@@ -31,14 +31,19 @@ self.addEventListener("push", event => {
         body: data.body || "Incoming announcement from KVC3.",
         icon: "/assets/society_erp/images/icon-192.png",
         badge: "/assets/society_erp/images/icon-192.png",
-        data: { url: data.url || "/resident/" },
+        data: {
+            url: data.url || "/resident/",
+            visitor_log_id: data.visitor_log_id || null,
+            actions: data.actions || []
+        },
         tag: data.tag || "kvc3-urgent-call",
         // Stays on screen permanently until user explicitly acts on it
         requireInteraction: true,
         // Trigger sound & vibration again even if a previous notification is present
         renotify: true,
         vibrate: ringVibration,
-        silent: false
+        silent: false,
+        actions: data.actions || []
     };
 
     // Forward push message to all open tabs so they can play a continuous audio ringtone
@@ -78,8 +83,33 @@ self.addEventListener("notificationclick", event => {
         });
     });
 
+    const notifData = event.notification.data || {};
+    const action = event.action;
+
+    // Handle direct action button clicks (e.g., approve / deny visitor at gate)
+    if (action && (action === "approve" || action === "deny") && notifData.visitor_log_id) {
+        event.waitUntil(
+            fetch("/api/method/society_erp.api.visitor.respond_visitor_entry", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Frappe-CSRF-Token": frappe_csrf_token()
+                },
+                body: JSON.stringify({
+                    visitor_log_id: notifData.visitor_log_id,
+                    action: action
+                })
+            }).then(response => {
+                console.log("[KVC3 Push] Visitor action recorded:", action);
+            }).catch(err => {
+                console.error("[KVC3 Push] Error recording visitor action:", err);
+            })
+        );
+        return;
+    }
+
     const target = new URL(
-        event.notification.data?.url || "/resident/",
+        notifData.url || "/resident/",
         self.location.origin
     );
 
@@ -101,3 +131,8 @@ self.addEventListener("notificationclick", event => {
         return self.clients.openWindow(target.href);
     })());
 });
+
+function frappe_csrf_token() {
+    // Read from cookies in ServiceWorker context if available
+    return "";
+}

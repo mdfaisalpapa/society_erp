@@ -238,6 +238,18 @@ ALL_PORTAL_TILES = [
         "applies_to_resident": False,
         "applies_to_committee": True,
         "applies_to_agency": True,
+    },
+    {
+        "id": "amc_log",
+        "title": "Asset & Equipment AMC",
+        "icon": "⚙️",
+        "desc": "Lifts, DG, STP, Fire Safety & pump AMC servicing and certificate logs",
+        "default_resident": 0,
+        "default_committee": 1,
+        "default_agency": 1,
+        "applies_to_resident": False,
+        "applies_to_committee": True,
+        "applies_to_agency": True,
     }
 ]
 
