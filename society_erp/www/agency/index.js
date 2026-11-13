@@ -2,6 +2,7 @@ frappe.ready(function() {
     let allRoster = [];
     let allPosts = [];
     let allMusters = [];
+    let previousMusters = [];
     let selectedMusterId = null;
     let html5QrCode = null;
     let selectedStaffForPost = null;
@@ -12,6 +13,11 @@ frappe.ready(function() {
     // Muster shortcut button
     $('#btn-open-muster-modal-2').on('click', function() {
         $('#btn-open-muster-modal').click();
+    });
+
+    // Scan QR button next to target muster
+    $('#btn-open-qr-scanner-muster').on('click', function() {
+        $('#btn-open-qr-scanner').click();
     });
 
     // Search filter
@@ -570,6 +576,10 @@ frappe.ready(function() {
                     allPosts = data.duty_posts || [];
                     allRoster = data.roster || [];
                     allMusters = data.today_musters || [];
+                    previousMusters = data.previous_musters || [];
+
+                    $('#count-today-musters').text(allMusters.length);
+                    $('#count-prev-musters').text(previousMusters.length);
 
                     // Auto-select latest muster if none selected
                     if (!selectedMusterId && allMusters.length > 0) {
@@ -577,6 +587,7 @@ frappe.ready(function() {
                     }
 
                     renderMustersList(allMusters);
+                    renderPreviousMustersList(previousMusters);
                     renderRosterTable(allRoster);
                 }
             }
@@ -587,9 +598,9 @@ frappe.ready(function() {
         const container = $('#muster-sessions-container');
         if (!musters || musters.length === 0) {
             container.html(`
-                <div class="alert alert-warning py-2 mb-0 small d-flex justify-content-between align-items-center">
+                <div class="alert alert-warning py-3 mb-0 small d-flex justify-content-between align-items-center flex-wrap">
                     <div>⚠️ <strong>No Shift Muster photo recorded yet today.</strong> Please record the shift lineup photo before punching in staff.</div>
-                    <button class="btn btn-warning btn-sm font-weight-bold ml-2" onclick="$('#btn-open-muster-modal').click();">📸 Record Muster Now</button>
+                    <button class="btn btn-warning btn-sm font-weight-bold ml-md-2 mt-2 mt-md-0" onclick="$('#btn-open-muster-modal').click();">📸 Record Muster Now</button>
                 </div>
             `);
             return;
@@ -599,14 +610,32 @@ frappe.ready(function() {
         musters.forEach(m => {
             const isSelected = (m.name === selectedMusterId);
             const borderStyle = isSelected ? 'border: 2px solid #007bff; background: #f0f7ff;' : 'border: 1px solid #dee2e6; background: #fff;';
-            const badgeSelected = isSelected ? '<span class="badge badge-primary px-2 py-1">Active Target Muster</span>' : '<button class="btn btn-outline-primary btn-sm py-0 px-2 btn-select-muster" data-id="' + m.name + '">Select</button>';
+            
+            // If active target muster, place the "📷 Scan ID QR" button directly next to it
+            let actionHtml = '';
+            if (isSelected) {
+                actionHtml = `
+                    <div class="d-flex align-items-center flex-wrap gap-1">
+                        <span class="badge badge-primary px-2 py-1 mr-1">Active Target Muster</span>
+                        <button class="btn btn-sm btn-primary py-0 px-2 font-weight-bold shadow-sm" onclick="$('#btn-open-qr-scanner').click();" title="Scan QR badge under this muster">
+                            📷 Scan ID QR
+                        </button>
+                    </div>
+                `;
+            } else {
+                actionHtml = `
+                    <button class="btn btn-outline-primary btn-sm py-0 px-2 btn-select-muster font-weight-bold" data-id="${m.name}">
+                        🎯 Select
+                    </button>
+                `;
+            }
 
             html += `
                 <div class="col-12 col-md-6 col-lg-4 mb-2">
                     <div class="card p-2 shadow-sm rounded h-100" style="${borderStyle}">
                         <div class="d-flex align-items-center">
                             <a href="${m.muster_photo}" target="_blank" class="mr-2">
-                                <img src="${m.muster_photo}" class="rounded border" style="width: 60px; height: 60px; object-fit: cover;" alt="Muster">
+                                <img src="${m.muster_photo}" class="rounded border shadow-sm" style="width: 60px; height: 60px; object-fit: cover;" alt="Muster">
                             </a>
                             <div class="flex-grow-1 min-width-0">
                                 <div class="font-weight-bold text-dark text-truncate small">${frappe.utils.escape_html(m.shift)}</div>
@@ -614,9 +643,9 @@ frappe.ready(function() {
                                 <div class="small text-success font-weight-bold">✅ Verified Punches: <strong>${m.verified_punch_count || 0}</strong></div>
                             </div>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top">
+                        <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top flex-wrap">
                             <small class="text-muted font-family-monospace">${m.name.slice(-14)}</small>
-                            <div>${badgeSelected}</div>
+                            <div>${actionHtml}</div>
                         </div>
                     </div>
                 </div>
@@ -626,9 +655,100 @@ frappe.ready(function() {
         container.html(html);
     }
 
+    function renderPreviousMustersList(musters) {
+        const container = $('#previous-musters-container');
+        if (!musters || musters.length === 0) {
+            container.html(`
+                <div class="text-center py-4 text-muted bg-light rounded border">
+                    <div style="font-size: 1.8rem;">🗂️</div>
+                    <div class="small font-weight-bold mt-1">No Previous Musters Found</div>
+                    <div class="small text-muted">Past muster lineups from earlier dates will appear here for audit reference.</div>
+                </div>
+            `);
+            return;
+        }
+
+        let html = `
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0 bg-white border">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Lineup Photo</th>
+                            <th>Muster ID & Date</th>
+                            <th>Shift & Category</th>
+                            <th>Physical Lineup</th>
+                            <th>Punched Count</th>
+                            <th class="text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        musters.forEach(m => {
+            const isSelected = (m.name === selectedMusterId);
+            const rowClass = isSelected ? 'table-primary' : '';
+            const isPurged = m.muster_photo === 'DELETED_POST_BILLING_VERIFICATION';
+
+            let photoCol = '';
+            if (isPurged) {
+                photoCol = '<span class="badge badge-light border text-muted">Purged &bull; 30d Audit</span>';
+            } else if (m.muster_photo) {
+                photoCol = `
+                    <a href="${m.muster_photo}" target="_blank">
+                        <img src="${m.muster_photo}" class="rounded border shadow-sm" style="width: 48px; height: 48px; object-fit: cover;" alt="Photo">
+                    </a>
+                `;
+            } else {
+                photoCol = '<span class="text-muted small">No Photo</span>';
+            }
+
+            html += `
+                <tr class="${rowClass}">
+                    <td style="width: 60px;">${photoCol}</td>
+                    <td>
+                        <div class="font-weight-bold text-dark font-family-monospace small">${frappe.utils.escape_html(m.name)}</div>
+                        <span class="badge badge-secondary">${frappe.utils.escape_html(m.shift_date || '')}</span>
+                    </td>
+                    <td>
+                        <div class="font-weight-bold small">${frappe.utils.escape_html(m.shift)}</div>
+                        <small class="text-muted">${frappe.utils.escape_html(m.category)}</small>
+                    </td>
+                    <td>
+                        <span class="badge badge-info px-2 py-1 font-weight-bold">${m.reported_count || 0} Reported</span>
+                    </td>
+                    <td>
+                        <span class="badge badge-success px-2 py-1 font-weight-bold">${m.verified_punch_count || 0} Punched</span>
+                    </td>
+                    <td class="text-right">
+                        ${isSelected ? `
+                            <div class="d-flex justify-content-end align-items-center gap-1">
+                                <span class="badge badge-primary px-2 py-1 mr-1">Active Target</span>
+                                <button class="btn btn-sm btn-primary py-0 px-2 font-weight-bold" onclick="$('#btn-open-qr-scanner').click();">
+                                    📷 Scan ID QR
+                                </button>
+                            </div>
+                        ` : `
+                            <button class="btn btn-outline-secondary btn-sm py-0 px-2 btn-select-muster font-weight-bold" data-id="${m.name}">
+                                🎯 Select
+                            </button>
+                        `}
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        container.html(html);
+    }
+
     $(document).on('click', '.btn-select-muster', function() {
         selectedMusterId = $(this).data('id');
         renderMustersList(allMusters);
+        renderPreviousMustersList(previousMusters);
         showAlert('info', '🎯 Active Shift Muster set to: ' + selectedMusterId);
     });
 

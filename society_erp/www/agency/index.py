@@ -90,8 +90,16 @@ def get_agency_dashboard_data():
     today_musters = frappe.get_all(
         "Facility Shift Muster",
         filters={"agency": agency, "shift_date": nowdate()},
-        fields=["name", "shift", "category", "muster_photo", "reported_count", "verified_punch_count", "creation"],
+        fields=["name", "shift_date", "shift", "category", "muster_photo", "reported_count", "verified_punch_count", "creation"],
         order_by="creation desc"
+    )
+
+    previous_musters = frappe.get_all(
+        "Facility Shift Muster",
+        filters={"agency": agency, "shift_date": ("<", nowdate())},
+        fields=["name", "shift_date", "shift", "category", "muster_photo", "reported_count", "verified_punch_count", "creation"],
+        order_by="shift_date desc, creation desc",
+        limit_page_length=30
     )
 
     # Calculate active shift quota requirement vs punched in
@@ -116,5 +124,6 @@ def get_agency_dashboard_data():
         "active_shift_quota": contract_quota,
         "shifts": shifts,
         "duty_posts": posts,
-        "today_musters": today_musters
+        "today_musters": today_musters,
+        "previous_musters": previous_musters
     }

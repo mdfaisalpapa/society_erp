@@ -102,22 +102,53 @@
             </div>
         </div>
 
-        <!-- Shift Muster Sessions for Today (Master Record) -->
+        <!-- Shift Muster Sessions & History (Master Lineups) -->
         <div class="card border-0 shadow-sm p-3 bg-white mb-4">
             <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
                 <div>
-                    <h5 class="font-weight-bold mb-0 text-dark">📸 Today's Shift Muster Records (Master Lineups)</h5>
+                    <h5 class="font-weight-bold mb-0 text-dark">📸 Shift Muster Records (Master Lineups)</h5>
                     <small class="text-muted">Select an active Shift Muster to punch in staff directly under that muster</small>
                 </div>
-                <div class="mt-2 mt-md-0">
-                    <button type="button" class="btn btn-outline-info btn-sm font-weight-bold" id="btn-open-muster-modal-2">
-                        📸 Record New Shift Muster
+                <div class="mt-2 mt-md-0 d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-info btn-sm font-weight-bold mr-2" id="btn-open-muster-modal-2">
+                        📸 Record New Muster
                     </button>
+                    {% if (is_supervisor or not is_pump_operator) and tiles.get('facility_staff', True) %}
+                    <button type="button" class="btn btn-primary btn-sm font-weight-bold shadow-sm" id="btn-open-qr-scanner-muster">
+                        📷 Scan ID QR
+                    </button>
+                    {% endif %}
                 </div>
             </div>
 
-            <div id="muster-sessions-container">
-                <div class="text-center py-3 text-muted small">Loading today's shift musters…</div>
+            <!-- Tab Pills: Today's Musters vs Previous Musters -->
+            <ul class="nav nav-tabs mt-2 mb-3" id="musterTabNav" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active font-weight-bold" id="tab-today-musters-nav" data-toggle="tab" href="#tab-pane-today-musters" role="tab" aria-selected="true">
+                        📅 Today's Active Musters (<span id="count-today-musters">0</span>)
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link font-weight-bold text-secondary" id="tab-prev-musters-nav" data-toggle="tab" href="#tab-pane-prev-musters" role="tab" aria-selected="false">
+                        🗂️ Previous Musters & Archive (<span id="count-prev-musters">0</span>)
+                    </a>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="musterTabContent">
+                <!-- Tab Pane 1: Today's Musters -->
+                <div class="tab-pane fade show active" id="tab-pane-today-musters" role="tabpanel">
+                    <div id="muster-sessions-container">
+                        <div class="text-center py-3 text-muted small">Loading today's shift musters…</div>
+                    </div>
+                </div>
+
+                <!-- Tab Pane 2: Previous Musters History -->
+                <div class="tab-pane fade" id="tab-pane-prev-musters" role="tabpanel">
+                    <div id="previous-musters-container">
+                        <div class="text-center py-3 text-muted small">Loading previous musters history…</div>
+                    </div>
+                </div>
             </div>
         </div>
 
