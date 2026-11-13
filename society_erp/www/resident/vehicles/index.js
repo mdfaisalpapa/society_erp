@@ -12,8 +12,9 @@ frappe.ready(function() {
                 args: { vehicle_type: type },
                 callback: function(r) {
                     $make.empty().append('<option value="">Select Make</option>');
-                    if (r.message && r.message.makes) {
-                        r.message.makes.forEach(m => $make.append(new Option(m.make_name || m.name, m.name)));
+                    let data = (r.message && r.message.data) ? r.message.data : r.message;
+                    if (data && data.makes) {
+                        data.makes.forEach(m => $make.append(new Option(m.make_name || m.name, m.name)));
                     }
                     $make.prop('disabled', false);
                 }
@@ -33,8 +34,9 @@ frappe.ready(function() {
                 args: { vehicle_type: type, make: make },
                 callback: function(r) {
                     $model.empty().append('<option value="">Select Model</option>');
-                    if (r.message && r.message.models) {
-                        r.message.models.forEach(m => $model.append(new Option(m.model_name || m.name, m.name)));
+                    let data = (r.message && r.message.data) ? r.message.data : r.message;
+                    if (data && data.models) {
+                        data.models.forEach(m => $model.append(new Option(m.model_name || m.name, m.name)));
                     }
                     $model.prop('disabled', false);
                 }

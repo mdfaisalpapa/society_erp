@@ -12,12 +12,13 @@ frappe.ready(function() {
                 $btn.prop('disabled', true).text('Processing...');
                 
                 frappe.call({
-                    method: 'society_erp.api.resident_portal.reallocate_parking',
+                    method: 'society_erp.vehicle_portal.reallocate_parking_slot',
                     args: {
                         slot_id: slot_id,
                         new_type: 'Self-Occupied',
                         occupant: owner_flat,
-                        old_alloc: old_alloc
+                        old_alloc_name: old_alloc,
+                        start_date: frappe.datetime.get_today()
                     },
                     callback: function(r) {
                         if (!r.exc) {
@@ -57,12 +58,12 @@ frappe.ready(function() {
         $btn.prop('disabled', true).text('Submitting...');
 
         frappe.call({
-            method: 'society_erp.api.resident_portal.reallocate_parking',
+            method: 'society_erp.vehicle_portal.reallocate_parking_slot',
             args: {
                 slot_id: $('#modal_slot_id').val(),
                 new_type: 'Private Neighbor Rental',
                 occupant: neighbor,
-                old_alloc: $('#modal_old_alloc').val(),
+                old_alloc_name: $('#modal_old_alloc').val(),
                 start_date: $('#start_date').val(),
                 end_date: $('#end_date').val() || null
             },
