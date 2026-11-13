@@ -17,7 +17,16 @@
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="badge badge-warning text-dark font-weight-bold px-2 py-1">KVC3 QRT Job Card</span>
-                    <span class="badge badge-light font-weight-bold px-2 py-1" id="ticket-status-badge">{{ ticket.status }}</span>
+                    <div>
+                        {% if ticket.claimed_by %}
+                            <span class="badge badge-success font-weight-bold px-2 py-1 mr-1">🟢 Claimed</span>
+                        {% elif ticket.assigned_staff %}
+                            <span class="badge badge-warning text-dark font-weight-bold px-2 py-1 mr-1">⏳ Assigned (Pending Claim)</span>
+                        {% else %}
+                            <span class="badge badge-danger font-weight-bold px-2 py-1 mr-1">⚪ Unclaimed</span>
+                        {% endif %}
+                        <span class="badge badge-light font-weight-bold px-2 py-1" id="ticket-status-badge">{{ ticket.status }}</span>
+                    </div>
                 </div>
                 <h3 class="font-weight-bold mb-1">Ticket #{{ ticket.name }}</h3>
                 <h5 class="mb-0 text-white-50">🏢 Flat: <strong class="text-white">{{ ticket.resident or 'Common Area' }}</strong></h5>

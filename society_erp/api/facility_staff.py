@@ -500,7 +500,9 @@ def generate_reconciliation_purchase_invoice(reconciliation_id: str) -> dict:
         frappe.throw(_("Reconciliation record not found: {0}").format(reconciliation_id))
 
     rec = frappe.get_doc("Facility Invoice Reconciliation", reconciliation_id)
-    company = "Kendriya Vihar Chennai 3"
+    # Flow company from Facility Agency or fallback to default
+    agency_company = frappe.db.get_value("Facility Agency", rec.agency, "company")
+    company = agency_company or frappe.db.get_single_value("Global Defaults", "default_company") or "KVC3-TEST"
     supplier = frappe.db.get_value("Facility Agency", rec.agency, "supplier") or rec.agency
 
     if not frappe.db.exists("Supplier", supplier):

@@ -139,46 +139,54 @@ def assign_ticket_and_notify_qrt(ticket_name: str, staff_id: str = None, remarks
 @frappe.whitelist()
 def post_unassigned_tickets_summary(time_of_day: str = "Morning") -> dict:
     """
-    Gathers all unassigned or pending maintenance tickets and posts a digest to QRT group.
+    Gathers all unassigned or pending (assigned but not yet claimed) maintenance tickets
+    and posts an actionable digest to QRT Telegram group.
     Scheduled for Morning (08:00) and Evening (18:00).
     """
-    unassigned = frappe.get_all(
+    # Fetch: 1) completely unassigned tickets (status=Open, assigned_staff is null)
+    #        2) assigned but unclaimed tickets (status in ['Open', 'Assigned'], claimed_by is null)
+    tickets = frappe.get_all(
         "Maintenance Ticket",
-        filters={"status": "Open", "assigned_staff": ("is", "not set")},
-        fields=["name", "resident", "category", "priority_level", "description", "received_on", "claim_key"],
+        filters={
+            "status": ["in", ["Open", "Assigned"]],
+            "claimed_by": ("is", "not set")
+        },
+        fields=["name", "resident", "category", "priority_level", "description", "status", "assigned_staff", "received_on", "claim_key"],
         order_by="creation asc",
         limit_page_length=50
     )
 
-    if not unassigned:
-        msg = f"☀️ *KVC3 Maintenance QRT — {time_of_day} Digest*\n\n✅ Great job! There are currently *zero unassigned maintenance tickets*."
+    if not tickets:
+        msg = f"☀️ *KVC3 Maintenance QRT — {time_of_day} Digest*\n\n✅ Great job! All maintenance tickets are currently claimed and active."
         sent = send_telegram_message(msg)
-        return {"count": 0, "telegram_sent": sent, "message": "No unassigned tickets"}
+        return {"count": 0, "telegram_sent": sent, "message": "No unassigned or unclaimed tickets"}
 
     lines = [
-        f"📋 *KVC3 Maintenance QRT — {time_of_day} Unassigned Digest*",
-        f"⚠️ There are *{len(unassigned)} unassigned tickets* requiring technician allocation:\n"
+        f"📋 *KVC3 Maintenance QRT — {time_of_day} Ticket Digest*",
+        f"⚠️ *{len(tickets)} tickets* require technician attention (unassigned / pending claim):\n"
     ]
 
     base_url = get_url()
 
-    for idx, t in enumerate(unassigned[:15], 1):
+    for idx, t in enumerate(tickets[:15], 1):
         key = t.claim_key or generate_claim_key(t.name)
         magic_url = f"{base_url}/maintenance_job?id={t.name}&key={key}"
         flat = t.resident or "Common"
         cat = t.category or "General"
         prio = t.priority_level or "Routine"
         desc = (t.description[:45] + "…") if t.description and len(t.description) > 45 else (t.description or "")
-        lines.append(f"{idx}. *#{t.name}* ({flat}) [{cat} - `{prio}`]\n   _{desc}_\n   👉 [Claim Ticket]({magic_url})")
 
-    if len(unassigned) > 15:
-        lines.append(f"\n_...and {len(unassigned) - 15} more unassigned tickets._")
+        status_tag = "⚪ Unassigned" if not t.assigned_staff else f"⏳ Assigned ({t.assigned_staff}) - Unclaimed"
+        lines.append(f"{idx}. *#{t.name}* ({flat}) [{cat} - `{prio}`]\n   Status: `{status_tag}`\n   _{desc}_\n   👉 [Open / Claim Job Card]({magic_url})")
 
-    lines.append(f"\n💡 *Staff instructions:* Tap any link above to claim the ticket and submit completion photo.")
+    if len(tickets) > 15:
+        lines.append(f"\n_...and {len(tickets) - 15} more pending tickets._")
+
+    lines.append(f"\n💡 *Technician Instructions:* Tap the link above to claim the job and upload completion photos.")
 
     sent = send_telegram_message("\n".join(lines))
     return {
-        "count": len(unassigned),
+        "count": len(tickets),
         "telegram_sent": sent,
-        "message": f"Posted {len(unassigned)} unassigned tickets to QRT."
+        "message": f"Posted {len(tickets)} pending tickets to QRT."
     }

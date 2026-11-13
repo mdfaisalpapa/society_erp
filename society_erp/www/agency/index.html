@@ -147,16 +147,21 @@
                             </div>
                             <div class="row">
                                 <div class="col-md-6 form-group mb-3">
-                                    <label for="staff-gate" class="font-weight-bold small text-dark">Default Gate / Post</label>
-                                    <select class="form-control" id="staff-gate">
-                                        <option value="Main Gate">Main Gate</option>
-                                        <option value="Back Gate">Back Gate</option>
-                                        <option value="Tower Concierge">Tower Concierge</option>
-                                        <option value="Basement Parking">Basement Parking</option>
-                                        <option value="Clubhouse">Clubhouse</option>
-                                        <option value="All Gates">All Gates</option>
+                                    <label for="staff-id-type" class="font-weight-bold small text-dark">Govt ID Type</label>
+                                    <select class="form-control" id="staff-id-type">
+                                        <option value="Aadhaar">Aadhaar Card (Last 4 Digits / Masked)</option>
+                                        <option value="Voter ID">Voter ID</option>
+                                        <option value="Driving License">Driving License</option>
+                                        <option value="Passport">Passport</option>
                                     </select>
                                 </div>
+                                <div class="col-md-6 form-group mb-3">
+                                    <label for="staff-id-number" class="font-weight-bold small text-dark">Govt ID Number (Masked Aadhaar: XXXX-XXXX-1234)</label>
+                                    <input type="text" class="form-control" id="staff-id-number" placeholder="e.g. XXXX-XXXX-4567 or DL12345">
+                                    <small class="text-muted">Per UIDAI guidelines, do not enter full 12 digits. Keep first 8 digits masked.</small>
+                                </div>
+                            </div>
+                            <div class="row">
                                 <div class="col-md-6 form-group mb-3">
                                     <label for="staff-police" class="font-weight-bold small text-dark">Police Verification</label>
                                     <select class="form-control" id="staff-police">
@@ -165,19 +170,13 @@
                                         <option value="Not Applicable">Not Applicable</option>
                                     </select>
                                 </div>
-                            </div>
-                            <div class="row">
                                 <div class="col-md-6 form-group mb-3">
-                                    <label for="staff-id-type" class="font-weight-bold small text-dark">Govt ID Type</label>
-                                    <select class="form-control" id="staff-id-type">
-                                        <option value="Aadhaar">Aadhaar Card</option>
-                                        <option value="Voter ID">Voter ID</option>
-                                        <option value="Driving License">Driving License</option>
-                                        <option value="Passport">Passport</option>
-                                    </select>
+                                    <label class="font-weight-bold small text-dark">Duty Post Assignment</label>
+                                    <div class="text-muted small p-2 bg-light rounded border">
+                                        📍 Assigned dynamically during daily roll call / reporting.
+                                    </div>
                                 </div>
-                                <div class="col-md-6 form-group mb-3">
-                                    <label for="staff-id-number" class="font-weight-bold small text-dark">Govt ID Number</label>
+                            </div>
                                     <input type="text" class="form-control" id="staff-id-number" placeholder="e.g. 12-digit Aadhaar">
                                 </div>
                             </div>
@@ -341,20 +340,19 @@
                                     <label class="font-weight-bold small">Discharge Sump *</label>
                                     <select class="form-control" id="tanker-target-sump" required>
                                         <option value="Domestic Sump" selected>Domestic Sump</option>
-                                        <option value="Central Raw Water Sump">Central Raw Water Sump</option>
                                         <option value="Flush Sump">Flush Sump</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6 form-group mb-3">
-                                    <label class="font-weight-bold small">Discharge Block</label>
-                                    <select class="form-control" id="tanker-target-block">
-                                        <option value="">Central / All Blocks</option>
+                                    <label class="font-weight-bold small">Discharge Block *</label>
+                                    <select class="form-control font-weight-bold" id="tanker-target-block" required>
                                         <option value="A1">Block A1</option>
                                         <option value="A2">Block A2</option>
                                         <option value="B1">Block B1</option>
                                         <option value="B2">Block B2</option>
                                         <option value="C1">Block C1</option>
                                         <option value="C2">Block C2</option>
+                                        <option value="C3">Block C3</option>
                                         <option value="D1">Block D1</option>
                                         <option value="D2">Block D2</option>
                                         <option value="D3">Block D3</option>
@@ -428,8 +426,9 @@
                                 <div class="font-weight-bold text-dark mb-2">🚰 Domestic Sump (WTP / Borewell)</div>
                                 <div class="row">
                                     <div class="col-md-6 form-group mb-2">
-                                        <label class="small text-muted font-weight-bold">Water Level (Feet) *</label>
-                                        <input type="number" step="0.1" class="form-control form-control-sm" id="water-dom-level" placeholder="e.g. 6.5" required>
+                                        <label class="small text-muted font-weight-bold">Water Level (%) *</label>
+                                        <input type="number" step="1" min="0" max="100" class="form-control form-control-sm font-weight-bold" id="water-dom-level" placeholder="e.g. 80" required>
+                                        <small class="text-muted">Enter percentage (0% to 100%)</small>
                                     </div>
                                     <div class="col-md-6 form-group mb-2">
                                         <label class="small text-muted font-weight-bold">OHT Pump Action</label>
@@ -452,8 +451,9 @@
                                 <div class="font-weight-bold text-dark mb-2">🚽 Flush Sump (STP Treated)</div>
                                 <div class="row">
                                     <div class="col-md-6 form-group mb-2">
-                                        <label class="small text-muted font-weight-bold">Water Level (Feet) *</label>
-                                        <input type="number" step="0.1" class="form-control form-control-sm" id="water-flush-level" placeholder="e.g. 4.2" required>
+                                        <label class="small text-muted font-weight-bold">Water Level (%) *</label>
+                                        <input type="number" step="1" min="0" max="100" class="form-control form-control-sm font-weight-bold" id="water-flush-level" placeholder="e.g. 60" required>
+                                        <small class="text-muted">Enter percentage (0% to 100%)</small>
                                     </div>
                                     <div class="col-md-6 form-group mb-2">
                                         <label class="small text-muted font-weight-bold">OHT Pump Action</label>

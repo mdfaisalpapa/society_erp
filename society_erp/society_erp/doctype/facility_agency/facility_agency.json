@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "agency_name",
+  "company",
   "supplier",
   "service_types",
   "contract_status",
@@ -28,6 +29,13 @@
    "label": "Agency / Vendor Name",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company"
   },
   {
    "fieldname": "supplier",

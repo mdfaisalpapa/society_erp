@@ -93,7 +93,7 @@
    "fieldname": "target_sump",
    "fieldtype": "Select",
    "label": "Target Sump",
-   "options": "Domestic Sump\nCentral Raw Water Sump\nFlush Sump"
+   "options": "Domestic Sump\nFlush Sump"
   },
   {
    "fieldname": "received_by_staff",

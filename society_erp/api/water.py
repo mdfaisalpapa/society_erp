@@ -16,7 +16,7 @@ def log_block_water(
     source: str = "Manual Staff Entry"
 ) -> dict:
     """
-    Records daily water sump levels and OHT pump switching for a residential block.
+    Records daily water sump levels (% capacity) and OHT pump switching for a residential block.
     Can be called by mobile operator or IoT telemetry webhooks.
     """
     if not block or not frappe.db.exists("Block", block):
@@ -46,11 +46,12 @@ def log_block_water(
             "reading_source": source
         })
 
-    # Update domestic sump readings
+    # Update domestic sump readings (level is entered as % capacity)
     if domestic_level_ft is not None:
-        doc.domestic_level_ft = float(domestic_level_ft)
-        # Approximate standard sump capacity % (assume 8.0 ft max capacity)
-        doc.domestic_capacity_pct = min(100.0, round((float(domestic_level_ft) / 8.0) * 100, 1))
+        pct_val = min(100.0, max(0.0, float(domestic_level_ft)))
+        doc.domestic_capacity_pct = pct_val
+        # Map 100% to standard 8.0 ft for backward compatibility
+        doc.domestic_level_ft = round((pct_val / 100.0) * 8.0, 1)
 
     if domestic_photo:
         doc.domestic_photo = domestic_photo
@@ -68,10 +69,12 @@ def log_block_water(
     elif domestic_pump_action:
         doc.domestic_pump_status = domestic_pump_action.capitalize()
 
-    # Update flush sump readings
+    # Update flush sump readings (level is entered as % capacity)
     if flush_level_ft is not None:
-        doc.flush_level_ft = float(flush_level_ft)
-        doc.flush_capacity_pct = min(100.0, round((float(flush_level_ft) / 7.0) * 100, 1))
+        pct_val = min(100.0, max(0.0, float(flush_level_ft)))
+        doc.flush_capacity_pct = pct_val
+        # Map 100% to standard 7.0 ft for backward compatibility
+        doc.flush_level_ft = round((pct_val / 100.0) * 7.0, 1)
 
     if flush_photo:
         doc.flush_photo = flush_photo
