@@ -57,6 +57,14 @@ def punch_attendance(
         as_dict=True
     )
 
+    # Find active shift muster for this agency & date to link master record
+    latest_muster = frappe.db.get_value(
+        "Facility Shift Muster",
+        {"agency": staff.agency, "shift_date": today, "shift": shift},
+        "name",
+        order_by="creation desc"
+    )
+
     if punch_type == "in" or (punch_type == "auto" and not existing):
         # Create Punch-In
         doc = frappe.get_doc({
@@ -64,6 +72,7 @@ def punch_attendance(
             "staff": staff_id,
             "attendance_date": today,
             "shift": shift or (existing.get("shift") if existing else shift),
+            "muster": latest_muster,
             "status": "Present",
             "in_time": now_dt,
             "verification_method": method,
@@ -74,6 +83,12 @@ def punch_attendance(
             "remarks": remarks
         })
         doc.insert(ignore_permissions=True)
+
+        # Update verified punch count on muster master
+        if latest_muster:
+            punched_count = frappe.db.count("Facility Staff Attendance", {"muster": latest_muster, "status": "Present"})
+            frappe.db.set_value("Facility Shift Muster", latest_muster, "verified_punch_count", punched_count)
+
         return {
             "status": "success",
             "action": "punch_in",
@@ -83,6 +98,7 @@ def punch_attendance(
             "role": staff.role,
             "duty_post": post_name,
             "cost_center": cost_center,
+            "muster_id": latest_muster,
             "in_time": str(now_dt)
         }
 
@@ -424,6 +440,7 @@ def review_facility_staff(staff_id: str, action: str, remarks: str = None) -> di
 def assign_duty_post(attendance_id: str = None, staff_id: str = None, duty_post: str = None) -> dict:
     """
     Dynamically assign or update physical post and cost center for a staff attendance record.
+    Strictly allowed ONLY for staff who are currently punched in / on duty today.
     """
     if not duty_post or not frappe.db.exists("Facility Duty Post", duty_post):
         frappe.throw(_("Invalid Duty Post: {0}").format(duty_post))
@@ -437,11 +454,13 @@ def assign_duty_post(attendance_id: str = None, staff_id: str = None, duty_post:
             "name"
         )
 
-    if attendance_id:
-        frappe.db.set_value("Facility Staff Attendance", attendance_id, {
-            "duty_post": duty_post,
-            "cost_center": cost_center
-        })
+    if not attendance_id:
+        frappe.throw(_("Cannot allocate post: Staff member is not punched in today or has already punched out."))
+
+    frappe.db.set_value("Facility Staff Attendance", attendance_id, {
+        "duty_post": duty_post,
+        "cost_center": cost_center
+    })
 
     if staff_id:
         # Also update staff default

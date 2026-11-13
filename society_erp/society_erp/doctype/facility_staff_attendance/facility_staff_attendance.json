@@ -13,6 +13,7 @@
   "column_break_attendance",
   "attendance_date",
   "shift",
+  "muster",
   "status",
   "section_break_timings",
   "in_time",
@@ -82,6 +83,13 @@
    "label": "Shift",
    "options": "Facility Shift",
    "reqd": 1
+  },
+  {
+   "fieldname": "muster",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Shift Muster Reference",
+   "options": "Facility Shift Muster"
   },
   {
    "default": "Present",

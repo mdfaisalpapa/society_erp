@@ -38,6 +38,7 @@
                     <button type="button" class="btn btn-primary font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-tanker-modal">
                         🚚 Log Water Tanker
                     </button>
+                    {% if is_supervisor or not is_pump_operator %}
                     <button type="button" class="btn btn-primary font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-qr-scanner">
                         📷 Scan ID QR
                     </button>
@@ -47,6 +48,7 @@
                     <button type="button" class="btn btn-success font-weight-bold shadow-sm mb-2" id="btn-open-onboard-modal">
                         ➕ Onboard Staff
                     </button>
+                    {% endif %}
                     {% if is_standalone %}
                     <button type="button" class="btn btn-outline-light ml-2 mb-2" onclick="window.close(); if(window.Telegram && window.Telegram.WebApp){ window.Telegram.WebApp.close(); }">
                         ✕ Close

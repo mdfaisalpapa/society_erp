@@ -13,10 +13,24 @@ def get_context(context):
 
     # Agency lookup
     agency = None
-    if "System Manager" in roles or user == "Administrator":
+    is_supervisor = False
+    is_pump_operator = False
+
+    if "System Manager" in roles or user == "Administrator" or "Facility Agency Manager" in roles:
+        is_supervisor = True
         agency = frappe.db.get_value("Facility Agency", {"contract_status": "Active"}, "agency_name")
     else:
+        # Check if agency supervisor
         agency = frappe.db.get_value("Facility Agency", {"portal_user": user}, "agency_name")
+        if agency:
+            is_supervisor = True
+        else:
+            # Check if facility staff (e.g. Pump Operator / Technician)
+            staff_doc = frappe.db.get_value("Facility Staff", {"user_id": user}, ["name", "agency", "role"], as_dict=True)
+            if staff_doc:
+                agency = staff_doc.agency
+                if "Pump" in (staff_doc.role or "") or "STP" in (staff_doc.role or "") or "WTP" in (staff_doc.role or "") or "Operator" in (staff_doc.role or ""):
+                    is_pump_operator = True
 
     if not agency and "System Manager" not in roles and user != "Administrator":
         context.access_denied = True
@@ -27,6 +41,8 @@ def get_context(context):
     context.agency_name = agency
     context.agency_doc = agency_doc
     context.today_date = nowdate()
+    context.is_supervisor = is_supervisor
+    context.is_pump_operator = is_pump_operator
 
     # Standalone support
     context.is_standalone = bool(frappe.form_dict.get("standalone"))

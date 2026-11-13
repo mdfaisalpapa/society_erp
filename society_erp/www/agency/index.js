@@ -558,13 +558,18 @@ frappe.ready(function() {
                     ? `<button class="btn btn-sm btn-outline-danger btn-agency-punch font-weight-bold mr-1" data-id="${st.staff_id}" data-punch="in">⏹️ Punch Out</button>`
                     : `<button class="btn btn-sm btn-success btn-agency-punch font-weight-bold mr-1" data-id="${st.staff_id}" data-punch="out">▶️ Punch In</button>`;
                 
-                const assignBtnDesktop = `
+                // Assign Post button is active ONLY when staff is punched in / on duty
+                const assignBtnDesktop = isOnDuty ? `
                     <button class="btn btn-sm btn-outline-primary btn-assign-duty font-weight-bold" 
                             data-id="${st.staff_id}" 
                             data-name="${frappe.utils.escape_html(st.full_name)}" 
                             data-role="${frappe.utils.escape_html(st.role)}"
                             data-post="${frappe.utils.escape_html(st.duty_post || '')}"
                             data-att-id="${st.attendance_id || ''}">
+                        📍 Assign Post
+                    </button>
+                ` : `
+                    <button class="btn btn-sm btn-light text-muted border" disabled title="Staff must be punched in before assigning duty post">
                         📍 Assign Post
                     </button>
                 `;
@@ -574,7 +579,7 @@ frappe.ready(function() {
                     ? `<button class="btn btn-danger btn-block btn-agency-punch font-weight-bold mb-2 py-2" data-id="${st.staff_id}" data-punch="in">⏹️ Punch Out</button>`
                     : `<button class="btn btn-success btn-block btn-agency-punch font-weight-bold mb-2 py-2" data-id="${st.staff_id}" data-punch="out">▶️ Punch In</button>`;
 
-                const assignBtnMobile = `
+                const assignBtnMobile = isOnDuty ? `
                     <button class="btn btn-outline-primary btn-block btn-assign-duty font-weight-bold py-2" 
                             data-id="${st.staff_id}" 
                             data-name="${frappe.utils.escape_html(st.full_name)}" 
@@ -582,6 +587,10 @@ frappe.ready(function() {
                             data-post="${frappe.utils.escape_html(st.duty_post || '')}"
                             data-att-id="${st.attendance_id || ''}">
                         📍 Assign Duty Post / Block
+                    </button>
+                ` : `
+                    <button class="btn btn-light text-muted btn-block py-2 border mb-0" disabled>
+                        📍 Assign Post (Punch-in Required)
                     </button>
                 `;
                 mobileActions = punchBtnMobile + assignBtnMobile;
