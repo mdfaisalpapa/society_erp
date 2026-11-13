@@ -37,6 +37,9 @@
                         💧 Log Sump & Pump
                     </button>
                     {% endif %}
+                    <button type="button" class="btn btn-warning text-dark font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-chemical-modal">
+                        🧪 Log STP Chemicals
+                    </button>
                     {% if tiles.get('water_tanker', True) %}
                     <button type="button" class="btn btn-primary font-weight-bold shadow-sm mr-2 mb-2" id="btn-open-tanker-modal">
                         🚚 Log Water Tanker
@@ -647,6 +650,80 @@
                             <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
                             <button type="submit" class="btn btn-info btn-sm px-4 font-weight-bold" id="btn-submit-tank-cleaning">
                                 🚰 Save Cleaning Record
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: STP Chemical Stock Log -->
+        <div class="modal fade" id="modal-chemical-log" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0">
+                    <div class="modal-header bg-warning text-dark align-items-center">
+                        <h5 class="modal-title font-weight-bold">🧪 STP Chemical Stock Level Log</h5>
+                        <button type="button" class="close text-dark" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <form id="form-chemical-log">
+                        <div class="modal-body p-4">
+                            <div class="alert alert-info py-2 small mb-3">
+                                ℹ️ Daily STP chemical stock levels must be monitored to prevent stock-out of chlorine, coagulants & biological nutrients.
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold small text-dark">Chemical / Consumable Name *</label>
+                                <select class="form-control font-weight-bold" id="chem-select-name" required>
+                                    <option value="Sodium Hypochlorite (Chlorine)">Sodium Hypochlorite (Chlorine) — 50L Safety Threshold</option>
+                                    <option value="Alum / Polyaluminium Chloride (PAC)">Alum / Polyaluminium Chloride (PAC) — 40Kg Safety Threshold</option>
+                                    <option value="Sodium Hydroxide (Caustic Soda)">Sodium Hydroxide (Caustic Soda) — 25Kg Safety Threshold</option>
+                                    <option value="Hydrochloric Acid (HCl)">Hydrochloric Acid (HCl) — 20L Safety Threshold</option>
+                                    <option value="Urea / Bacterial Nutrients">Urea / Bacterial Nutrients — 25Kg Safety Threshold</option>
+                                    <option value="Filter Sand / Activated Carbon Media">Filter Sand / Activated Carbon Media — 5 Bags Safety Threshold</option>
+                                </select>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 form-group mb-3">
+                                    <label class="font-weight-bold small text-dark">Current Stock Level *</label>
+                                    <input type="number" step="0.1" min="0" class="form-control font-weight-bold" id="chem-current-stock" placeholder="e.g. 120" required>
+                                </div>
+                                <div class="col-md-6 form-group mb-3">
+                                    <label class="font-weight-bold small text-dark">Unit of Measure</label>
+                                    <select class="form-control font-weight-bold" id="chem-unit">
+                                        <option value="Liters">Liters</option>
+                                        <option value="Kilograms (Kg)">Kilograms (Kg)</option>
+                                        <option value="Cans (30L / 50L)">Cans</option>
+                                        <option value="Bags (25Kg / 50Kg)">Bags</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 form-group mb-3">
+                                    <label class="small text-muted font-weight-bold">Dosed / Consumed Today</label>
+                                    <input type="number" step="0.1" min="0" class="form-control form-control-sm" id="chem-consumption" placeholder="e.g. 15.0">
+                                </div>
+                                <div class="col-md-6 form-group mb-3">
+                                    <label class="small text-muted font-weight-bold">New Inward Received Today</label>
+                                    <input type="number" step="0.1" min="0" class="form-control form-control-sm" id="chem-received" placeholder="e.g. 0.0">
+                                </div>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="small text-muted font-weight-bold">Minimum Safety / Buffer Threshold</label>
+                                <input type="number" step="0.1" min="0" class="form-control form-control-sm" id="chem-threshold" placeholder="e.g. 50">
+                                <small class="text-muted">An alert triggers on Committee portal if stock drops below this limit.</small>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="small text-muted font-weight-bold">Chemical Cans / Storage Photo Proof</label>
+                                <input type="file" class="form-control-file border p-1 rounded bg-white" id="chem-photo" accept="image/*" capture="environment">
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="small text-muted font-weight-bold">Supplier Name / Remarks</label>
+                                <textarea class="form-control form-control-sm" id="chem-remarks" rows="2" placeholder="e.g. M/s ChemSupply invoice #892, chlorine residual test 1.5 ppm..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light border-top">
+                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-warning btn-sm px-4 font-weight-bold text-dark" id="btn-submit-chemical-log">
+                                🧪 Save Chemical Stock
                             </button>
                         </div>
                     </form>

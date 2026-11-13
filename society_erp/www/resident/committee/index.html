@@ -196,6 +196,13 @@
                         </a>
                     </li>
                     {% endif %}
+                    {% if tiles.get('chemical_log', True) %}
+                    <li class="nav-item">
+                        <a class="nav-link font-weight-bold text-warning" id="tab-chemical_log" data-toggle="pill" href="#pane-chemical_log" role="tab" data-module="chemical_log">
+                            <span class="tab-icon">🧪</span><span class="tab-label">STP Chemicals</span> <span class="badge badge-danger ml-1" id="badge-chemical_log">{{ counts.chemical_low_count or 0 }}</span>
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
 
                 <button class="btn btn-outline-secondary btn-sm ml-auto d-md-none mt-2" type="button" data-toggle="collapse" data-target="#committeeFilterCollapse" aria-expanded="false" aria-controls="committeeFilterCollapse">
@@ -332,6 +339,11 @@
             <!-- 14. Asset & Equipment AMC Logs Pane -->
             <div class="tab-pane fade" id="pane-amc_log" role="tabpanel">
                 <div id="container-amc_log"></div>
+            </div>
+
+            <!-- 15. STP Chemical Stocks & Non-Data Entry Highlighting Pane -->
+            <div class="tab-pane fade" id="pane-chemical_log" role="tabpanel">
+                <div id="container-chemical_log"></div>
             </div>
         </div>
 

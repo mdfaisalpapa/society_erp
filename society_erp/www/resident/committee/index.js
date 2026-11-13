@@ -107,6 +107,7 @@ frappe.ready(function () {
         $("#badge-classifieds").text(counts.classifieds_pending || 0);
         $("#badge-resolutions").text(counts.resolutions_pending || 0);
         $("#badge-amc_log").text(counts.amc_logs_total || 0);
+        $("#badge-chemical_log").text(counts.chemical_low_count || 0);
     }
 
     // --- Render Modules ---
@@ -1734,6 +1735,158 @@ frappe.ready(function () {
         $cont.html(html);
     }
 
+    // --- 15. STP Chemical Stocks & Non-Data Entry Highlighting Module ---
+    function renderChemicalSummary(summary) {
+        const $cont = $("#container-chemical_log");
+        if (!summary || !summary.chemicals) {
+            $cont.html(`
+                <div class="text-center py-5 bg-white rounded border">
+                    <div style="font-size: 2.5rem;">🧪</div>
+                    <h6 class="font-weight-bold mt-2">No STP Chemical Stock Data</h6>
+                    <p class="text-muted small">Daily STP chemical logs will appear here.</p>
+                </div>
+            `);
+            return;
+        }
+
+        const missingCount = summary.missing_entry_count || 0;
+        const lowStockCount = summary.low_stock_count || 0;
+
+        let html = `
+            <!-- Non-Data Entry Alert for Committee -->
+            ${missingCount > 0 ? `
+                <div class="alert alert-danger shadow-sm border-0 mb-3 d-flex align-items-center justify-content-between flex-wrap p-3">
+                    <div class="d-flex align-items-center mb-2 mb-md-0">
+                        <span style="font-size: 2rem;" class="mr-3">⚠️</span>
+                        <div>
+                            <h6 class="font-weight-bold mb-0 text-danger">ATTENTION COMMITTEE: Daily STP Chemical Logs Missing Today!</h6>
+                            <div class="small">
+                                <strong>${missingCount}</strong> of ${summary.total_monitored} chemical stocks have not been updated for today (${summary.today_date}). Regular dosing data entry is critical to prevent plant shutdown.
+                            </div>
+                        </div>
+                    </div>
+                    <span class="badge badge-danger px-3 py-2 font-weight-bold" style="font-size: 0.9rem;">
+                        ${missingCount} Overdue Entries
+                    </span>
+                </div>
+            ` : `
+                <div class="alert alert-success shadow-sm border-0 mb-3 py-2 px-3 small d-flex align-items-center">
+                    <span class="mr-2">✅</span>
+                    <span>All ${summary.total_monitored} STP chemical stock balances are updated for today (${summary.today_date}).</span>
+                </div>
+            `}
+
+            <!-- KPI Cards Header -->
+            <div class="row mb-3">
+                <div class="col-md-4 mb-2">
+                    <div class="card p-3 border-0 shadow-sm bg-white" style="border-left: 4px solid #ffc107 !important;">
+                        <span class="small text-muted font-weight-bold text-uppercase">Monitored STP Chemicals</span>
+                        <h4 class="font-weight-bold text-dark my-1">${summary.total_monitored}</h4>
+                        <small class="text-muted">Chlorine, PAC, Caustic, HCl, Urea</small>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <div class="card p-3 border-0 shadow-sm bg-white" style="border-left: 4px solid #dc3545 !important;">
+                        <span class="small text-muted font-weight-bold text-uppercase">⚠️ Low Stock Warnings</span>
+                        <h4 class="font-weight-bold text-danger my-1">${lowStockCount}</h4>
+                        <small class="text-muted">Stock &le; safety minimum buffer</small>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <div class="card p-3 border-0 shadow-sm bg-white" style="border-left: 4px solid #6f42c1 !important;">
+                        <span class="small text-muted font-weight-bold text-uppercase">Data Entry Compliance</span>
+                        <h4 class="font-weight-bold text-purple my-1" style="color:#6f42c1;">${summary.total_monitored - missingCount} / ${summary.total_monitored}</h4>
+                        <small class="text-muted">Updated on date of inspection</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chemical Status Cards Grid -->
+            <h6 class="font-weight-bold text-dark mb-2">Current Chemical Balances & Safety Buffers</h6>
+            <div class="row mb-4">
+        `;
+
+        summary.chemicals.forEach(c => {
+            const isMissing = c.entry_missing_today;
+            const isStale = c.is_stale_entry;
+            const isLow = c.is_low_stock;
+
+            let cardBorder = 'border-left: 4px solid #28a745 !important;';
+            let statusBadge = '<span class="badge badge-success">✅ In Stock</span>';
+
+            if (isLow) {
+                cardBorder = 'border-left: 4px solid #dc3545 !important; background: #fff8f8;';
+                statusBadge = '<span class="badge badge-danger">🚨 LOW STOCK — RE-ORDER</span>';
+            } else if (isMissing) {
+                cardBorder = 'border-left: 4px solid #ffc107 !important;';
+                statusBadge = '<span class="badge badge-warning text-dark">⏳ Pending Today</span>';
+            }
+
+            const rec = c.latest_record;
+            const lastUpdatedText = rec ? `${formatDate(rec.log_date)} (${c.days_since_entry === 0 ? 'Today' : c.days_since_entry + 'd ago'})` : 'Never Entered';
+
+            html += `
+                <div class="col-12 col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 shadow-sm border p-3 d-flex flex-column justify-content-between" style="${cardBorder}">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h6 class="font-weight-bold text-dark mb-0">${escapeHtml(c.chemical_name)}</h6>
+                                ${statusBadge}
+                            </div>
+                            <small class="text-muted d-block mb-2 font-italic">${escapeHtml(c.description)}</small>
+
+                            <!-- Non-Data Entry Flag Pill -->
+                            ${isStale ? `
+                                <div class="badge badge-danger text-wrap text-left p-1 mb-2 d-block" style="font-size:0.75rem;">
+                                    ⚠️ No entry for ${c.days_since_entry} days! Stock level unverified.
+                                </div>
+                            ` : (isMissing ? `
+                                <div class="badge badge-warning text-dark text-wrap text-left p-1 mb-2 d-block" style="font-size:0.75rem;">
+                                    ⏳ No entry logged today (${summary.today_date}).
+                                </div>
+                            ` : '')}
+
+                            <div class="p-2 mb-2 bg-light rounded small">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Current Balance:</span>
+                                    <span class="h5 font-weight-bold mb-0 ${isLow ? 'text-danger' : 'text-dark'}">${c.current_stock} ${c.unit}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-1">
+                                    <span class="text-muted">Safety Buffer (Min):</span>
+                                    <span class="text-dark font-weight-bold">${c.threshold} ${c.unit}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-1 pt-1 border-top">
+                                    <span class="text-muted">Last Inspected:</span>
+                                    <span class="font-weight-bold ${isMissing ? 'text-danger' : 'text-success'}">${lastUpdatedText}</span>
+                                </div>
+                                ${rec && rec.daily_consumption ? `
+                                <div class="d-flex justify-content-between align-items-center mt-1">
+                                    <span class="text-muted">Daily Dosed:</span>
+                                    <span>${rec.daily_consumption} ${c.unit}</span>
+                                </div>` : ''}
+                            </div>
+
+                            ${rec && rec.remarks ? `
+                                <div class="small text-muted font-italic bg-white p-1 rounded border mb-2">
+                                    "${escapeHtml(rec.remarks)}"
+                                </div>
+                            ` : ''}
+
+                            ${rec && rec.stock_photo ? `
+                                <a href="${rec.stock_photo}" target="_blank" class="btn btn-outline-secondary btn-sm btn-block text-truncate">
+                                    📷 View Canister / Storage Photo Proof
+                                </a>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        $cont.html(html);
+    }
+
     // --- Search & Filter Logic ---
     function applyFilterAndRender() {
         const query = $searchInput.val().trim().toLowerCase();
@@ -1793,6 +1946,7 @@ frappe.ready(function () {
         renderCleaningLog(committeeData.cleaning_summary);
         renderTankCleaning(committeeData.tank_cleanings || []);
         renderAMCLogs(filterList(committeeData.amc_logs || [], "amc_log", ["equipment_name", "asset_category", "location_or_block", "vendor_agency", "technician_name", "service_type"]));
+        renderChemicalSummary(committeeData.chemical_summary || {});
     }
 
     // --- Data Fetching ---

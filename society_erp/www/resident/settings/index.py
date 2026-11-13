@@ -250,6 +250,18 @@ ALL_PORTAL_TILES = [
         "applies_to_resident": False,
         "applies_to_committee": True,
         "applies_to_agency": True,
+    },
+    {
+        "id": "chemical_log",
+        "title": "STP Chemical Stocks",
+        "icon": "🧪",
+        "desc": "Chlorine, PAC, and bacterial nutrient inventory monitoring & stock-out prevention",
+        "default_resident": 0,
+        "default_committee": 1,
+        "default_agency": 1,
+        "applies_to_resident": False,
+        "applies_to_committee": True,
+        "applies_to_agency": True,
     }
 ]
 

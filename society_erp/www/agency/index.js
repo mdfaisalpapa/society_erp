@@ -327,6 +327,97 @@ frappe.ready(function() {
         });
     });
 
+    // Submit Chemical Log
+    $('#btn-open-chemical-modal').on('click', function() {
+        $('#form-chemical-log')[0].reset();
+        $('#modal-chemical-log').modal('show');
+    });
+
+    $('#form-chemical-log').on('submit', function(e) {
+        e.preventDefault();
+        const btn = $('#btn-submit-chemical-log');
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
+
+        const chemName = $('#chem-select-name').val();
+        const curStock = $('#chem-current-stock').val();
+        const unit = $('#chem-unit').val();
+        const consumption = $('#chem-consumption').val() || 0;
+        const received = $('#chem-received').val() || 0;
+        const threshold = $('#chem-threshold').val() || null;
+        const remarks = $('#chem-remarks').val().trim();
+        const photoInput = document.getElementById('chem-photo');
+
+        async function uploadIfPresent(fileInput) {
+            if (fileInput && fileInput.files && fileInput.files[0]) {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('is_private', 0);
+                formData.append('folder', 'Home');
+                const resp = await fetch('/api/method/upload_file', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token }
+                });
+                const d = await resp.json();
+                return d.message ? d.message.file_url : null;
+            }
+            return null;
+        }
+
+        (async () => {
+            try {
+                const photoUrl = await uploadIfPresent(photoInput);
+                frappe.call({
+                    method: 'society_erp.api.stp_chemical.log_stp_chemical_stock',
+                    args: {
+                        chemical_name: chemName,
+                        current_stock: curStock,
+                        unit_of_measure: unit,
+                        daily_consumption: consumption,
+                        stock_received: received,
+                        minimum_threshold: threshold,
+                        stock_photo: photoUrl,
+                        remarks: remarks
+                    },
+                    callback: function(r) {
+                        btn.prop('disabled', false).text('🧪 Save Chemical Stock');
+                        if (r.message && r.message.status === 'success') {
+                            $('#modal-chemical-log').modal('hide');
+                            const isLow = r.message.is_low_stock;
+                            const alertType = isLow ? 'warning' : 'success';
+                            const alertMsg = isLow 
+                                ? '⚠️ Stock recorded! Warning: Current stock is below safety threshold!' 
+                                : '🧪 ' + r.message.message;
+                            showAlert(alertType, alertMsg);
+                            loadAgencyDashboard();
+                        } else {
+                            frappe.msgprint(__('Failed to save chemical stock.'));
+                        }
+                    },
+                    error: function() {
+                        btn.prop('disabled', false).text('🧪 Save Chemical Stock');
+                    }
+                });
+            } catch (err) {
+                btn.prop('disabled', false).text('🧪 Save Chemical Stock');
+                frappe.msgprint(__('Error uploading photo: ' + err));
+            }
+        })();
+    });
+
+    // Handle Upload / Update Photo button directly next to Active Target Muster
+    $(document).on('click', '.btn-upload-active-muster-photo', function() {
+        const musterId = $(this).data('id');
+        const category = $(this).data('category');
+        const shift = $(this).data('shift');
+
+        // Pre-fill modal with active muster details
+        $('#muster-shift').val(shift);
+        $('#muster-category').val(category);
+        $('#form-record-muster').data('target-muster-id', musterId);
+        $('#modal-muster').modal('show');
+    });
+
     // Form submit: Muster Photo Upload
     $('#form-record-muster').on('submit', function(e) {
         e.preventDefault();
@@ -361,18 +452,32 @@ frappe.ready(function() {
         .then(data => {
             if (data.message && data.message.file_url) {
                 const fileUrl = data.message.file_url;
+                const targetMusterId = $('#form-record-muster').data('target-muster-id');
+
+                const apiMethod = targetMusterId 
+                    ? 'society_erp.api.facility_staff.update_muster_photo'
+                    : 'society_erp.api.facility_staff.record_shift_muster';
+
+                const apiArgs = targetMusterId ? {
+                    muster_id: targetMusterId,
+                    muster_photo: fileUrl,
+                    reported_count: countVal,
+                    notes: notesVal
+                } : {
+                    agency: agencyName,
+                    shift: shiftVal,
+                    category: catVal,
+                    muster_photo: fileUrl,
+                    reported_count: countVal,
+                    notes: notesVal
+                };
+
                 frappe.call({
-                    method: 'society_erp.api.facility_staff.record_shift_muster',
-                    args: {
-                        agency: agencyName,
-                        shift: shiftVal,
-                        category: catVal,
-                        muster_photo: fileUrl,
-                        reported_count: countVal,
-                        notes: notesVal
-                    },
+                    method: apiMethod,
+                    args: apiArgs,
                     callback: function(r) {
                         submitBtn.prop('disabled', false).text('📸 Save Muster Photo');
+                        $('#form-record-muster').removeData('target-muster-id');
                         if (r.message && r.message.status === 'success') {
                             $('#modal-muster').modal('hide');
                             showAlert('success', '📸 ' + r.message.message);
@@ -645,13 +750,24 @@ frappe.ready(function() {
 
             // If active target muster, place the "📷 Scan ID QR" button directly next to it
             let actionHtml = '';
+            const hasPhoto = (m.muster_photo && m.muster_photo !== 'DELETED_POST_BILLING_VERIFICATION');
+
             if (isSelected) {
                 actionHtml = `
                     <div class="d-flex align-items-center flex-wrap gap-1">
                         <span class="badge badge-primary px-2 py-1 mr-1">Active Target Muster</span>
-                        <button class="btn btn-sm btn-primary py-0 px-2 font-weight-bold shadow-sm" onclick="$('#btn-open-qr-scanner').click();" title="Scan QR badge under this muster">
-                            📷 Scan ID QR
+                        <button class="btn btn-sm ${hasPhoto ? 'btn-outline-info' : 'btn-danger'} py-0 px-2 font-weight-bold shadow-sm btn-upload-active-muster-photo mr-1" data-id="${m.name}" data-category="${frappe.utils.escape_html(m.category)}" data-shift="${frappe.utils.escape_html(m.shift)}" title="${hasPhoto ? 'Replace / Update Lineup Photo' : 'Upload Mandatory Lineup Photo'}">
+                            📸 ${hasPhoto ? 'Update Photo' : 'Upload Photo *'}
                         </button>
+                        ${hasPhoto ? `
+                            <button class="btn btn-sm btn-primary py-0 px-2 font-weight-bold shadow-sm" onclick="$('#btn-open-qr-scanner').click();" title="Scan QR badge under this muster">
+                                📷 Scan ID QR
+                            </button>
+                        ` : `
+                            <button class="btn btn-sm btn-secondary py-0 px-2 font-weight-bold shadow-sm" disabled title="Muster roll photo is mandatory before punching in">
+                                📷 Scan ID QR (Photo Required)
+                            </button>
+                        `}
                     </div>
                 `;
             } else {
@@ -789,6 +905,12 @@ frappe.ready(function() {
         return target ? target.category : null;
     }
 
+    function isSelectedMusterPhotoUploaded() {
+        if (!selectedMusterId) return false;
+        const target = allMusters.find(m => m.name === selectedMusterId) || previousMusters.find(m => m.name === selectedMusterId);
+        return Boolean(target && target.muster_photo && target.muster_photo !== 'DELETED_POST_BILLING_VERIFICATION');
+    }
+
     function isStaffEligibleForCategory(staffRole, category) {
         if (!category) return true;
         const role = (staffRole || '').toLowerCase();
@@ -808,6 +930,7 @@ frappe.ready(function() {
 
         // Filter roster strictly for the active target muster's department category
         const filteredRoster = (roster || []).filter(st => isStaffEligibleForCategory(st.role, activeCategory));
+        const musterHasPhoto = isSelectedMusterPhotoUploaded();
 
         if (!filteredRoster || filteredRoster.length === 0) {
             container.html(`
@@ -884,6 +1007,20 @@ frappe.ready(function() {
             if (!isApproved) {
                 desktopActions = `<small class="text-muted font-italic">Awaiting Approval</small>`;
                 mobileActions = `<div class="text-center text-muted small font-italic py-1">Awaiting Committee Approval</div>`;
+            } else if (!musterHasPhoto && !isOnDuty) {
+                desktopActions = `
+                    <button class="btn btn-sm btn-outline-secondary font-weight-bold mr-1" disabled title="Shift Lineup Photo is mandatory! Upload photo next to Active Target Muster to enable punch-in.">
+                        🔒 Photo Required
+                    </button>
+                    <button class="btn btn-sm btn-light text-muted border" disabled>
+                        📍 Assign Post
+                    </button>
+                `;
+                mobileActions = `
+                    <button class="btn btn-outline-secondary btn-block font-weight-bold mb-2 py-2" disabled title="Shift Lineup Photo is mandatory! Upload photo next to Active Target Muster to enable punch-in.">
+                        🔒 Punch In Locked (Photo Required)
+                    </button>
+                `;
             } else {
                 const punchBtnDesktop = isOnDuty
                     ? `<button class="btn btn-sm btn-outline-danger btn-agency-punch font-weight-bold mr-1" data-id="${st.staff_id}" data-punch="in">⏹️ Punch Out</button>`

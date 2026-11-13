@@ -120,6 +120,8 @@ def get_context(context):
         ),
         "facility_staff_total": frappe.db.count("Facility Staff", {"status": "Active"}),
         "amc_logs_total": frappe.db.count("Facility AMC Log"),
+        "chemical_missing_count": frappe.db.count("STP Chemical Log", {"log_date": nowdate()}),
+        "chemical_low_count": frappe.db.count("STP Chemical Log", {"is_low_stock": 1}),
     }
 
     # Count pending resolutions for the current user
@@ -523,6 +525,11 @@ def get_committee_data(module_type="all"):
             limit_page_length=60
         )
 
+    # 16. STP Chemical Stock Monitoring & Non-Data Entry Highlighting
+    if module_type in ("all", "chemical_log"):
+        from society_erp.api.stp_chemical import get_stp_chemical_dashboard
+        data["chemical_summary"] = get_stp_chemical_dashboard()
+
     # Counts summary
     res_pending_count = 0
     if comm_member_name:
@@ -558,6 +565,8 @@ def get_committee_data(module_type="all"):
         "facility_staff_total": frappe.db.count("Facility Staff", {"status": "Active"}),
         "facility_staff_pending": frappe.db.count("Facility Staff", {"approval_status": "Pending"}),
         "amc_logs_total": frappe.db.count("Facility AMC Log"),
+        "chemical_missing_count": frappe.db.count("STP Chemical Log", {"log_date": nowdate()}),
+        "chemical_low_count": frappe.db.count("STP Chemical Log", {"is_low_stock": 1}),
     }
 
     return data

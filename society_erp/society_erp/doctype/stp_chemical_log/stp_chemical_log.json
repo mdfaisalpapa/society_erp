@@ -1,0 +1,164 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:STP-CHEM-{YYYY}-{MM}-{###}",
+ "creation": "2026-11-13 08:50:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "chemical_name",
+  "log_date",
+  "unit_of_measure",
+  "column_break_stock",
+  "current_stock",
+  "minimum_threshold",
+  "is_low_stock",
+  "daily_consumption",
+  "stock_received",
+  "section_audit",
+  "stock_photo",
+  "supplier_or_invoice",
+  "supervisor_in_charge",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "default": "Sodium Hypochlorite (Chlorine)",
+   "fieldname": "chemical_name",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Chemical / Consumable Name",
+   "options": "Sodium Hypochlorite (Chlorine)\nAlum / Polyaluminium Chloride (PAC)\nSodium Hydroxide (Caustic Soda)\nHydrochloric Acid (HCl)\nUrea / Bacterial Nutrients\nAntifoam Agent\nFilter Sand / Activated Carbon Media",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "log_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Date of Inspection",
+   "reqd": 1
+  },
+  {
+   "default": "Liters",
+   "fieldname": "unit_of_measure",
+   "fieldtype": "Select",
+   "label": "Unit of Measure",
+   "options": "Liters\nKilograms (Kg)\nCans (30L / 50L)\nBags (25Kg / 50Kg)"
+  },
+  {
+   "fieldname": "column_break_stock",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "current_stock",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Current Stock Balance",
+   "reqd": 1
+  },
+  {
+   "default": "50.0",
+   "fieldname": "minimum_threshold",
+   "fieldtype": "Float",
+   "label": "Minimum Buffer / Safety Threshold",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_low_stock",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "⚠️ Low Stock Warning (< Minimum Threshold)"
+  },
+  {
+   "default": "0.0",
+   "fieldname": "daily_consumption",
+   "fieldtype": "Float",
+   "label": "Quantity Dosed / Consumed Today"
+  },
+  {
+   "default": "0.0",
+   "fieldname": "stock_received",
+   "fieldtype": "Float",
+   "label": "New Stock Received Today (Inward)"
+  },
+  {
+   "fieldname": "section_audit",
+   "fieldtype": "Section Break",
+   "label": "Stock Proof & Supervisor"
+  },
+  {
+   "fieldname": "stock_photo",
+   "fieldtype": "Attach Image",
+   "label": "Chemical Storage / Carboy Photo Proof"
+  },
+  {
+   "fieldname": "supplier_or_invoice",
+   "fieldtype": "Data",
+   "label": "Supplier Name / Invoice Ref"
+  },
+  {
+   "fieldname": "supervisor_in_charge",
+   "fieldtype": "Data",
+   "label": "Operator / Supervisor In Charge"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks / Dosing Observations"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-13 08:50:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "STP Chemical Log",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee Member",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Facility Agency Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "All",
+   "write": 1
+  }
+ ],
+ "sort_field": "log_date",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

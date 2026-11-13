@@ -61,7 +61,7 @@
    "fieldtype": "Attach Image",
    "in_list_view": 1,
    "label": "Shift Lineup / Group Photo",
-   "reqd": 0
+   "reqd": 1
   },
   {
    "fieldname": "supervisor_in_charge",

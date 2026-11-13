@@ -77,7 +77,16 @@ def punch_attendance(
 
     # Validate staff eligibility against the Target Muster Category when punching in
     if (punch_type == "in" or (punch_type == "auto" and not existing)) and latest_muster:
-        muster_cat = frappe.db.get_value("Facility Shift Muster", latest_muster, "category")
+        muster_doc = frappe.db.get_value("Facility Shift Muster", latest_muster, ["category", "muster_photo"], as_dict=True)
+        muster_cat = muster_doc.category if muster_doc else None
+        muster_photo = (muster_doc.muster_photo or "").strip() if muster_doc else ""
+
+        # Requirement 1: Make muster photo mandatory before punching in is allowed
+        if not muster_photo or muster_photo == "DELETED_POST_BILLING_VERIFICATION":
+            frappe.throw(_("Muster Roll photo is mandatory! Please upload the shift lineup photo for '{0}' before punching in staff.").format(
+                latest_muster
+            ))
+
         role_str = (staff.role or "").lower()
         if muster_cat == "Security":
             if "security" not in role_str:
@@ -503,6 +512,37 @@ def assign_duty_post(attendance_id: str = None, staff_id: str = None, duty_post:
         "duty_post": duty_post,
         "cost_center": cost_center,
         "message": _("Duty post assigned to {0} (Cost Center: {1})").format(duty_post, cost_center)
+    }
+
+
+@frappe.whitelist()
+def update_muster_photo(muster_id: str, muster_photo: str, reported_count: int = None, notes: str = None) -> dict:
+    """
+    Updates the mandatory Shift Lineup Group Photo for an active Muster session.
+    """
+    if not muster_id:
+        frappe.throw(_("Muster ID is required."))
+    if not muster_photo:
+        frappe.throw(_("Please select or capture a Shift Lineup Photo."))
+
+    if not frappe.db.exists("Facility Shift Muster", muster_id):
+        frappe.throw(_("Muster record '{0}' not found.").format(muster_id))
+
+    muster = frappe.get_doc("Facility Shift Muster", muster_id)
+    muster.muster_photo = muster_photo
+    if reported_count is not None and int(reported_count) > 0:
+        muster.reported_count = int(reported_count)
+    if notes:
+        muster.briefing_notes = (muster.briefing_notes or "") + "\n" + notes
+    muster.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "muster_id": muster.name,
+        "photo": muster.muster_photo,
+        "reported_count": muster.reported_count,
+        "message": _("Muster lineup photo uploaded successfully. Punching in is now enabled.")
     }
 
 
