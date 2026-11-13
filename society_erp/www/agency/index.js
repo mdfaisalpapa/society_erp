@@ -305,7 +305,7 @@ frappe.ready(function() {
                 agency: agencyName,
                 role: $('#staff-role').val(),
                 contact_number: $('#staff-contact').val().trim(),
-                gate_assigned: $('#staff-gate').val(),
+                gate_assigned: ($('#staff-gate').length && $('#staff-gate').val()) ? $('#staff-gate').val() : 'All Gates',
                 government_id_type: $('#staff-id-type').val(),
                 government_id_number: $('#staff-id-number').val().trim(),
                 police_verification_status: $('#staff-police').val(),
