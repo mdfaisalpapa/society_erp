@@ -14,10 +14,18 @@
   "description",
   "status",
   "assigned_to",
+  "assigned_staff",
+  "claim_key",
+  "claimed_by",
+  "claimed_on",
   "photo",
   "amended_from",
   "priority_level",
   "preferred_visit_time",
+  "section_break_completion",
+  "work_started_on",
+  "work_completed_on",
+  "completion_photo",
   "resolution_remarks",
   "resident_feedbackrating",
   "raised_by_user"
@@ -100,6 +108,53 @@
    "fieldtype": "Link",
    "label": "Assigned To",
    "options": "Authorized Bot Device"
+  },
+  {
+   "fieldname": "assigned_staff",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Assigned Staff",
+   "options": "Facility Staff"
+  },
+  {
+   "fieldname": "claim_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Claim Key / Magic Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "claimed_by",
+   "fieldtype": "Data",
+   "label": "Claimed By Staff",
+   "read_only": 1
+  },
+  {
+   "fieldname": "claimed_on",
+   "fieldtype": "Datetime",
+   "label": "Claimed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_completion",
+   "fieldtype": "Section Break",
+   "label": "Work Execution & Completion"
+  },
+  {
+   "fieldname": "work_started_on",
+   "fieldtype": "Datetime",
+   "label": "Work Started On"
+  },
+  {
+   "fieldname": "work_completed_on",
+   "fieldtype": "Datetime",
+   "label": "Work Completed On"
+  },
+  {
+   "fieldname": "completion_photo",
+   "fieldtype": "Attach Image",
+   "label": "Work Completion Photo"
   },
   {
    "fieldname": "raised_by_user",

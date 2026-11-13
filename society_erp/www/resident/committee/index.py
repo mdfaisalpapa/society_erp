@@ -613,6 +613,14 @@ def update_item_status(doctype, docname, action, remarks=None):
             existing = doc.resolution_remarks or ""
             doc.resolution_remarks = f"{existing}\n[{today()}] 🏢 Committee ({comm_name}): {remarks}".strip()
 
+        # If assigned, post magic link to QRT Telegram Group
+        if action == "Assigned":
+            try:
+                from society_erp.api.qrt_maintenance import assign_ticket_and_notify_qrt
+                assign_ticket_and_notify_qrt(ticket_name=doc.name, remarks=remarks)
+            except Exception as e:
+                frappe.logger("society_erp").error(f"Failed to post to QRT: {e}")
+
     elif doctype == "Society Notice":
         if action == "toggle_active":
             doc.is_active = 0 if doc.is_active else 1

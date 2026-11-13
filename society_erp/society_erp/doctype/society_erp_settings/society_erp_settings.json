@@ -16,7 +16,10 @@
   "default_maintenance_accounts",
   "portal_features_section",
   "enable_emergency_sos",
-  "enabled_portal_tiles"
+  "enabled_portal_tiles",
+  "section_break_qrt",
+  "qrt_telegram_chat_id",
+  "telegram_bot_token"
  ],
  "fields": [
   {
@@ -86,6 +89,23 @@
    "fieldtype": "Code",
    "options": "JSON",
    "label": "Enabled Portal Tiles Configuration"
+  },
+  {
+   "fieldname": "section_break_qrt",
+   "fieldtype": "Section Break",
+   "label": "QRT & Maintenance Telegram Integration"
+  },
+  {
+   "description": "Telegram Group Chat ID for Quick Response Team (e.g. -1001234567890)",
+   "fieldname": "qrt_telegram_chat_id",
+   "fieldtype": "Data",
+   "label": "QRT Telegram Group Chat ID"
+  },
+  {
+   "description": "Telegram Bot Token (optional override; falls back to Bot Channel token)",
+   "fieldname": "telegram_bot_token",
+   "fieldtype": "Password",
+   "label": "Telegram Bot Token"
   }
  ],
  "grid_page_length": 50,

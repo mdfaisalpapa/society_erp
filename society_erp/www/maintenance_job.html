@@ -1,0 +1,285 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_content %}
+<div class="container py-4" style="max-width: 640px;">
+    {% if error %}
+        <div class="card border-danger shadow-sm text-center p-4">
+            <div style="font-size: 3rem;">⚠️</div>
+            <h4 class="text-danger font-weight-bold mt-2">Access Error</h4>
+            <p class="text-muted">{{ error }}</p>
+            <small class="text-muted">Please contact the Estate Office or tap the link in the official QRT Telegram group.</small>
+        </div>
+    {% else %}
+        <!-- Job Card Header -->
+        <div class="card border-0 shadow-sm mb-3 text-white" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); border-radius: 12px;">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge badge-warning text-dark font-weight-bold px-2 py-1">KVC3 QRT Job Card</span>
+                    <span class="badge badge-light font-weight-bold px-2 py-1" id="ticket-status-badge">{{ ticket.status }}</span>
+                </div>
+                <h3 class="font-weight-bold mb-1">Ticket #{{ ticket.name }}</h3>
+                <h5 class="mb-0 text-white-50">🏢 Flat: <strong class="text-white">{{ ticket.resident or 'Common Area' }}</strong></h5>
+            </div>
+        </div>
+
+        <div id="job-alert" class="alert d-none shadow-sm mb-3"></div>
+
+        <!-- Issue Details Card -->
+        <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <span class="badge badge-info mr-1" style="font-size: 0.9rem;">🛠️ {{ ticket.category }}</span>
+                        <span class="badge badge-secondary" style="font-size: 0.85rem;">Priority: {{ ticket.priority_level or 'Routine' }}</span>
+                    </div>
+                    <small class="text-muted">{{ ticket.received_on.strftime('%d-%b %H:%M') if ticket.received_on else '' }}</small>
+                </div>
+
+                <h6 class="font-weight-bold text-dark mb-1">Problem Description:</h6>
+                <div class="p-3 bg-light rounded text-dark mb-3 border">
+                    {{ ticket.description or 'No details provided.' }}
+                </div>
+
+                {% if ticket.photo %}
+                    <div class="mb-3">
+                        <label class="font-weight-bold small text-muted">Resident Photo:</label>
+                        <div>
+                            <a href="{{ ticket.photo }}" target="_blank">
+                                <img src="{{ ticket.photo }}" class="img-fluid rounded border shadow-sm" style="max-height: 200px;" alt="Issue Photo">
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Assigned Technician Info -->
+                <div class="p-3 rounded border bg-light mb-0">
+                    <div class="small font-weight-bold text-muted text-uppercase mb-1">Technician Allocation</div>
+                    <div class="h6 font-weight-bold text-dark mb-1" id="claimed-by-display">
+                        {% if ticket.claimed_by %}
+                            👤 {{ ticket.claimed_by }}
+                        {% elif ticket.assigned_staff %}
+                            👤 Assigned Staff ID: {{ ticket.assigned_staff }}
+                        {% else %}
+                            ⚠️ Unassigned (Open for Claim)
+                        {% endif %}
+                    </div>
+                    {% if ticket.work_started_on %}
+                        <small class="text-success font-weight-bold">▶️ Work Started: {{ ticket.work_started_on.strftime('%d-%b %H:%M') }}</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if ticket.status != "Resolved" %}
+            <!-- Action Card: Claim / Start / Complete -->
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card-body p-4">
+                    <h5 class="font-weight-bold text-dark mb-3">⚡ Technician Actions</h5>
+
+                    <!-- Step 1: Claim Job if not claimed -->
+                    {% if not ticket.claimed_by and not ticket.assigned_staff %}
+                        <div class="mb-4 pb-3 border-bottom">
+                            <label class="font-weight-bold small">Claim this Ticket (Identify Yourself):</label>
+                            <div class="input-group">
+                                <select class="form-control" id="select-staff-claim">
+                                    <option value="">-- Select Your Name (Plumber / Electrician) --</option>
+                                    {% for s in staff_list %}
+                                        <option value="{{ s.name }}">{{ s.full_name }} ({{ s.role }})</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary font-weight-bold px-3" type="button" id="btn-claim-job">
+                                        🙋 Claim Job
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Step 2: Start Work -->
+                    {% if not ticket.work_started_on and (ticket.claimed_by or ticket.assigned_staff) %}
+                        <div class="mb-4 pb-3 border-bottom text-center">
+                            <button type="button" class="btn btn-outline-primary btn-block py-2 font-weight-bold" id="btn-start-work">
+                                ▶️ Tap Here When You Arrive / Start Work
+                            </button>
+                        </div>
+                    {% endif %}
+
+                    <!-- Step 3: Complete Work & Photo Proof -->
+                    <form id="form-complete-job">
+                        <div class="form-group mb-3">
+                            <label class="font-weight-bold small">📸 Work Completion Photo (Rectified Issue) *</label>
+                            <input type="file" class="form-control-file border p-2 rounded bg-light" id="completion-photo-file" accept="image/*" capture="environment" required>
+                            <small class="text-muted">Take a clear photo of the fixed pipe, circuit breaker, valve, or switchboard.</small>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="font-weight-bold small">Work Done & Parts Used Notes</label>
+                            <textarea class="form-control" id="completion-remarks" rows="3" placeholder="e.g. Replaced 1/2 inch PVC union and ball valve. Tested for leakage, all clear."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-success btn-block py-3 font-weight-bold shadow-sm" id="btn-submit-completion" style="font-size: 1.1rem;">
+                            ✅ Mark Work Completed
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <!-- Resolved Badge Card -->
+            <div class="card border-0 shadow-sm p-4 text-center bg-white" style="border-radius: 12px; border-left: 6px solid #28a745 !important;">
+                <div style="font-size: 3rem;">🎉</div>
+                <h4 class="font-weight-bold text-success mt-2">Ticket Resolved</h4>
+                <p class="text-muted mb-2">This work order has been successfully completed and recorded in Society ERP.</p>
+                {% if ticket.completion_photo %}
+                    <div class="mt-3">
+                        <label class="font-weight-bold small text-muted">Completion Photo Proof:</label>
+                        <div>
+                            <a href="{{ ticket.completion_photo }}" target="_blank">
+                                <img src="{{ ticket.completion_photo }}" class="img-fluid rounded border shadow-sm" style="max-height: 220px;" alt="Completion Proof">
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+                {% if ticket.resolution_remarks %}
+                    <div class="p-3 bg-light rounded text-left mt-3 small border">
+                        <strong>Resolution Notes:</strong><br>
+                        {{ ticket.resolution_remarks }}
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+$(document).ready(function() {
+    const ticketId = "{{ ticket_id }}";
+    const claimKey = "{{ claim_key }}";
+
+    function showAlert(type, msg) {
+        const box = $('#job-alert');
+        box.removeClass('d-none alert-success alert-danger alert-info')
+           .addClass('alert-' + type)
+           .html(msg);
+        $('html, body').animate({ scrollTop: 0 }, 'fast');
+    }
+
+    // 1. Claim Job
+    $('#btn-claim-job').on('click', function() {
+        const staffId = $('#select-staff-claim').val();
+        if (!staffId) {
+            frappe.msgprint(__('Please select your name from the staff dropdown.'));
+            return;
+        }
+
+        const btn = $(this);
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Claiming…');
+
+        frappe.call({
+            method: 'society_erp.www.maintenance_job.claim_and_update_job',
+            args: {
+                ticket_id: ticketId,
+                claim_key: claimKey,
+                action: 'claim',
+                staff_id: staffId
+            },
+            callback: function(r) {
+                btn.prop('disabled', false).text('🙋 Claim Job');
+                if (r.message && r.message.success) {
+                    showAlert('success', '🎉 ' + r.message.message);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    frappe.msgprint(__('Failed to claim ticket.'));
+                }
+            }
+        });
+    });
+
+    // 2. Start Work
+    $('#btn-start-work').on('click', function() {
+        const btn = $(this);
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Recording…');
+
+        frappe.call({
+            method: 'society_erp.www.maintenance_job.claim_and_update_job',
+            args: {
+                ticket_id: ticketId,
+                claim_key: claimKey,
+                action: 'start'
+            },
+            callback: function(r) {
+                if (r.message && r.message.success) {
+                    showAlert('success', '⏱️ Work started timestamp logged.');
+                    setTimeout(() => location.reload(), 1200);
+                }
+            }
+        });
+    });
+
+    // 3. Complete Work
+    $('#form-complete-job').on('submit', function(e) {
+        e.preventDefault();
+        const fileInput = document.getElementById('completion-photo-file');
+        if (!fileInput.files || !fileInput.files[0]) {
+            frappe.msgprint(__('Please capture or attach a photo proof of the completed work.'));
+            return;
+        }
+
+        const btn = $('#btn-submit-completion');
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Uploading photo & closing ticket…');
+
+        const remarksVal = $('#completion-remarks').val().trim();
+        const file = fileInput.files[0];
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('is_private', 0);
+        formData.append('folder', 'Home');
+
+        fetch('/api/method/upload_file', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Frappe-CSRF-Token': frappe.csrf_token || ''
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message && data.message.file_url) {
+                const photoUrl = data.message.file_url;
+                frappe.call({
+                    method: 'society_erp.www.maintenance_job.claim_and_update_job',
+                    args: {
+                        ticket_id: ticketId,
+                        claim_key: claimKey,
+                        action: 'complete',
+                        completion_photo: photoUrl,
+                        remarks: remarksVal
+                    },
+                    callback: function(r) {
+                        btn.prop('disabled', false).text('✅ Mark Work Completed');
+                        if (r.message && r.message.success) {
+                            showAlert('success', '🎉 ' + r.message.message);
+                            setTimeout(() => location.reload(), 2000);
+                        } else {
+                            frappe.msgprint(__('Failed to complete ticket: ' + (r.message ? r.message.message : 'Unknown error')));
+                        }
+                    }
+                });
+            } else {
+                btn.prop('disabled', false).text('✅ Mark Work Completed');
+                frappe.msgprint(__('Photo upload failed. Please try again.'));
+            }
+        })
+        .catch(err => {
+            btn.prop('disabled', false).text('✅ Mark Work Completed');
+            frappe.msgprint(__('Error uploading photo: ' + err));
+        });
+    });
+});
+</script>
+{% endblock %}

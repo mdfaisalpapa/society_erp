@@ -628,8 +628,8 @@ frappe.ready(function () {
                     <td>${getStatusBadge(t.status)}</td>
                     <td class="text-right">
                         ${t.status === "Open" ? `
-                            <button type="button" class="btn btn-sm btn-info py-1 px-2 btn-action" data-doctype="Maintenance Ticket" data-docname="${t.name}" data-action="Assigned" data-title="Assign Ticket to Staff" data-show-remarks="1">
-                                👷 Assign
+                            <button type="button" class="btn btn-sm btn-info py-1 px-2 btn-action" data-doctype="Maintenance Ticket" data-docname="${t.name}" data-action="Assigned" data-title="Assign Ticket to Staff & Post to QRT Telegram" data-show-remarks="1">
+                                👷 Assign & Post to QRT
                             </button>
                             <button type="button" class="btn btn-sm btn-success py-1 px-2 btn-action" data-doctype="Maintenance Ticket" data-docname="${t.name}" data-action="Resolved" data-title="Resolve Ticket" data-show-remarks="1">
                                 ✅ Resolve
@@ -665,8 +665,8 @@ frappe.ready(function () {
                     ${isOpen ? `
                         <div class="d-flex pt-2 border-top">
                             ${t.status === 'Open' ? `
-                                <button type="button" class="btn btn-info btn-sm flex-grow-1 mr-2 font-weight-bold btn-action" data-doctype="Maintenance Ticket" data-docname="${t.name}" data-action="Assigned" data-title="Assign Ticket" data-show-remarks="1">
-                                    👷 Assign
+                                <button type="button" class="btn btn-info btn-sm flex-grow-1 mr-2 font-weight-bold btn-action" data-doctype="Maintenance Ticket" data-docname="${t.name}" data-action="Assigned" data-title="Assign Ticket & Post to QRT Telegram" data-show-remarks="1">
+                                    👷 Assign & Post to QRT
                                 </button>
                             ` : ''}
                             <button type="button" class="btn btn-success btn-sm flex-grow-1 font-weight-bold btn-action" data-doctype="Maintenance Ticket" data-docname="${t.name}" data-action="Resolved" data-title="Resolve Ticket" data-show-remarks="1">

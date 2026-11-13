@@ -87,6 +87,14 @@ regional_overrides = {
 }
 
 scheduler_events = {
+    "cron": {
+        "0 8 * * *": [
+            "society_erp.tasks.qrt_digest.morning_unassigned_tickets_digest"
+        ],
+        "0 18 * * *": [
+            "society_erp.tasks.qrt_digest.evening_unassigned_tickets_digest"
+        ]
+    },
     "daily": [
         "society_erp.parking_rental.expire_due_parking_rentals",
         "society_erp.api.facility_staff.cleanup_reconciled_muster_photos"
