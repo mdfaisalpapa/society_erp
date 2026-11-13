@@ -896,7 +896,29 @@ frappe.ready(function() {
         renderMustersList(allMusters);
         renderPreviousMustersList(previousMusters);
         renderRosterTable(allRoster);
-        showAlert('info', '🎯 Active Shift Muster set to: ' + selectedMusterId);
+
+        // Find selected muster details to populate friendly modal popup
+        const target = allMusters.find(m => m.name === selectedMusterId) || previousMusters.find(m => m.name === selectedMusterId);
+        if (target) {
+            let deptIcon = '🛡️';
+            if (target.category === 'Housekeeping') deptIcon = '🧹';
+            else if (target.category === 'Maintenance' || target.category === 'Technical / Plant') deptIcon = '🔧';
+
+            $('#muster-modal-icon').text(deptIcon);
+            $('#muster-modal-title').text(`${deptIcon} ${target.category} Muster Activated`);
+            $('#muster-modal-shift').text(`${target.shift} (${target.shift_date || ''})`);
+            $('#muster-modal-id').text(target.name);
+            $('#muster-modal-filter').text(`Only ${target.category} Staff`);
+
+            const hasPhoto = Boolean(target.muster_photo && target.muster_photo !== 'DELETED_POST_BILLING_VERIFICATION');
+            if (hasPhoto) {
+                $('#muster-modal-photo-status').html('<span class="badge badge-success font-weight-bold">✅ Photo Uploaded</span>');
+            } else {
+                $('#muster-modal-photo-status').html('<span class="badge badge-danger font-weight-bold">⚠️ Photo Required</span>');
+            }
+
+            $('#modal-muster-activated').modal('show');
+        }
     });
 
     function getSelectedMusterCategory() {

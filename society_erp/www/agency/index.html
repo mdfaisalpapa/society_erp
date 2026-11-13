@@ -730,6 +730,47 @@
                 </div>
             </div>
         </div>
+
+        <!-- MODAL: Muster Activation Confirmation -->
+        <div class="modal fade" id="modal-muster-activated" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 440px;">
+                <div class="modal-content shadow-lg border-0 rounded">
+                    <div class="modal-header bg-primary text-white py-3 align-items-center">
+                        <h6 class="modal-title font-weight-bold mb-0">🎯 Target Muster Activated</h6>
+                        <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body p-4 text-center">
+                        <div style="font-size: 2.6rem;" id="muster-modal-icon">🛡️</div>
+                        <h5 class="font-weight-bold text-dark mt-2 mb-1" id="muster-modal-title">Security Muster Active</h5>
+                        <p class="text-muted small mb-3" id="muster-modal-shift">Security & Maintenance Shift (Day)</p>
+                        
+                        <div class="p-2 mb-3 bg-light rounded text-left small border">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Muster ID:</span>
+                                <span class="font-family-monospace font-weight-bold text-dark" id="muster-modal-id">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Roster Filter:</span>
+                                <span class="badge badge-info" id="muster-modal-filter">Only Eligible Staff</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Lineup Photo:</span>
+                                <span id="muster-modal-photo-status"><span class="badge badge-success">Uploaded</span></span>
+                            </div>
+                        </div>
+
+                        <p class="small text-muted mb-0">
+                            The roster table and QR scanner below are now filtered for this department.
+                        </p>
+                    </div>
+                    <div class="modal-footer bg-light border-top py-2 justify-content-center">
+                        <button type="button" class="btn btn-primary btn-sm px-4 font-weight-bold" data-dismiss="modal">
+                            Got it, Continue
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     {% endif %}
 </div>
 {% endblock %}
