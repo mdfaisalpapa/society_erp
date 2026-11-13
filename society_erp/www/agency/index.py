@@ -93,7 +93,11 @@ def get_agency_dashboard_data():
 
     today_musters = frappe.get_all(
         "Facility Shift Muster",
-        filters={"agency": agency, "shift_date": nowdate()},
+        filters={
+            "agency": agency,
+            "shift_date": nowdate(),
+            "shift": ["in", [s.name for s in shifts]]
+        },
         fields=["name", "shift_date", "shift", "category", "muster_photo", "reported_count", "verified_punch_count", "creation"],
         order_by="creation desc"
     )
