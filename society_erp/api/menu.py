@@ -30,14 +30,8 @@ def get_resident_menu(for_user: str = None) -> dict:
                     "action": "share_contact",
                     "request_contact": True,
                 },
-                {
-                    "id": "emergency",
-                    "label": "🚨 Emergency SOS",
-                    "desc": "Gate Security, Doctor & Police",
-                    "action": "emergency",
-                },
             ],
-            "count": 2,
+            "count": 1,
         }
 
     # 1. Resolve Resident Role (Tenant vs Owner) & Committee Membership
