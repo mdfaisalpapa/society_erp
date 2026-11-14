@@ -244,6 +244,14 @@ def get_resident_menu(for_user: str = None) -> dict:
             "action": "emergency"
         })
 
+    # 16. Logout Option (Unlink Session)
+    options.append({
+        "id": "logout",
+        "label": "🚪 Logout",
+        "desc": "Unlink Account & Clear Session",
+        "action": "logout"
+    })
+
     res_name = (owner.get("owner_name") if owner else (tenant.get("tenant_name") if tenant else "")).strip()
     flat_num = (owner.get("flat") if owner else (tenant.get("flat") if tenant else "")).strip()
     welcome_msg = f"🏢 *Welcome to Kendriya Vihar Phase-3!*\n\nHello *{res_name}* (Flat: `{flat_num}`)\nSelect any society service below:"

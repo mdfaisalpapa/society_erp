@@ -157,6 +157,36 @@ def resolve_chat_user(channel: str, channel_user_id: str, phone_number: str = No
     }
 
 
+@frappe.whitelist(allow_guest=True)
+@portal_api
+def logout_chat_user(channel: str, channel_user_id: str) -> dict:
+    """
+    Unlinks and logs out a chat account from Society ERP.
+    Deleting the Channel Identity ensures that future queries will require
+    the resident to Share Contact again to log back in.
+    """
+    if not channel or not channel_user_id:
+        return {"success": False, "message": "Missing channel or channel_user_id"}
+
+    channel_norm = channel.strip().capitalize()
+    user_id_norm = str(channel_user_id).strip()
+
+    frappe.db.delete(
+        "Channel Identity",
+        {
+            "channel": channel_norm,
+            "channel_user_id": user_id_norm,
+        },
+    )
+    frappe.db.commit()
+
+    return {
+        "success": True,
+        "logged_out": True,
+        "message": f"Successfully logged out and unlinked {channel_norm} account.",
+    }
+
+
 @frappe.whitelist()
 @portal_api
 def whois_flat(flat_number: str) -> dict:
