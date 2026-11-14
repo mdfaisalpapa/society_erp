@@ -215,9 +215,12 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
 
     meta = SERVICE_REGISTRY.get(act_lower)
     if not meta:
+        fallback_msg = f"Service '{action_id}' is currently being updated."
         return {
             "title": "Service",
-            "summary_text": f"Service '{action_id}' is currently being updated.",
+            "icon": "ℹ️",
+            "summary_text": fallback_msg,
+            "prompt": f"ℹ️ *Service Details*\n\n{fallback_msg}",
             "options": [{"label": "🔙 Back to Main Menu", "value": "menu"}]
         }
 
