@@ -6,12 +6,15 @@ from society_erp.api.utils import portal_api
 
 @frappe.whitelist(allow_guest=True)
 @portal_api
-def resolve_chat_user(channel: str, channel_user_id: str) -> dict:
+def resolve_chat_user(channel: str, channel_user_id: str, phone_number: str = None) -> dict:
     """
     Called by universal_chatbot to identify and authenticate incoming messages.
+    If phone_number is provided (e.g. via 1-click Contact Sharing), automatically links
+    and verifies the resident if found in Owners or Tenants.
 
     :param channel: 'Telegram' or 'WhatsApp'
     :param channel_user_id: Telegram chat_id or WhatsApp phone number
+    :param phone_number: Verified phone number shared by user
     :return: Clean JSON payload with resident profile context or unauthenticated status
     """
     if not channel or not channel_user_id:
@@ -23,6 +26,59 @@ def resolve_chat_user(channel: str, channel_user_id: str) -> dict:
     # Normalize channel name (e.g. 'telegram' -> 'Telegram')
     channel_norm = channel.strip().capitalize()
     user_id_norm = str(channel_user_id).strip()
+
+    # 1. If phone_number was provided, attempt 1-click auto-registration / linking
+    if phone_number:
+        clean_phone = "".join(c for c in str(phone_number) if c.isdigit())
+        if len(clean_phone) > 10:
+            clean_phone = clean_phone[-10:]
+
+        if clean_phone:
+            # Match in Owners or Tenants
+            matched_owner = frappe.db.sql(
+                """
+                SELECT email, owner_name as resident_name, mobile_no
+                FROM `tabOwners`
+                WHERE active = 1 AND RIGHT(REPLACE(REPLACE(mobile_no, ' ', ''), '-', ''), 10) = %s
+                ORDER BY creation DESC LIMIT 1
+                """,
+                (clean_phone,),
+                as_dict=True,
+            )
+            if not matched_owner:
+                matched_owner = frappe.db.sql(
+                    """
+                    SELECT email, tenant_name as resident_name, mobile_no
+                    FROM `tabTenants`
+                    WHERE active = 1 AND RIGHT(REPLACE(REPLACE(mobile_no, ' ', ''), '-', ''), 10) = %s
+                    ORDER BY creation DESC LIMIT 1
+                    """,
+                    (clean_phone,),
+                    as_dict=True,
+                )
+
+            if matched_owner and matched_owner[0].get("email"):
+                res_email = matched_owner[0]["email"]
+                # Upsert Channel Identity
+                ci_name = frappe.db.get_value(
+                    "Channel Identity",
+                    {"channel": channel_norm, "channel_user_id": user_id_norm},
+                    "name",
+                )
+                if ci_name:
+                    ci_doc = frappe.get_doc("Channel Identity", ci_name)
+                    ci_doc.resident_email = res_email
+                    ci_doc.verified = 1
+                    ci_doc.save(ignore_permissions=True)
+                else:
+                    frappe.get_doc({
+                        "doctype": "Channel Identity",
+                        "channel": channel_norm,
+                        "channel_user_id": user_id_norm,
+                        "resident_email": res_email,
+                        "verified": 1,
+                    }).insert(ignore_permissions=True)
+                frappe.db.commit()
 
     # Query Channel Identity
     identity = frappe.db.get_value(
