@@ -138,12 +138,82 @@ SERVICE_REGISTRY = {
 def get_service_details(action_id: str, for_user: str = None) -> dict:
     """
     Unified Single-Node Dispatcher for Universal Chatbot.
-    Given an action_id (e.g. 'dues', 'visitors', 'tickets'), executes the corresponding
-    module API, formats summary text, generates the SSO link, and returns structured options
-    for the dynamic Chatbot UI card.
+    Given an action_id (e.g. 'dues', 'visitors', 'tickets', or sub-action like 'open_comm_vehicles'),
+    executes the corresponding module API, formats summary text, generates the SSO link,
+    and returns structured options for the dynamic Chatbot UI card.
     """
-    act = (action_id or "").strip().lower()
-    meta = SERVICE_REGISTRY.get(act)
+    act = (action_id or "").strip()
+    act_lower = act.lower()
+
+    # Special handling for direct open actions (e.g. when selected in WhatsApp)
+    if act_lower.startswith("open_comm_"):
+        from society_erp.api.committee_menu import get_committee_sub_tiles
+        res = get_committee_sub_tiles(for_user=for_user)
+        tile_map = {st["value"]: st for st in res.get("sub_tiles", []) if isinstance(st, dict)}
+        st = tile_map.get(act) or tile_map.get(act_lower)
+        if st:
+            title = st.get("title") or st.get("label", "Committee Item")
+            icon = st.get("icon", "🏛️")
+            web_url = st.get("web_app_url", "")
+            badge = st.get("badge", 0)
+            status_desc = f" ({badge} Pending)" if badge > 0 else ""
+            prompt = (
+                f"{icon} *{title}{status_desc}*\n\n"
+                f"🔗 Tap the secure link below to open this section in your browser:\n\n"
+                f"{web_url}\n\n"
+                f"_(Link is valid for 15 minutes. Tap below to proceed)_"
+            )
+            return {
+                "title": title,
+                "icon": icon,
+                "summary_text": prompt,
+                "prompt": prompt,
+                "sso_url": web_url,
+                "options": [
+                    {
+                        "label": "🏛️ Back to Committee",
+                        "value": "committee"
+                    },
+                    {
+                        "label": "🏠 Main Menu",
+                        "value": "menu"
+                    }
+                ]
+            }
+
+    # Handling for open_<act>_portal (e.g. open_dues_portal, open_profile_portal)
+    if act_lower.startswith("open_") and act_lower.endswith("_portal"):
+        base_act = act_lower[5:-7]
+        meta = SERVICE_REGISTRY.get(base_act)
+        if meta and meta.get("target_route"):
+            from society_erp.api.sso import generate_portal_link
+            sso_res = generate_portal_link(for_user=for_user, target_route=meta["target_route"])
+            sso_url = sso_res.get("url") or (sso_res.get("data", {}).get("url") if isinstance(sso_res, dict) else "")
+            prompt = (
+                f"{meta['icon']} *{meta['title']}*\n\n"
+                f"🔗 Tap the secure link below to open this portal in your browser:\n\n"
+                f"{sso_url}\n\n"
+                f"_(Link is valid for 15 minutes. Tap below to proceed)_"
+            )
+            return {
+                "title": meta["title"],
+                "icon": meta["icon"],
+                "summary_text": prompt,
+                "prompt": prompt,
+                "sso_url": sso_url,
+                "options": [
+                    {
+                        "label": f"🔙 Back to {meta['title'][:15]}",
+                        "value": base_act
+                    },
+                    {
+                        "label": "🏠 Main Menu",
+                        "value": "menu"
+                    }
+                ]
+            }
+
+    meta = SERVICE_REGISTRY.get(act_lower)
     if not meta:
         return {
             "title": "Service",
