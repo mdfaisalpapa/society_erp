@@ -427,11 +427,22 @@ def ensure_vapid_keys():
         print("  ✔ Injected VAPID keys into site_config.json.")
 
 
-def create_test_agency_user(email="agency@qpms.in", password="Agency@123", full_name="QPMS Agency Supervisor"):
+def create_test_agency_user(email="agency@qpms.in", password=None, full_name="QPMS Agency Supervisor"):
     """
-    Provisions a dedicated agency operator account, sets password,
+    Provisions a dedicated agency operator account, sets password (generated randomly or from env/parameter),
     assigns the 'Facility Agency Manager' role, and links it to the active Facility Agency.
     """
+    import os
+    import secrets
+
+    # If no password provided, check env or generate a secure random one
+    generated = False
+    if not password:
+        password = os.environ.get("AGENCY_SEED_PASSWORD")
+        if not password:
+            password = secrets.token_urlsafe(12)
+            generated = True
+
     print(f"\n[*] Provisioning Agency Operator User: {email}...")
 
     # 1. Create or update user
@@ -474,6 +485,10 @@ def create_test_agency_user(email="agency@qpms.in", password="Agency@123", full_
     print("🎉 Agency Operator Ready!")
     print(f"   URL      : /agency")
     print(f"   Username : {email}")
-    print(f"   Password : {password}")
+    if generated:
+        print(f"   Temporary Password (Generated) : {password}")
+        print("   ⚠️  Please change this password upon first login or store it securely.")
+    else:
+        print("   Password set from provided input / environment.")
     print("-" * 60 + "\n")
 
