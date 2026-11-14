@@ -161,7 +161,8 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
     if act_lower.startswith("open_comm_"):
         from society_erp.api.committee_menu import get_committee_sub_tiles
         res = get_committee_sub_tiles(for_user=for_user)
-        tile_map = {st["value"]: st for st in res.get("sub_tiles", []) if isinstance(st, dict)}
+        raw_tiles = res.get("sub_tiles") or (res.get("data", {}).get("sub_tiles") if isinstance(res.get("data"), dict) else [])
+        tile_map = {st["value"]: st for st in raw_tiles if isinstance(st, dict)}
         st = tile_map.get(act) or tile_map.get(act_lower)
         if st:
             title = st.get("title") or st.get("label", "Committee Item")
