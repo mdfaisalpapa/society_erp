@@ -159,7 +159,12 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
     elif meta.get("method"):
         try:
             fn = frappe.get_attr(meta["method"])
-            res = fn(for_user=for_user) if "for_user" in fn.__code__.co_varnames else fn()
+            # Always try passing for_user first; if TypeError fallback to no args
+            try:
+                res = fn(for_user=for_user)
+            except TypeError:
+                res = fn()
+
             raw_data = res.get("data", res) if isinstance(res, dict) else {}
             summary_text = raw_data.get("summary_text", "")
             if not summary_text:
