@@ -145,6 +145,18 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
     act = (action_id or "").strip()
     act_lower = act.lower()
 
+    # If action_id is 'menu', route cleanly to get_resident_menu
+    if act_lower in ("menu", "main_menu"):
+        from society_erp.api.menu import get_resident_menu
+        menu_data = get_resident_menu(for_user=for_user)
+        return {
+            "title": "Main Menu",
+            "icon": "🏢",
+            "summary_text": menu_data.get("welcome_message", "Main Menu"),
+            "prompt": menu_data.get("welcome_message", "Main Menu"),
+            "options": menu_data.get("options", []),
+        }
+
     # Special handling for direct open actions (e.g. when selected in WhatsApp)
     if act_lower.startswith("open_comm_"):
         from society_erp.api.committee_menu import get_committee_sub_tiles
