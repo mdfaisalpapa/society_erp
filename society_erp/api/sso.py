@@ -16,9 +16,16 @@ def create_portal_link(for_user: str, target_route: str = "/resident") -> dict:
     cache_key = f"portal_sso_{token}"
     frappe.cache.set_value(cache_key, for_user, expires_in_sec=900)
 
-    # Use base url
+    # Use configured public base url or dynamic request host
     import urllib.parse
-    base_url = "https://giver-unwed-unleveled.ngrok-free.dev"
+    base_url = (frappe.conf.get("host_name") or "").rstrip("/")
+    if not base_url:
+        req = getattr(frappe.local, "request", None)
+        if req and getattr(req, "host_url", None):
+            base_url = str(req.host_url).rstrip("/")
+        else:
+            base_url = frappe.utils.get_url().rstrip("/")
+
     encoded_redirect = urllib.parse.quote(target_route, safe="")
     sso_url = f"{base_url}/api/method/society_erp.api.sso.authenticate_sso?token={token}&redirect_to={encoded_redirect}"
 
