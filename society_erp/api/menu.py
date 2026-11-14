@@ -11,10 +11,34 @@ def get_resident_menu(for_user: str = None) -> dict:
     strictly adhering to the Master Switch Settings (Society ERP Settings) and role-based
     access control rules matching the Resident Portal UI (`resident/index.html`).
     """
-    if not for_user and frappe.session.user != "Guest":
+    if for_user is None and frappe.session and frappe.session.user and frappe.session.user != "Guest":
         for_user = frappe.session.user
 
     user_email = (for_user or "").strip().lower()
+
+    if not user_email or user_email in ("guest", "none", "null", "undefined"):
+        return {
+            "is_owner": False,
+            "is_committee": False,
+            "committee_role": "",
+            "welcome_message": "🏢 *Welcome to Kendriya Vihar Phase-3!*\n\n👋 Please tap *📱 Share Contact to Login* below to securely verify your mobile number and access your flat details:",
+            "options": [
+                {
+                    "id": "verify_contact",
+                    "label": "📱 Share Contact to Login",
+                    "desc": "1-Click Verify Mobile Number",
+                    "action": "share_contact",
+                    "request_contact": True,
+                },
+                {
+                    "id": "emergency",
+                    "label": "🚨 Emergency SOS",
+                    "desc": "Gate Security, Doctor & Police",
+                    "action": "emergency",
+                },
+            ],
+            "count": 2,
+        }
 
     # 1. Resolve Resident Role (Tenant vs Owner) & Committee Membership
     tenant = frappe.db.get_value(
@@ -220,10 +244,15 @@ def get_resident_menu(for_user: str = None) -> dict:
             "action": "emergency"
         })
 
+    res_name = (owner.get("owner_name") if owner else (tenant.get("tenant_name") if tenant else "")).strip()
+    flat_num = (owner.get("flat") if owner else (tenant.get("flat") if tenant else "")).strip()
+    welcome_msg = f"🏢 *Welcome to Kendriya Vihar Phase-3!*\n\nHello *{res_name}* (Flat: `{flat_num}`)\nSelect any society service below:"
+
     return {
         "is_owner": is_owner,
         "is_committee": is_committee,
         "committee_role": committee_role,
+        "welcome_message": welcome_msg,
         "options": options,
         "count": len(options)
     }
