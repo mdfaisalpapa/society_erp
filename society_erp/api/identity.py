@@ -23,8 +23,9 @@ def resolve_chat_user(channel: str, channel_user_id: str, phone_number: str = No
             "reason": "Missing channel or channel_user_id",
         }
 
-    # Normalize channel name (e.g. 'telegram' -> 'Telegram')
-    channel_norm = channel.strip().capitalize()
+    # Normalize channel name matching DocType Select ('Telegram' or 'WhatsApp')
+    channel_lower = (channel or "").strip().lower()
+    channel_norm = "WhatsApp" if channel_lower in ("whatsapp", "wa") else ("Telegram" if channel_lower in ("telegram", "tg") else channel.strip().capitalize())
     user_id_norm = str(channel_user_id).strip()
 
     # 1. If phone_number was provided, attempt 1-click auto-registration / linking
