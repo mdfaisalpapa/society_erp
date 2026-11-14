@@ -5,14 +5,14 @@ from society_erp.api.utils import portal_api
 @frappe.whitelist()
 @portal_api
 def get_vehicles(for_user=None):
-    """List vehicles associated with the logged-in owner's verified flats."""
+    """List vehicles associated with the logged-in owner's verified flats with summary text."""
 
     owners = get_verified_owner_records(user_override=for_user)
     owner_names = [o.name for o in owners]
     flats = sorted({o.flat for o in owners if o.flat})
 
     if not flats:
-        return {"vehicles": []}
+        return {"vehicles": [], "count": 0, "summary_text": "No registered flats found."}
 
     vehicles = frappe.get_all(
         "Resident Vehicle",
@@ -33,12 +33,30 @@ def get_vehicles(for_user=None):
             "is_electric",
             "active",
             "approval_status",
+            "parking_slot",
         ],
         order_by="creation desc",
         limit_page_length=100,
     )
 
-    return {"vehicles": vehicles, "count": len(vehicles)}
+    lines = []
+    for v in vehicles:
+        ev = "⚡ EV" if v.is_electric else ""
+        slot = f"Slot: {v.parking_slot}" if v.parking_slot else "No Dedicated Slot"
+        lines.append(
+            f"• 🚗 *{v.vehicle_type}*: `{v.registration_number}` {ev}\n"
+            f"  {v.make or ''} {v.model or ''} ({v.color or ''})\n"
+            f"  Owner: {v.registered_owner_name} ({v.relationship_to_resident})\n"
+            f"  Status: `{v.approval_status}` | {slot}"
+        )
+
+    summary_text = "\n\n".join(lines) if lines else "No registered vehicles on record for your flat."
+
+    return {
+        "vehicles": vehicles,
+        "count": len(vehicles),
+        "summary_text": summary_text
+    }
 
 
 

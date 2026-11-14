@@ -1,29 +1,46 @@
 import random
 from datetime import datetime, timedelta
 import frappe
+from frappe.utils import format_date
 from society_erp.resident_portal import get_verified_owner_records
 from society_erp.api.utils import portal_api
 
 @frappe.whitelist()
 @portal_api
 def get_recent_visitors(for_user: str = None) -> dict:
-    """Fetch recent visitors for the resident's flat."""
+    """Fetch recent visitors for the resident's flat with complete details and summary text."""
     owners = get_verified_owner_records(user_override=for_user)
     flats = sorted({o.flat for o in owners if o.flat})
 
     if not flats:
-        return {"visitors": [], "count": 0}
+        return {"visitors": [], "count": 0, "summary_text": "No registered flats found."}
 
     logs = frappe.get_all(
         "Visitor Log",
         filters={"resident": ["in", flats]},
-        fields=["name", "visitor_name", "status", "entry_type", "expected_date", "passcode", "creation"],
+        fields=["name", "visitor_name", "status", "entry_type", "purpose", "expected_date", "in_time", "out_time", "passcode", "creation"],
         order_by="creation desc",
-        limit_page_length=10
+        limit_page_length=15
     )
+
+    lines = []
+    for v in logs:
+        v_date = format_date(v.expected_date, "dd-MM-yyyy") if v.expected_date else "-"
+        in_t = str(v.in_time).split(".")[0] if v.in_time else "Not Checked-In"
+        out_t = str(v.out_time).split(".")[0] if v.out_time else "-"
+        lines.append(
+            f"• 🎫 *{v.visitor_name or 'Guest'}* ({v.entry_type or v.purpose or 'General'})\n"
+            f"  Date: {v_date} | Status: `{v.status}` | Passcode: `{v.passcode or '-'}`\n"
+            f"  In: {in_t} | Out: {out_t}"
+        )
+
+    summary_text = "\n\n".join(lines) if lines else "No visitor logs recorded recently."
+
     return {
         "visitors": logs,
-        "count": len(logs)
+        "count": len(logs),
+        "primary_visitor": logs[0] if logs else None,
+        "summary_text": summary_text
     }
 
 @frappe.whitelist()

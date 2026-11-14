@@ -107,19 +107,40 @@ def _member_fields():
 
 
 @frappe.whitelist()
-def get_family_members():
-    resident = _current_resident()
+def get_family_members(for_user: str = None) -> dict:
+    """
+    Fetch family members for the resident's flat(s).
+    Supports both web portal (logged-in session) and headless bot impersonation (via for_user).
+    """
+    from society_erp.resident_portal import get_verified_owner_records
+
+    owners = get_verified_owner_records(user_override=for_user)
+    flats = sorted({o.flat for o in owners if o.flat})
+
+    if not flats:
+        return {"members": [], "count": 0, "summary_text": "No registered flats found."}
+
     fields = _member_fields()
+    members = frappe.get_all(
+        DOCTYPE,
+        filters={"parent_flat": ["in", flats]},
+        fields=fields,
+        order_by="creation asc"
+    )
+
+    lines = []
+    for m in members:
+        reg_status = m.get("registration_status") or m.get("status") or "-"
+        lines.append(f"• 👨‍👩‍👧 *{m.member_name}* ({m.relationship})\n  📞 `{m.mobile_no or '-'}` | Status: `{reg_status}`")
+
+    summary_text = "\n\n".join(lines) if lines else "No family members currently registered."
+
     return {
-        "flat_number": resident["flat"],
-        "resident_type": resident["type"],
-        "can_manage": True,
+        "members": members,
+        "count": len(members),
         "relationships": _options("relationship"),
         "id_proof_types": _options("id_proof_type"),
-        "active": frappe.get_all(DOCTYPE, filters={"parent_flat": resident["flat"], "status": "Active"},
-                                  fields=fields, order_by="member_name asc"),
-        "inactive": frappe.get_all(DOCTYPE, filters={"parent_flat": resident["flat"], "status": "Inactive"},
-                                    fields=fields, order_by="member_name asc"),
+        "summary_text": summary_text
     }
 
 
@@ -230,28 +251,4 @@ def upload_id_proof(member_id):
     return {"file_url": file_doc.file_url, "message": _("ID proof uploaded privately. Verification is pending.")}
 
 
-@frappe.whitelist()
-def get_family_members(for_user: str = None) -> dict:
-    """
-    Fetch family members for the resident's flat(s).
-    """
-    from society_erp.resident_portal import get_verified_owner_records
-    from society_erp.api.utils import portal_api
 
-    owners = get_verified_owner_records(user_override=for_user)
-    flats = sorted({o.flat for o in owners if o.flat})
-
-    if not flats:
-        return {"members": [], "count": 0}
-
-    members = frappe.get_all(
-        DOCTYPE,
-        filters={"flat": ["in", flats]},
-        fields=["name", "member_name", "relationship", "mobile_no", "status"],
-        order_by="creation asc"
-    )
-
-    return {
-        "members": members,
-        "count": len(members)
-    }

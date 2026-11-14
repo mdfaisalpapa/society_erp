@@ -281,3 +281,42 @@ def get_committee_ticket_summary() -> dict:
         "resolved_tickets": resolved_count,
         "total": open_count + resolved_count
     }
+
+
+@frappe.whitelist()
+@portal_api
+def get_resident_tickets_summary(for_user: str = None) -> dict:
+    """Fetch complete ticket records and status tracking for the resident's flat with summary text."""
+    from frappe.utils import format_date
+
+    resident = _resident(for_user=for_user)
+    flat = resident.get("flat")
+    if not flat:
+        return {"tickets": [], "count": 0, "summary_text": "No registered flats found."}
+
+    tickets = frappe.get_all(
+        "Maintenance Ticket",
+        filters={"resident": flat},
+        fields=["name", "category", "priority_level", "status", "creation", "description", "resolution_remarks"],
+        order_by="creation desc",
+        limit_page_length=20
+    )
+
+    lines = []
+    for t in tickets:
+        c_date = format_date(t.creation, "dd-MM-yyyy") if t.creation else "-"
+        p_desc = (t.description[:80] + "...") if t.description and len(t.description) > 80 else (t.description or "No description")
+        res_note = f"\n  Resolution: _{t.resolution_remarks}_" if t.resolution_remarks else ""
+        lines.append(
+            f"• 🛠️ *#{t.name}* [{t.category or 'General'}]\n"
+            f"  Priority: `{t.priority_level or 'Normal'}` | Status: `{t.status}` | Logged: {c_date}\n"
+            f"  _{p_desc}_{res_note}"
+        )
+
+    summary_text = "\n\n".join(lines) if lines else "No maintenance complaints or service tickets on record."
+
+    return {
+        "tickets": tickets,
+        "count": len(tickets),
+        "summary_text": summary_text
+    }

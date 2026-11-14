@@ -1,6 +1,6 @@
 import frappe
 import re
-from frappe.utils import validate_email_address
+from frappe.utils import format_date, validate_email_address
 
 # Import your core authentication function from the main file
 from society_erp.resident_portal import get_verified_owner_records
@@ -23,12 +23,12 @@ def _sync_flat_let_out_flag(flat):
 @frappe.whitelist()
 @portal_api
 def get_tenants(for_user=None):
-    """Fetch active and past tenants for the owner's flats."""
+    """Fetch active and past tenants for the owner's flats with summary text."""
     owners = get_verified_owner_records(user_override=for_user)
     flats = [o.flat for o in owners if o.flat]
 
     if not flats:
-        return {"tenants": []}
+        return {"tenants": [], "count": 0, "summary_text": "No registered flats found."}
 
     tenants = frappe.get_all(
         "Tenants",
@@ -36,11 +36,30 @@ def get_tenants(for_user=None):
         fields=[
             "name", "flat", "tenant_name", "mobile_no", "email", 
             "start_date", "end_date", "active", "registration_status", 
-            "rental_agreement", "photo", "id_proof", "police_verification" # Added new fields here
+            "rental_agreement", "photo", "id_proof", "police_verification"
         ],
         order_by="active desc, start_date desc"
     )
-    return {"tenants": tenants, "count": len(tenants)}
+
+    lines = []
+    for t in tenants:
+        status_lbl = "🟢 Active" if t.active else "⚪ Past"
+        s_date = format_date(t.start_date, "dd-MM-yyyy") if t.start_date else "-"
+        e_date = format_date(t.end_date, "dd-MM-yyyy") if t.end_date else "Ongoing"
+        lines.append(
+            f"• 👤 *{t.tenant_name}* ({status_lbl})\n"
+            f"  📞 `{t.mobile_no or '-'}` | ✉️ `{t.email or '-'}`\n"
+            f"  Duration: {s_date} to {e_date}"
+        )
+
+    summary_text = "\n\n".join(lines) if lines else "No tenants registered on record."
+
+    return {
+        "tenants": tenants,
+        "count": len(tenants),
+        "active_tenants": [t for t in tenants if t.active],
+        "summary_text": summary_text
+    }
 
 @frappe.whitelist()
 @portal_api
