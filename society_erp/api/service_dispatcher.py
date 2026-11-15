@@ -189,15 +189,41 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
     act_lower = act.lower()
 
     # If action_id is 'menu', route cleanly to get_resident_menu
-    if act_lower in ("menu", "main_menu", "hi", "hello", "hey"):
+    if act_lower in ("menu", "main_menu", "hi", "hello", "hey", "start"):
         from society_erp.api.menu import get_resident_menu
         menu_data = get_resident_menu(for_user=for_user, channel="WhatsApp")
+        raw_options = menu_data.get("options", [])
+        
+        # Format options with both label and value so channel adapters can render them properly
+        action_options = []
+        for opt in raw_options:
+            val = opt.get("value") or opt.get("id") or opt.get("action")
+            lbl = opt.get("label") or opt.get("title") or val
+            opt_entry = {
+                "id": val,
+                "value": val,
+                "label": lbl,
+                "title": lbl,
+            }
+            if opt.get("desc"):
+                opt_entry["desc"] = opt.get("desc")
+            if opt.get("web_app_url"):
+                opt_entry["web_app_url"] = opt.get("web_app_url")
+            if opt.get("url"):
+                opt_entry["url"] = opt.get("url")
+            action_options.append(opt_entry)
+
+        # Fallback if no options (e.g. unverified/anonymous or empty)
+        if not action_options:
+            action_options = [{"label": "🏠 Main Menu", "value": "menu"}]
+
+        welcome_text = menu_data.get("welcome_message") or "🏢 *Main Menu*\n\nSelect an option below:"
         return {
             "title": "Main Menu",
             "icon": "🏢",
-            "summary_text": menu_data.get("welcome_message", "Main Menu"),
-            "prompt": menu_data.get("welcome_message", "Main Menu"),
-            "options": menu_data.get("options", []),
+            "summary_text": welcome_text,
+            "prompt": welcome_text,
+            "options": action_options,
         }
 
     # Handle incoming verification messages (e.g. "VERIFY TC2-411 9445698019" or "VERIFY 814610")
