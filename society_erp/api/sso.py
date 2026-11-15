@@ -51,15 +51,56 @@ def authenticate_sso(token: str, redirect_to: str = "/resident"):
     """
     Consumes the one-time token, sets the session cookie, and redirects to target portal route.
     """
+    is_standalone = bool(
+        frappe.form_dict.get("standalone")
+        or (redirect_to and ("standalone=1" in redirect_to or "standalone=true" in redirect_to.lower()))
+    )
+
     if not token:
-        frappe.respond_as_web_page("Invalid Request", "Missing authentication token.", http_status_code=400)
+        if is_standalone:
+            close_btn_html = (
+                '<div class="mt-4">'
+                '<button type="button" class="btn btn-danger btn-block font-weight-bold py-2 shadow-sm" '
+                'onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">'
+                '✕ Close Window</button>'
+                '</div>'
+            )
+            frappe.respond_as_web_page(
+                "Invalid Request",
+                f"<p class='text-muted text-center'>Missing authentication token.</p>{close_btn_html}",
+                http_status_code=400,
+                primary_action=None,
+            )
+        else:
+            frappe.respond_as_web_page("Invalid Request", "Missing authentication token.", http_status_code=400)
         return
 
     cache_key = f"portal_sso_{token}"
     user = frappe.cache.get_value(cache_key)
 
     if not user:
-        frappe.respond_as_web_page("Session Expired", "This magic login link has expired or has already been used. Please request a new one from the bot.", http_status_code=403)
+        if is_standalone:
+            close_btn_html = (
+                '<div class="mt-4">'
+                '<button type="button" class="btn btn-danger btn-block font-weight-bold py-2 shadow-sm" '
+                'onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">'
+                '✕ Close Window</button>'
+                '</div>'
+            )
+            frappe.respond_as_web_page(
+                "Session Expired",
+                f"<p class='text-muted text-center mb-0'>This magic login link has expired or has already been used.</p>"
+                f"<p class='text-muted text-center small mb-3'>Please close this window and request a new link from the chatbot.</p>"
+                f"{close_btn_html}",
+                http_status_code=403,
+                primary_action=None,
+            )
+        else:
+            frappe.respond_as_web_page(
+                "Session Expired",
+                "This magic login link has expired or has already been used. Please request a new one from the bot.",
+                http_status_code=403,
+            )
         return
 
     # Delete token so it cannot be reused

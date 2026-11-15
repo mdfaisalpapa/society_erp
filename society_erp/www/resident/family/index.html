@@ -20,7 +20,7 @@
     </div>
     <div>
       {% if is_standalone %}
-    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">✕ Close</button>
+    <button type="button" class="btn btn-danger btn-sm font-weight-bold shadow-sm px-3" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }"><span class="mr-1">✕</span> Close</button>
 {% else %}
     <a href="/resident" class="btn btn-outline-secondary btn-sm">🔙 Back to Resident Portal</a>
 {% endif %}
@@ -38,7 +38,7 @@
       ➕ Add Family Member
     </button>
     {% if is_standalone %}
-    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">✕ Close</button>
+    <button type="button" class="btn btn-danger btn-sm font-weight-bold shadow-sm px-3" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }"><span class="mr-1">✕</span> Close</button>
 {% else %}
     <a href="/resident" class="btn btn-outline-secondary btn-sm">
       🔙 Back to Resident Portal

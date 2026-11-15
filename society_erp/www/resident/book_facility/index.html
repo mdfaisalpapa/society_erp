@@ -110,7 +110,7 @@
                 ➕ New Booking
             </button>
             {% if is_standalone %}
-    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">✕ Close</button>
+    <button type="button" class="btn btn-danger btn-sm font-weight-bold shadow-sm px-3" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }"><span class="mr-1">✕</span> Close</button>
 {% else %}
     <a href="/resident" class="btn btn-outline-secondary">
                 🔙 Back to Resident Portal
@@ -124,7 +124,7 @@
         <h4>Access Restricted</h4>
         <p>No verified resident record found for your user account. Please contact the society office.</p>
         {% if is_standalone %}
-    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }">✕ Close</button>
+    <button type="button" class="btn btn-danger btn-sm font-weight-bold shadow-sm px-3" onclick="if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close){ window.Telegram.WebApp.close(); } else { window.close(); history.back(); }"><span class="mr-1">✕</span> Close</button>
 {% else %}
     <a href="/resident" class="btn btn-outline-secondary mt-2">Back to Resident Portal</a>
 {% endif %}
