@@ -223,6 +223,42 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
             "options": menu_data.get("options", []),
         }
 
+    # Handle incoming verification messages (e.g. "VERIFY TC2-411 9445698019" or "VERIFY ...")
+    if act_lower.startswith("verify"):
+        parts = act.split()
+        mobile_to_verify = None
+        for p in reversed(parts):
+            digits = "".join(filter(str.isdigit, p))
+            if len(digits) >= 10:
+                mobile_to_verify = digits[-10:]
+                break
+
+        if not mobile_to_verify and for_user:
+            # Check owner or tenant mobile
+            m = frappe.db.get_value("Owners", {"email": for_user, "active": 1}, "mobile_no") or \
+                frappe.db.get_value("Tenants", {"email": for_user, "active": 1}, "mobile_no")
+            if m:
+                mobile_to_verify = "".join(filter(str.isdigit, str(m)))[-10:]
+
+        if mobile_to_verify:
+            from society_erp.account_management import mark_mobile_verified
+            mark_mobile_verified(mobile_to_verify)
+
+        from society_erp.api.menu import get_resident_menu
+        menu_data = get_resident_menu(for_user=for_user)
+        prompt = (
+            "✅ *Mobile Number Verified Successfully!*\n\n"
+            "Thank you! Your mobile number is now verified in Kendriya Vihar Phase-III records.\n\n"
+            + menu_data.get("welcome_message", "Select any society service below:")
+        )
+        return {
+            "title": "Mobile Verified",
+            "icon": "✅",
+            "summary_text": prompt,
+            "prompt": prompt,
+            "options": menu_data.get("options", []),
+        }
+
     # Special handling for direct open actions (e.g. when selected in WhatsApp)
     if act_lower.startswith("open_comm_"):
         from society_erp.api.committee_menu import get_committee_sub_tiles
