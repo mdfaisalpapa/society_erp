@@ -50,17 +50,15 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
             {"signatory": cm.name, "signature_status": "Pending"}
         )
 
-    # Build streamlined 4 Functional Pillars for Committee (strictly <= 10 items for WhatsApp & Telegram UX)
+    # Streamlined Single-Gateway pattern: concise summary + single WebApp CTA button
     sub_tiles = []
-
-    # 1. Direct WebApp Canvas Button
     canvas_route = "/resident/committee?standalone=1"
     sso_canvas = create_portal_link(user_email, target_route=canvas_route)
     sub_tiles.append({
         "id": "comm_canvas",
         "module": "committee_canvas",
-        "label": "🌐 Full Committee Canvas",
-        "title": "Full Committee Portal",
+        "label": "🌐 Open Committee Portal",
+        "title": "Open Committee Portal",
         "icon": "🌐",
         "badge": 0,
         "badge_type": "primary",
@@ -69,88 +67,7 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
         "route": canvas_route
     })
 
-    # Pillar 1: Resident Management (Tenants, Vehicles, Permits, Family, Pets, Hall Bookings, Classifieds)
-    c_ten = counts.get("tenants_pending", 0)
-    c_veh = counts.get("vehicles_pending", 0)
-    c_pmt = counts.get("permits_pending", 0)
-    c_fam = counts.get("family_pending", 0)
-    c_pet = counts.get("pets_pending", 0)
-    c_fac = counts.get("facility_bookings_pending", 0)
-    c_cls = counts.get("classifieds_pending", 0)
-    c_res_mgmt = c_ten + c_veh + c_pmt + c_fam + c_pet + c_fac + c_cls
-
-    route_res_mgmt = "/resident/committee?cat=resident_mgmt&tab=tenants&standalone=1#pane-tenants"
-    sso_res_mgmt = create_portal_link(user_email, target_route=route_res_mgmt)
-    sub_tiles.append({
-        "id": "comm_resident_mgmt",
-        "module": "resident_mgmt",
-        "label": f"👥 Resident Mgmt ({c_res_mgmt} Pending)" if c_res_mgmt > 0 else "👥 Resident Mgmt",
-        "title": "Resident Management",
-        "icon": "👥",
-        "desc": "Tenants, Vehicles, Permits, Family, Pets, Halls",
-        "badge": c_res_mgmt,
-        "badge_type": "warning" if c_res_mgmt > 0 else "secondary",
-        "value": "open_comm_resident_mgmt",
-        "web_app_url": sso_res_mgmt.get("url"),
-        "route": route_res_mgmt
-    })
-
-    # Pillar 2: Facility Operations & Monitoring (Tickets, Staff, Housekeeping Proofs)
-    c_tkt = counts.get("tickets_open", 0)
-    c_on_duty = counts.get("facility_on_duty", 0)
-    route_fac_ops = "/resident/committee?cat=facility_ops&tab=tickets&standalone=1#pane-tickets"
-    sso_fac_ops = create_portal_link(user_email, target_route=route_fac_ops)
-    sub_tiles.append({
-        "id": "comm_facility_ops",
-        "module": "facility_ops",
-        "label": f"🛠️ Facility Operations ({c_tkt} Open)" if c_tkt > 0 else "🛠️ Facility Operations",
-        "title": "Facility Operations",
-        "icon": "🛠️",
-        "desc": "Helpdesk Tickets, Security/Staff, Housekeeping",
-        "badge": c_tkt,
-        "badge_type": "danger" if c_tkt > 0 else "secondary",
-        "value": "open_comm_facility_ops",
-        "web_app_url": sso_fac_ops.get("url"),
-        "route": route_fac_ops
-    })
-
-    # Pillar 3: Committee Governance (Notices, Board Resolutions)
-    c_res = counts.get("resolutions_pending", 0)
-    route_gov = "/resident/committee?cat=governance&tab=notices&standalone=1#pane-notices"
-    sso_gov = create_portal_link(user_email, target_route=route_gov)
-    sub_tiles.append({
-        "id": "comm_governance",
-        "module": "governance",
-        "label": f"⚖️ Committee Governance ({c_res} Pending)" if c_res > 0 else "⚖️ Committee Governance",
-        "title": "Committee Governance",
-        "icon": "⚖️",
-        "desc": "Society Notices & Board Resolutions",
-        "badge": c_res,
-        "badge_type": "warning" if c_res > 0 else "secondary",
-        "value": "open_comm_governance",
-        "web_app_url": sso_gov.get("url"),
-        "route": route_gov
-    })
-
-    # Pillar 4: Asset & Plant Monitoring (Water/Sumps, OHT Tanks, AMC, STP Chemicals)
-    c_chem = counts.get("chemical_low_count", 0)
-    route_assets = "/resident/committee?cat=plant_assets&tab=water_log&standalone=1#pane-water_log"
-    sso_assets = create_portal_link(user_email, target_route=route_assets)
-    sub_tiles.append({
-        "id": "comm_plant_assets",
-        "module": "plant_assets",
-        "label": f"💧 Asset & Plant Monitoring ({c_chem} Alert)" if c_chem > 0 else "💧 Asset & Plant Monitoring",
-        "title": "Asset & Plant Monitoring",
-        "icon": "💧",
-        "desc": "Water Sumps, Tank Cleaning, Asset AMC, STP Chemicals",
-        "badge": c_chem,
-        "badge_type": "danger" if c_chem > 0 else "secondary",
-        "value": "open_comm_plant_assets",
-        "web_app_url": sso_assets.get("url"),
-        "route": route_assets
-    })
-
-    # 5. Add Return to Main Menu option at the bottom
+    # Return to Main Menu option
     sub_tiles.append({
         "id": "comm_menu_back",
         "module": "menu",
@@ -161,15 +78,26 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
         "value": "menu"
     })
 
-    summary_lines = []
-    for t in sub_tiles:
-        if t["value"] == "menu":
-            summary_lines.append(f"• {t['icon']} *{t['title']}*")
-        elif t.get("badge", 0) > 0:
-            summary_lines.append(f"• {t['icon']} *{t['title']}*: {t['badge']} Pending / Open")
-        else:
-            summary_lines.append(f"• {t['icon']} *{t['title']}*")
+    c_ten = counts.get("tenants_pending", 0)
+    c_veh = counts.get("vehicles_pending", 0)
+    c_pmt = counts.get("permits_pending", 0)
+    c_fam = counts.get("family_pending", 0)
+    c_pet = counts.get("pets_pending", 0)
+    c_fac = counts.get("facility_bookings_pending", 0)
+    c_cls = counts.get("classifieds_pending", 0)
+    c_res_mgmt = c_ten + c_veh + c_pmt + c_fam + c_pet + c_fac + c_cls
+    c_tkt = counts.get("tickets_open", 0)
+    c_res = counts.get("resolutions_pending", 0)
+    c_on_duty = counts.get("facility_on_duty", 0)
 
+    summary_lines = [
+        f"• Pending Approvals: *{c_res_mgmt}* (Tenants, Vehicles, Permits)",
+        f"• Open Helpdesk Tickets: *{c_tkt}*",
+        f"• Pending Resolutions: *{c_res}*",
+        f"• Facility Staff on Duty: *{c_on_duty}*",
+        "",
+        "Tap below to review and manage all committee operations in the portal:"
+    ]
     summary_text = "\n".join(summary_lines)
 
     return {

@@ -128,36 +128,26 @@ SERVICE_REGISTRY = {
         "icon": "🏛️",
         "method": "society_erp.api.committee_menu.get_committee_sub_tiles",
         "target_route": "/resident/committee?standalone=1",
-        "btn_label": "🌐 Open Full Committee Canvas (WebApp)"
+        "btn_label": "🌐 Open Committee Portal (WebApp)"
     },
-    # --- Consolidated 8-Hub Mappings ---
+    # --- Consolidated 8-Hub Mappings (Gateway to Web Portal) ---
     "profile_ownership": {
         "title": "Flat & Ownership Details",
         "icon": "👤",
         "target_route": "/resident/profile?standalone=1",
-        "btn_label": "👤 View Flat Profile (WebApp)",
-        "sub_actions": [
-            {"id": "owners", "label": "📜 Ownership History & Deeds (WebApp)", "route": "/resident/owners?standalone=1"},
-            {"id": "profile", "label": "✏️ Update Mobile & Contacts (WebApp)", "route": "/resident/profile?standalone=1&modal=update_mobile"}
-        ]
+        "btn_label": "👤 Open Flat & Ownership (WebApp)"
     },
     "accounts_dues": {
         "title": "Accounts & Society Dues",
         "icon": "💳",
         "target_route": "/resident/dues?standalone=1",
-        "btn_label": "💳 Pay Dues & View Ledger (WebApp)",
-        "sub_actions": [
-            {"id": "financials", "label": "📈 Society Financials & P&L (WebApp)", "route": "/resident/financials?standalone=1"}
-        ]
+        "btn_label": "💳 Pay Dues & Ledger (WebApp)"
     },
     "residents_tenants": {
         "title": "Residents & Tenants",
         "icon": "🏠",
         "target_route": "/resident/family?standalone=1",
-        "btn_label": "👨‍👩‍👧‍👦 Family Members (WebApp)",
-        "sub_actions": [
-            {"id": "tenants", "label": "🏠 Tenant Management & Leases (WebApp)", "route": "/resident/tenants?standalone=1"}
-        ]
+        "btn_label": "🏠 Open Residents & Tenants (WebApp)"
     },
     "vehicles_parking": {
         "title": "Vehicles & Parking Allocation",
@@ -169,32 +159,19 @@ SERVICE_REGISTRY = {
         "title": "Visitors & Domestic Staff",
         "icon": "🎫",
         "target_route": "/resident/visitors?standalone=1",
-        "btn_label": "📋 Visitor Passes & Logs (WebApp)",
-        "has_instant_pass": True,
-        "sub_actions": [
-            {"id": "staff", "label": "🧹 Domestic Staff & Helper Attendance (WebApp)", "route": "/resident/staff?standalone=1"}
-        ]
+        "btn_label": "🎫 Open Visitors & Passes (WebApp)"
     },
     "helpdesk_services": {
         "title": "Helpdesk & Resident Services",
         "icon": "🛠️",
         "target_route": "/resident/maintenance?standalone=1",
-        "btn_label": "🛠️ Maintenance Tickets (WebApp)",
-        "sub_actions": [
-            {"id": "facilities", "label": "🏛️ Book Community Hall (WebApp)", "route": "/resident/book_facility?standalone=1"},
-            {"id": "permits", "label": "👷 Work Permits & Contractor Passes (WebApp)", "route": "/resident/work_permits?standalone=1"}
-        ]
+        "btn_label": "🛠️ Open Helpdesk & Services (WebApp)"
     },
     "community_notices": {
         "title": "Community, Notices & Voting",
         "icon": "📢",
         "target_route": "/resident/notices?standalone=1",
-        "btn_label": "📋 Official Notice Board (WebApp)",
-        "sub_actions": [
-            {"id": "classifieds", "label": "📢 Resident Marketplace Classifieds (WebApp)", "route": "/resident/classifieds?standalone=1"},
-            {"id": "voting", "label": "🗳️ Polls & Governance Voting (WebApp)", "route": "/consensus-vote?standalone=1"},
-            {"id": "pets", "label": "🐾 Pets Registry & Vaccinations (WebApp)", "route": "/resident/pets?standalone=1"}
-        ]
+        "btn_label": "📢 Open Notice Board & Polls (WebApp)"
     }
 }
 
@@ -841,45 +818,24 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
         except Exception:
             sso_url = ""
 
-    # 3. Build Card UI Prompt and Action Options
+    # 3. Build Card UI Prompt and Action Options (Strict Summary + Single CTA Button Gateway)
     prompt = f"{meta['icon']} *{meta['title']}*\n\n{summary_text}"
     options = []
 
-    if meta.get("has_instant_pass"):
-        options.append({
-            "label": "⚡ Instant 1-Day Guest Pass",
-            "value": "gen_pass"
-        })
-
-    if sso_url and meta.get("btn_label"):
-        options.append({
-            "label": meta["btn_label"],
-            "value": f"open_{act}_portal",
-            "web_app_url": sso_url
-        })
-
-    # If additional sub-actions exist in hub metadata, generate SSO for each
-    if meta.get("sub_actions") and for_user:
-        for sa in meta["sub_actions"]:
-            try:
-                from society_erp.api.sso import generate_portal_link
-                sa_sso = generate_portal_link(for_user=for_user, target_route=sa["route"])
-                sa_url = sa_sso.get("url") or (sa_sso.get("data", {}).get("url") if isinstance(sa_sso, dict) else "")
-                sa_val = sa.get("id") or f"open_{sa.get('label')[:10].strip()}_sub"
-                options.append({
-                    "label": sa["label"],
-                    "value": sa_val,
-                    "web_app_url": sa_url
-                })
-            except Exception:
-                pass
-
-    # If sub-tiles exist (e.g. committee sub-tiles)
+    # If sub-tiles exist (e.g. from committee_menu), use them directly
     if raw_data.get("sub_tiles"):
         for st in raw_data["sub_tiles"]:
             options.append(st)
+    else:
+        # Single primary WebApp CTA button
+        if sso_url and meta.get("btn_label"):
+            options.append({
+                "label": meta["btn_label"],
+                "value": f"open_{act}_portal",
+                "web_app_url": sso_url
+            })
 
-    # Avoid duplicate 'menu' option if sub_tiles already added a menu option
+    # Ensure clean 'Back to Main Menu' option is present
     has_menu_option = any(opt.get("value") == "menu" for opt in options)
     if not has_menu_option:
         options.append({
