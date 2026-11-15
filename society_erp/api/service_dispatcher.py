@@ -137,8 +137,8 @@ SERVICE_REGISTRY = {
         "target_route": "/resident/profile?standalone=1",
         "btn_label": "👤 View Flat Profile (WebApp)",
         "sub_actions": [
-            {"label": "📜 Ownership History & Deeds (WebApp)", "route": "/resident/owners?standalone=1"},
-            {"label": "✏️ Update Mobile & Contacts (WebApp)", "route": "/resident/profile?standalone=1&modal=update_mobile"}
+            {"id": "owners", "label": "📜 Ownership History & Deeds (WebApp)", "route": "/resident/owners?standalone=1"},
+            {"id": "profile", "label": "✏️ Update Mobile & Contacts (WebApp)", "route": "/resident/profile?standalone=1&modal=update_mobile"}
         ]
     },
     "accounts_dues": {
@@ -147,7 +147,7 @@ SERVICE_REGISTRY = {
         "target_route": "/resident/dues?standalone=1",
         "btn_label": "💳 Pay Dues & View Ledger (WebApp)",
         "sub_actions": [
-            {"label": "📈 Society Financials & P&L (WebApp)", "route": "/resident/financials?standalone=1"}
+            {"id": "financials", "label": "📈 Society Financials & P&L (WebApp)", "route": "/resident/financials?standalone=1"}
         ]
     },
     "residents_tenants": {
@@ -156,7 +156,7 @@ SERVICE_REGISTRY = {
         "target_route": "/resident/family?standalone=1",
         "btn_label": "👨‍👩‍👧‍👦 Family Members (WebApp)",
         "sub_actions": [
-            {"label": "🏠 Tenant Management & Leases (WebApp)", "route": "/resident/tenants?standalone=1"}
+            {"id": "tenants", "label": "🏠 Tenant Management & Leases (WebApp)", "route": "/resident/tenants?standalone=1"}
         ]
     },
     "vehicles_parking": {
@@ -172,7 +172,7 @@ SERVICE_REGISTRY = {
         "btn_label": "📋 Visitor Passes & Logs (WebApp)",
         "has_instant_pass": True,
         "sub_actions": [
-            {"label": "🧹 Domestic Staff & Helper Attendance (WebApp)", "route": "/resident/staff?standalone=1"}
+            {"id": "staff", "label": "🧹 Domestic Staff & Helper Attendance (WebApp)", "route": "/resident/staff?standalone=1"}
         ]
     },
     "helpdesk_services": {
@@ -181,8 +181,8 @@ SERVICE_REGISTRY = {
         "target_route": "/resident/maintenance?standalone=1",
         "btn_label": "🛠️ Maintenance Tickets (WebApp)",
         "sub_actions": [
-            {"label": "🏛️ Book Community Hall (WebApp)", "route": "/resident/book_facility?standalone=1"},
-            {"label": "👷 Work Permits & Contractor Passes (WebApp)", "route": "/resident/work_permits?standalone=1"}
+            {"id": "facilities", "label": "🏛️ Book Community Hall (WebApp)", "route": "/resident/book_facility?standalone=1"},
+            {"id": "permits", "label": "👷 Work Permits & Contractor Passes (WebApp)", "route": "/resident/work_permits?standalone=1"}
         ]
     },
     "community_notices": {
@@ -191,9 +191,9 @@ SERVICE_REGISTRY = {
         "target_route": "/resident/notices?standalone=1",
         "btn_label": "📋 Official Notice Board (WebApp)",
         "sub_actions": [
-            {"label": "📢 Resident Marketplace Classifieds (WebApp)", "route": "/resident/classifieds?standalone=1"},
-            {"label": "🗳️ Polls & Governance Voting (WebApp)", "route": "/consensus-vote?standalone=1"},
-            {"label": "🐾 Pets Registry & Vaccinations (WebApp)", "route": "/resident/pets?standalone=1"}
+            {"id": "classifieds", "label": "📢 Resident Marketplace Classifieds (WebApp)", "route": "/resident/classifieds?standalone=1"},
+            {"id": "voting", "label": "🗳️ Polls & Governance Voting (WebApp)", "route": "/consensus-vote?standalone=1"},
+            {"id": "pets", "label": "🐾 Pets Registry & Vaccinations (WebApp)", "route": "/resident/pets?standalone=1"}
         ]
     }
 }
@@ -374,9 +374,15 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
     elif act == "community_notices":
         from society_erp.api.notices import get_active_notices
         from society_erp.api.classifieds import get_classifieds
-        n_res = get_active_notices(for_user=for_user)
+        try:
+            n_res = get_active_notices()
+        except Exception:
+            n_res = {}
         n_data = n_res.get("data", n_res) if isinstance(n_res, dict) else {}
-        c_res = get_classifieds(for_user=for_user)
+        try:
+            c_res = get_classifieds(for_user=for_user)
+        except Exception:
+            c_res = {}
         c_data = c_res.get("data", c_res) if isinstance(c_res, dict) else {}
         n_count = len(n_data.get("notices", []))
         c_count = len(c_data.get("ads", []))
@@ -471,9 +477,10 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                 from society_erp.api.sso import generate_portal_link
                 sa_sso = generate_portal_link(for_user=for_user, target_route=sa["route"])
                 sa_url = sa_sso.get("url") or (sa_sso.get("data", {}).get("url") if isinstance(sa_sso, dict) else "")
+                sa_val = sa.get("id") or f"open_{sa.get('label')[:10].strip()}_sub"
                 options.append({
                     "label": sa["label"],
-                    "value": f"open_{sa.get('label')[:10].strip()}_sub",
+                    "value": sa_val,
                     "web_app_url": sa_url
                 })
             except Exception:
