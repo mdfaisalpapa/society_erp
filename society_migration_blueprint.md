@@ -93,20 +93,80 @@ To decommission the bespoke standalone Python/Flask application (**`society_bot`
 ## 2. Project Status & Progress Tracking
 
 ```
-Overall Migration Completion: [==================================================> ] 95%
+Overall Migration Completion: [==================================================> ] 98%
 ```
 
 | Phase | Milestone / Component | Status | Verification & Deliverables |
 | :--- | :--- | :---: | :--- |
 | **Phase 1** | Identity Foundation & Channel Mapping | **COMPLETED** | `Channel Identity` DocType operational; `society_erp.api.identity.resolve_chat_user` returning verified resident profile, flat, and committee status (`is_committee_member`). |
 | **Phase 2** | Backend Modular Data APIs | **COMPLETED** | 14 dedicated domain endpoints implemented in `society_erp/api/` covering Dues, Vehicles, Parking, Tenants, Family, Helpdesk, Staff, Notices, Resolutions, Work Permits, Visitors, and Guard Passcodes. |
-| **Phase 3** | Secure Passwordless SSO for WebApps | **COMPLETED** | `society_erp.api.sso.generate_portal_link` creates one-time 15-minute HMAC tokens; `authenticate_sso` logs in resident session seamlessly within Telegram WebApp bottom-sheet. |
-| **Phase 4** | Universal Chatbot Engine Enhancements | **COMPLETED** | Added `web_app_url` support to `MultipleChoiceNode` & Telegram adapter; nested dictionary dot-notation evaluation in template engine; context auto-injection (`channel`, `channel_user_id`). |
+| **Phase 3** | Secure Passwordless SSO for WebApps | **COMPLETED** | `society_erp.api.sso.generate_portal_link` creates one-time 15-minute HMAC tokens; `authenticate_sso` logs in resident session seamlessly within Telegram WebApp bottom-sheet and WhatsApp CTA browser links. |
+| **Phase 4** | Universal Chatbot Engine Enhancements | **COMPLETED** | Added `web_app_url` support to `MultipleChoiceNode`, Telegram adapter, and WhatsApp adapter; fallback option key resolution (`unpacked.options` vs `unpacked.data.options`); dynamic context auto-injection (`channel`, `channel_user_id`, `phone_number`). |
 | **Phase 5** | Integration Actions & Flow Deployment | **COMPLETED** | 14 `Integration Action` records registered; master resident flow (`kvc3_main_flow`) deployed with 12 interactive cards, looping back-navigation, and instant WebApp forms for mutations. |
-| **Phase 6** | Telegram Channel Live E2E Validation | **COMPLETED** | Verified on `@kvc3_py_bot` via ngrok webhook; authentication, menu navigation, sub-menus, detail lookups, and `[🔙 Back to Main Menu]` transitions operational. |
-| **Phase 7** | Production Webhook Cutover | **PENDING** | Repoint production Telegram bot (`@kvc_iii` / production token) webhook from legacy Flask to `universal_chatbot`. |
-| **Phase 8** | WhatsApp Cloud API Channel Activation | **PENDING** | Configure Meta WhatsApp Cloud API credentials in `Bot Channel` for live resident roll-out. |
-| **Phase 9** | Decommissioning `society_bot` | **PENDING** | Stop supervisor daemon `society_bot`, remove cron / systemd units, and archive repository. |
+| **Phase 6** | Telegram Channel Live E2E Validation | **COMPLETED** | Verified on `@kvc3_py_bot` via webhook; authentication, menu navigation, sub-menus, detail lookups, and `[🔙 Back to Main Menu]` transitions operational. |
+| **Phase 7** | WhatsApp Cloud API Live Activation & Gating | **COMPLETED** | Meta WhatsApp Cloud API connected in production (`DEP-00001` / `1428481243686640`); channel adapter reformats rich menus into native interactive lists (`Select Option`) and CTA URL cards. Dual-verification gating (Mobile + Email) and in-chat OTP verification operational. |
+| **Phase 8** | Web Portal Change-Mobile Self-Service | **PENDING** | On the Web Resident Portal, allow residents whose email is verified to request updating their registered mobile number by sending an automated WhatsApp/Telegram OTP verification code to the new mobile number. |
+| **Phase 9** | Production Webhook Cutover & Sunsetting | **PENDING** | Repoint production Telegram bot (`@kvc_iii`) webhook to `universal_chatbot`, stop legacy supervisor daemon `society_bot`, and archive `apps/society-bot`. |
+
+---
+
+## 3. Dual-Channel Verification & Authentication Flow
+
+### 3.1 Gated Access Rule
+To protect resident data, society services are strictly gated behind verified identity on both communication channels:
+1. **Mobile Verification**:
+   - On **WhatsApp**: Mobile number is automatically authenticated from the verified sender WhatsApp ID (`external_user_id`).
+   - On **Telegram**: Verified via 1-click native Telegram Contact Sharing button (`request_contact: True`).
+2. **Email Verification**:
+   - Until email is verified, all service tiles and menu options remain locked (`verification_pending = True`).
+   - The resident is greeted with their flat number and masked email (e.g. `mdfa***@gmail.com`).
+   - The resident replies with their full email.
+     - If matching the registered record, a 6-digit OTP is generated and emailed to the address.
+     - If mismatching, a `✏️ Change Email` button is provided allowing an in-band update via OTP.
+   - Upon replying with the 6-digit OTP:
+     - The database updates `is_email_verified = 1` and commits immediately.
+     - The full interactive society service menu (`Select Option` with 9 tiles) is displayed with immediate access.
+
+### 3.2 Conversational Navigation & Routing Rules
+- Words such as `"hi"`, `"hello"`, `"hey"`, `"start"`, or `"menu"` automatically transition to the User Resolver / Main Menu without triggering fallback error cards ("Service 'hi' is being updated").
+- Clean single-purpose action options: Intermediary steps (such as "Verification Code Sent" or "Change Email") do not show redundant `[🏠 Main Menu]` buttons to prevent user confusion.
+- Multi-URL cards (such as Accounts & Dues or Committee sub-tiles) render secure 1-click CTA URLs directly into WhatsApp message bodies and interactive buttons.
+
+---
+
+## 4. Work Completed in Recent Iterations (November 2026)
+
+1. **WhatsApp Channel Formatting & Rich Interaction**:
+   - Fixed `WhatsAppChannelAdapter.format_response`:
+     - Preserves full option metadata (`label`, `value`, `web_app_url`, `url`, `desc`).
+     - Up to 3 options rendered as native WhatsApp Reply Buttons (`type: button`).
+     - 4 to 10 options rendered as a native WhatsApp Interactive List (`type: list`, button: `Select Option`).
+     - Single portal URL actions formatted as WhatsApp CTA URL buttons (`type: cta_url`) with secondary navigation split-delivery.
+2. **Flow Engine Fallback & Template Variable Resolution**:
+   - Enhanced `MultipleChoiceNode` to gracefully resolve options from both `service_res.unpacked.data.options` and `service_res.unpacked.options`.
+   - Updated template interpolation for service cards to fallback between `{{service_res.unpacked.data.prompt}}` and `{{service_res.unpacked.prompt}}`.
+3. **Database Immediate Commit on OTP Match**:
+   - Added `frappe.db.commit()` in `society_erp/api/service_dispatcher.py` immediately after `frappe.db.set_value(doctype, target_doc, "is_email_verified", 1)`.
+   - Fixed issue where subsequent call to `get_resident_menu()` read stale unverified state and returned empty options.
+4. **Flow Transition Rule Sanitization**:
+   - Updated `kvc3_chatbot-kvc3_main_flow` transitions in `tabFlow Transition`:
+     - Transition `show_service_card -> resolve_user_node`: Condition set to `sub_action in ["menu", "hi", "hello", "start"]`.
+     - Transition `show_service_card -> fetch_service_data`: Condition set to `sub_action != "gen_pass" and sub_action not in ["menu", "hi", "hello", "start"]`.
+
+---
+
+## 5. Pending Tasks for Subsequent Conversations
+
+1. **Web Resident Portal: Change Mobile Number Flow**:
+   - In the web portal (`/resident/profile` / `/resident/flat`), if a resident's email is already verified:
+     - Allow changing the registered mobile number.
+     - Trigger an automated OTP message sent to the newly entered mobile number via WhatsApp Cloud API (or Telegram if linked).
+     - Provide an OTP verification modal on the portal to finalize the mobile number update.
+2. **Production Telegram Webhook Cutover**:
+   - Switch production Telegram bot webhook from legacy Flask to `universal_chatbot` endpoint.
+3. **Legacy `society_bot` Sunsetting**:
+   - Verify all active tenants and owners are successfully communicating via `universal_chatbot`.
+   - Decommission legacy Flask processes, systemd/supervisor units, and archive `apps/society-bot`.
 
 ---
 
