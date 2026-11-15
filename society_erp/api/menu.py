@@ -75,29 +75,35 @@ def get_resident_menu(for_user: str = None) -> dict:
         sso_res = generate_portal_link(for_user=user_email, target_route="/resident?standalone=1")
         verify_url = sso_res.get("url") if isinstance(sso_res, dict) else ""
 
+        verify_options = [
+            {
+                "id": "verify_contact",
+                "label": "🔐 Complete Verification",
+                "desc": f"Verify {missing_str}",
+                "action": "open_verify_portal",
+                "web_app_url": verify_url,
+            }
+        ]
+
+        # Only prompt "Share Contact" on Telegram where mobile number is not automatically provided in webhook
+        # On WhatsApp, phone number is already verified directly from sender wa_id
+        if not resident.get("is_mobile_verified"):
+            verify_options.append({
+                "id": "share_contact",
+                "label": "📱 Share Contact to Verify Mobile",
+                "desc": "1-Click Instant Mobile Verification",
+                "action": "share_contact",
+                "request_contact": True,
+            })
+
         return {
             "is_owner": bool(owner),
             "is_committee": False,
             "committee_role": "",
             "verification_pending": True,
             "welcome_message": welcome_msg,
-            "options": [
-                {
-                    "id": "verify_contact",
-                    "label": "🔐 Complete Verification",
-                    "desc": f"Verify {missing_str}",
-                    "action": "open_verify_portal",
-                    "web_app_url": verify_url,
-                },
-                {
-                    "id": "share_contact",
-                    "label": "📱 Share Contact to Verify Mobile",
-                    "desc": "1-Click Instant Mobile Verification",
-                    "action": "share_contact",
-                    "request_contact": True,
-                }
-            ],
-            "count": 2,
+            "options": verify_options,
+            "count": len(verify_options),
         }
 
     is_owner = bool(owner)

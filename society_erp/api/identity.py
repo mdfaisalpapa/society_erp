@@ -43,53 +43,53 @@ def resolve_chat_user(channel: str, channel_user_id: str, phone_number: str = No
         from society_erp.account_management import mark_mobile_verified
         mark_mobile_verified(clean_phone)
 
-    # 1. If phone_number was provided, attempt 1-click auto-registration / linking
-    if phone_number and clean_phone:
-            # Match in Owners or Tenants
+    # 1. Auto-registration / linking if phone is known (WhatsApp channel_user_id or shared phone_number)
+    if clean_phone:
+        # Match in Owners or Tenants
+        matched_owner = frappe.db.sql(
+            """
+            SELECT email, owner_name as resident_name, mobile_no
+            FROM `tabOwners`
+            WHERE active = 1 AND RIGHT(REGEXP_REPLACE(mobile_no, '[^0-9]', ''), 10) = %s
+            ORDER BY creation DESC LIMIT 1
+            """,
+            (clean_phone,),
+            as_dict=True,
+        )
+        if not matched_owner:
             matched_owner = frappe.db.sql(
                 """
-                SELECT email, owner_name as resident_name, mobile_no
-                FROM `tabOwners`
-                WHERE active = 1 AND RIGHT(REPLACE(REPLACE(mobile_no, ' ', ''), '-', ''), 10) = %s
+                SELECT email, tenant_name as resident_name, mobile_no
+                FROM `tabTenants`
+                WHERE active = 1 AND RIGHT(REGEXP_REPLACE(mobile_no, '[^0-9]', ''), 10) = %s
                 ORDER BY creation DESC LIMIT 1
                 """,
                 (clean_phone,),
                 as_dict=True,
             )
-            if not matched_owner:
-                matched_owner = frappe.db.sql(
-                    """
-                    SELECT email, tenant_name as resident_name, mobile_no
-                    FROM `tabTenants`
-                    WHERE active = 1 AND RIGHT(REPLACE(REPLACE(mobile_no, ' ', ''), '-', ''), 10) = %s
-                    ORDER BY creation DESC LIMIT 1
-                    """,
-                    (clean_phone,),
-                    as_dict=True,
-                )
 
-            if matched_owner and matched_owner[0].get("email"):
-                res_email = matched_owner[0]["email"]
-                # Upsert Channel Identity
-                ci_name = frappe.db.get_value(
-                    "Channel Identity",
-                    {"channel": channel_norm, "channel_user_id": user_id_norm},
-                    "name",
-                )
-                if ci_name:
-                    ci_doc = frappe.get_doc("Channel Identity", ci_name)
-                    ci_doc.resident_email = res_email
-                    ci_doc.verified = 1
-                    ci_doc.save(ignore_permissions=True)
-                else:
-                    frappe.get_doc({
-                        "doctype": "Channel Identity",
-                        "channel": channel_norm,
-                        "channel_user_id": user_id_norm,
-                        "resident_email": res_email,
-                        "verified": 1,
-                    }).insert(ignore_permissions=True)
-                frappe.db.commit()
+        if matched_owner and matched_owner[0].get("email"):
+            res_email = matched_owner[0]["email"]
+            # Upsert Channel Identity
+            ci_name = frappe.db.get_value(
+                "Channel Identity",
+                {"channel": channel_norm, "channel_user_id": user_id_norm},
+                "name",
+            )
+            if ci_name:
+                ci_doc = frappe.get_doc("Channel Identity", ci_name)
+                ci_doc.resident_email = res_email
+                ci_doc.verified = 1
+                ci_doc.save(ignore_permissions=True)
+            else:
+                frappe.get_doc({
+                    "doctype": "Channel Identity",
+                    "channel": channel_norm,
+                    "channel_user_id": user_id_norm,
+                    "resident_email": res_email,
+                    "verified": 1,
+                }).insert(ignore_permissions=True)
+            frappe.db.commit()
 
     # Query Channel Identity
     identity = frappe.db.get_value(
