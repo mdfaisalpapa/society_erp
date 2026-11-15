@@ -56,8 +56,8 @@ def get_verification_status(for_user: str = None) -> dict:
 
     # Fetch configured bot details
     settings = frappe.get_single("Society ERP Settings")
-    wa_number = getattr(settings, "whatsapp_bot_number", "") or "919445698019"
-    tg_username = getattr(settings, "telegram_bot_username", "") or "KendriyaViharPhase3Bot"
+    wa_number = getattr(settings, "whatsapp_bot_number", "") or "17374243710"
+    tg_username = getattr(settings, "telegram_bot_username", "") or "kvciii_bot"
 
     # Generate token for mobile link verification
     clean_mobile = "".join(filter(str.isdigit, str(resident.mobile_no or "")))
