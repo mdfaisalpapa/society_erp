@@ -263,20 +263,36 @@
                         <div id="otp-state-verify" class="d-none">
                             <div class="text-center mb-3">
                                 <div style="font-size: 2.2rem;">📬</div>
-                                <h6 class="font-weight-bold mb-1 text-dark">Enter Authorization Code</h6>
+                                <h6 class="font-weight-bold mb-1 text-dark">Verify Mobile Number</h6>
                                 <p class="text-muted small mb-1">
-                                    A 6-digit OTP was sent to:
+                                    A 6-digit verification code was emailed to:
                                 </p>
                                 <span class="badge badge-light border px-2 py-1 font-weight-normal text-dark">{{ resident_email }}</span>
+                            </div>
+
+                            <!-- User Initiated WhatsApp / Telegram 1-Click Verification -->
+                            <div class="card bg-light border-0 p-3 mb-3 text-center" style="border-radius: 8px;">
+                                <p class="small font-weight-bold text-dark mb-2">⚡ 1-Click Instant Verification via WhatsApp:</p>
+                                <a id="btn-wa-verify" href="#" target="_blank" class="btn btn-success btn-sm btn-block font-weight-bold mb-2">
+                                    <i class="fa fa-whatsapp mr-1"></i> Send Verification on WhatsApp
+                                </a>
+                                <a id="btn-tg-verify" href="#" target="_blank" class="btn btn-info btn-sm btn-block font-weight-bold text-white mb-1">
+                                    <i class="fa fa-paper-plane mr-1"></i> Send Verification on Telegram
+                                </a>
+                                <small class="text-muted mt-1" style="font-size: 11px;">Sends a secure user-initiated message from your new mobile to the society bot.</small>
+                            </div>
+
+                            <div class="text-center my-2 text-muted small font-weight-bold">
+                                ── OR ENTER 6-DIGIT CODE ──
                             </div>
 
                             <div class="form-group text-center mb-3">
                                 <label for="input-otp-code" class="sr-only">6-digit OTP</label>
                                 <input type="text" class="form-control text-center font-weight-bold" id="input-otp-code" placeholder="• • • • • •" maxlength="6" style="font-size: 1.6rem; letter-spacing: 8px; max-width: 240px; margin: 0 auto;" autocomplete="one-time-code">
-                                <small class="form-text text-muted mt-2">Code expires in 5 minutes</small>
+                                <small class="form-text text-muted mt-2">Code expires in 10 minutes</small>
                             </div>
 
-                            <button type="button" class="btn btn-success btn-block py-2 font-weight-bold mb-2" id="btn-verify-otp">
+                            <button type="button" class="btn btn-primary btn-block py-2 font-weight-bold mb-2" id="btn-verify-otp">
                                 ✅ Verify & Save Mobile Number
                             </button>
 

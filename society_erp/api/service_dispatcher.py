@@ -223,15 +223,63 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
             "options": menu_data.get("options", []),
         }
 
-    # Handle incoming verification messages (e.g. "VERIFY TC2-411 9445698019" or "VERIFY ...")
+    # Handle incoming verification messages (e.g. "VERIFY TC2-411 9445698019" or "VERIFY 814610")
     if act_lower.startswith("verify"):
         parts = act.split()
         mobile_to_verify = None
+        otp_to_verify = None
+
         for p in reversed(parts):
             digits = "".join(filter(str.isdigit, p))
             if len(digits) >= 10:
                 mobile_to_verify = digits[-10:]
                 break
+            elif len(digits) == 6:
+                otp_to_verify = digits
+
+        # Check if this is a web portal mobile update initiated verification: "VERIFY <otp>"
+        target_email = for_user
+        if otp_to_verify:
+            # Check cached mobile_update_otp
+            if for_user:
+                cache_key = f"mobile_update_otp:{for_user}"
+                cached = frappe.cache.get_value(cache_key)
+                if cached and str(cached.get("otp", "")).strip() == otp_to_verify:
+                    new_mobile = cached.get("new_mobile")
+                    from society_erp.www.resident.profile.index import verify_and_update_mobile
+                    # Direct update via profile module logic
+                    from society_erp.account_management import mark_mobile_verified
+                    mark_mobile_verified(new_mobile)
+                    frappe.cache.delete_value(cache_key)
+                    clean_m = "".join(filter(str.isdigit, str(new_mobile)))[-10:]
+                    frappe.cache.delete_value(f"mobile_verify_link:{clean_m}")
+
+                    # Update User and Owners/Tenants
+                    frappe.db.set_value("User", for_user, "mobile_no", new_mobile)
+                    frappe.db.sql(
+                        "UPDATE `tabOwners` SET mobile_no = %s, is_mobile_verified = 1, mobile_verified_on = NOW() WHERE active = 1 AND email = %s",
+                        (new_mobile, for_user)
+                    )
+                    frappe.db.sql(
+                        "UPDATE `tabTenants` SET mobile_no = %s, is_mobile_verified = 1, mobile_verified_on = NOW() WHERE active = 1 AND email = %s",
+                        (new_mobile, for_user)
+                    )
+                    frappe.db.commit()
+
+                    from society_erp.api.menu import get_resident_menu
+                    menu_data = get_resident_menu(for_user=for_user, channel="WhatsApp")
+                    prompt = (
+                        f"🎉 *Mobile Number Updated & Verified Successfully!*\n\n"
+                        f"Your registered mobile number has been updated to *{new_mobile}*.\n\n"
+                        + menu_data.get("welcome_message", "Select any society service below:")
+                    )
+                    return {
+                        "title": "Mobile Updated",
+                        "icon": "✅",
+                        "summary_text": prompt,
+                        "prompt": prompt,
+                        "options": menu_data.get("options", []),
+                    }
 
         if not mobile_to_verify and for_user:
             # Check owner or tenant mobile
@@ -245,7 +293,7 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
             mark_mobile_verified(mobile_to_verify)
 
         from society_erp.api.menu import get_resident_menu
-        menu_data = get_resident_menu(for_user=for_user)
+        menu_data = get_resident_menu(for_user=for_user, channel="WhatsApp")
         prompt = (
             "✅ *Mobile Number Verified Successfully!*\n\n"
             "Thank you! Your mobile number is now verified in Kendriya Vihar Phase-III records.\n\n"
@@ -259,7 +307,61 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
             "options": menu_data.get("options", []),
         }
 
-    # Handle email input for verification (e.g. user typed "mdfaisalpapa@gmail.com")
+    # Handle request to change registered email: "change_email:<new_email>"
+    if act_lower.startswith("change_email:"):
+        new_email = act.split(":", 1)[1].strip().lower()
+        if "@" in new_email and "." in new_email:
+            target_res = None
+            if for_user:
+                target_res = frappe.db.get_value("Owners", {"email": for_user, "active": 1}, ["name", "flat", "owner_name", "email"], as_dict=True) or \
+                             frappe.db.get_value("Tenants", {"email": for_user, "active": 1}, ["name", "flat", "tenant_name", "email"], as_dict=True)
+
+            if target_res:
+                import random, string
+                otp = "".join(random.choices(string.digits, k=6))
+                # Store update email request in cache with doc name
+                cache_payload = {
+                    "otp": otp,
+                    "new_email": new_email,
+                    "target_doc": target_res.name,
+                    "doctype": "Owners" if "owner_name" in target_res else "Tenants"
+                }
+                frappe.cache.set_value(f"email_change_req:{target_res.name}", cache_payload, expires_in_sec=600)
+                frappe.cache.set_value(f"email_change_user:{for_user}", cache_payload, expires_in_sec=600)
+
+                subject = f"🔐 Your Kendriya Vihar Email Update Code: {otp}"
+                res_display_name = target_res.get("tenant_name") or target_res.get("owner_name")
+                message = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <h3 style="color: #1e3a8a; margin-top: 0;">Kendriya Vihar Phase-3</h3>
+                    <p>Hello <strong>{res_display_name}</strong> (Flat: {target_res.flat}),</p>
+                    <p>You requested to update your registered email address to <strong>{new_email}</strong>.</p>
+                    <p>Please enter the following 6-digit confirmation code in WhatsApp to verify and complete the change:</p>
+                    <div style="font-size: 28px; font-weight: bold; letter-spacing: 6px; text-align: center; padding: 15px; background: #f8fafc; border-radius: 6px; color: #1e293b; margin: 15px 0;">
+                        {otp}
+                    </div>
+                    <p style="font-size: 13px; color: #64748b;">This OTP is valid for 10 minutes. If you did not request this, please contact the Estate Office.</p>
+                </div>
+                """
+                try:
+                    frappe.sendmail(recipients=[new_email], subject=subject, message=message, now=True)
+                except Exception as e:
+                    frappe.log_error("Email Change OTP Error", str(e))
+
+                prompt = (
+                    f"📩 *Verification Code Sent!*\n\n"
+                    f"A 6-digit confirmation code has been sent to your new email `{new_email}`.\n\n"
+                    f"👉 Please reply with the *6-digit OTP* (e.g. `123456`) to confirm and update your email address."
+                )
+                return {
+                    "title": "Email OTP Sent",
+                    "icon": "📩",
+                    "summary_text": prompt,
+                    "prompt": prompt,
+                    "options": [{"label": "🏠 Main Menu", "value": "menu"}]
+                }
+
+    # Handle email input for verification or update (e.g. user typed "mdfaisalpapa@gmail.com")
     if "@" in act and "." in act and " " not in act:
         user_input_email = act.strip().lower()
         # Find active resident by email or by for_user
@@ -309,18 +411,84 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                 "options": [{"label": "🏠 Main Menu", "value": "menu"}]
             }
         else:
+            # User's typed email does NOT match the registered record!
+            # Since mobile number is already authenticated via WhatsApp, provide option to update email.
             prompt = (
                 f"❌ *Email Does Not Match Records*\n\n"
                 f"The email address `{user_input_email}` does not match the registered email for this flat.\n\n"
-                f"Please verify and type your registered email address, or contact the Estate Office to update your records."
+                f"Since your mobile number is already verified, would you like to update your registered email to `{user_input_email}`?\n\n"
+                f"Tap *Change Email* below to send an OTP to `{user_input_email}`:"
             )
             return {
                 "title": "Email Mismatch",
                 "icon": "⚠️",
                 "summary_text": prompt,
                 "prompt": prompt,
-                "options": [{"label": "🏠 Main Menu", "value": "menu"}]
+                "options": [
+                    {
+                        "label": "✏️ Change Email",
+                        "value": f"change_email:{user_input_email}"
+                    },
+                    {
+                        "label": "🏠 Main Menu",
+                        "value": "menu"
+                    }
+                ]
             }
+
+    # Handle request to change registered email: "change_email:<new_email>"
+    if act_lower.startswith("change_email:"):
+        new_email = act.split(":", 1)[1].strip().lower()
+        if "@" in new_email and "." in new_email:
+            target_res = None
+            if for_user:
+                target_res = frappe.db.get_value("Owners", {"email": for_user, "active": 1}, ["name", "flat", "owner_name", "email"], as_dict=True) or \
+                             frappe.db.get_value("Tenants", {"email": for_user, "active": 1}, ["name", "flat", "tenant_name", "email"], as_dict=True)
+
+            if target_res:
+                import random, string
+                otp = "".join(random.choices(string.digits, k=6))
+                # Store update email request in cache with doc name
+                cache_payload = {
+                    "otp": otp,
+                    "new_email": new_email,
+                    "target_doc": target_res.name,
+                    "doctype": "Owners" if "owner_name" in target_res else "Tenants"
+                }
+                frappe.cache.set_value(f"email_change_req:{target_res.name}", cache_payload, expires_in_sec=600)
+                frappe.cache.set_value(f"email_change_user:{for_user}", cache_payload, expires_in_sec=600)
+
+                subject = f"🔐 Your Kendriya Vihar Email Update Code: {otp}"
+                res_display_name = target_res.get("tenant_name") or target_res.get("owner_name")
+                message = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <h3 style="color: #1e3a8a; margin-top: 0;">Kendriya Vihar Phase-3</h3>
+                    <p>Hello <strong>{res_display_name}</strong> (Flat: {target_res.flat}),</p>
+                    <p>You requested to update your registered email address to <strong>{new_email}</strong>.</p>
+                    <p>Please enter the following 6-digit confirmation code in WhatsApp to verify and complete the change:</p>
+                    <div style="font-size: 28px; font-weight: bold; letter-spacing: 6px; text-align: center; padding: 15px; background: #f8fafc; border-radius: 6px; color: #1e293b; margin: 15px 0;">
+                        {otp}
+                    </div>
+                    <p style="font-size: 13px; color: #64748b;">This OTP is valid for 10 minutes. If you did not request this, please contact the Estate Office.</p>
+                </div>
+                """
+                try:
+                    frappe.sendmail(recipients=[new_email], subject=subject, message=message, now=True)
+                except Exception as e:
+                    frappe.log_error("Email Change OTP Error", str(e))
+
+                prompt = (
+                    f"📩 *Verification Code Sent!*\n\n"
+                    f"A 6-digit confirmation code has been sent to your new email `{new_email}`.\n\n"
+                    f"👉 Please reply with the *6-digit OTP* (e.g. `123456`) to confirm and update your email address."
+                )
+                return {
+                    "title": "Email OTP Sent",
+                    "icon": "📩",
+                    "summary_text": prompt,
+                    "prompt": prompt,
+                    "options": [{"label": "🏠 Main Menu", "value": "menu"}]
+                }
 
     # Handle 6-digit OTP reply (e.g. user typed "849201")
     if act.isdigit() and len(act) == 6:
@@ -328,46 +496,104 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
         matched = False
         target_doc = None
         doctype = None
+        updated_new_email = None
 
         if for_user:
-            # Check owner or tenant
-            owner_doc = frappe.db.get_value("Owners", {"email": for_user, "active": 1}, ["name"], as_dict=True)
-            tenant_doc = frappe.db.get_value("Tenants", {"email": for_user, "active": 1}, ["name"], as_dict=True)
-            if tenant_doc:
-                target_doc = tenant_doc.name
-                doctype = "Tenants"
-            elif owner_doc:
-                target_doc = owner_doc.name
-                doctype = "Owners"
+            # 1. Check if this is an email change OTP
+            change_req = frappe.cache.get_value(f"email_change_user:{for_user}")
+            if not change_req:
+                owner_d = frappe.db.get_value("Owners", {"email": for_user, "active": 1}, ["name"], as_dict=True)
+                tenant_d = frappe.db.get_value("Tenants", {"email": for_user, "active": 1}, ["name"], as_dict=True)
+                doc_name = (tenant_d or owner_d or {}).get("name")
+                if doc_name:
+                    change_req = frappe.cache.get_value(f"email_change_req:{doc_name}")
 
-        if target_doc:
-            cache_key = f"email_verify_otp:{target_doc}"
-            stored_otp = frappe.cache.get_value(cache_key)
-            if stored_otp and str(stored_otp).strip() == otp_entered:
-                frappe.cache.delete_value(cache_key)
+            if change_req and str(change_req.get("otp", "")).strip() == otp_entered:
+                new_email = change_req.get("new_email")
+                target_doc = change_req.get("target_doc")
+                doctype = change_req.get("doctype", "Owners")
                 now = frappe.utils.now_datetime()
+
+                # Update email in Owners / Tenants
                 frappe.db.set_value(doctype, target_doc, {
+                    "email": new_email,
                     "is_email_verified": 1,
                     "email_verified_on": now
                 }, update_modified=False)
+
+                # Ensure resident user exists and is linked
+                from society_erp.account_management import ensure_resident_user
+                res_first_name = frappe.db.get_value(doctype, target_doc, "owner_name" if doctype == "Owners" else "tenant_name") or "Resident"
+                role = "Resident" if doctype == "Owners" else "Tenant"
+                ensure_resident_user(new_email, res_first_name, role)
+
+                # Update linked Channel Identity records
+                frappe.db.sql(
+                    "UPDATE `tabChannel Identity` SET resident_email = %s WHERE resident_email = %s",
+                    (new_email, for_user)
+                )
                 frappe.db.commit()
+
+                # Cleanup cache
+                frappe.cache.delete_value(f"email_change_req:{target_doc}")
+                frappe.cache.delete_value(f"email_change_user:{for_user}")
+
                 matched = True
+                updated_new_email = new_email
+
+            if not matched:
+                # 2. Check standard verification OTP
+                owner_doc = frappe.db.get_value("Owners", {"email": for_user, "active": 1}, ["name"], as_dict=True)
+                tenant_doc = frappe.db.get_value("Tenants", {"email": for_user, "active": 1}, ["name"], as_dict=True)
+                if tenant_doc:
+                    target_doc = tenant_doc.name
+                    doctype = "Tenants"
+                elif owner_doc:
+                    target_doc = owner_doc.name
+                    doctype = "Owners"
+
+                if target_doc:
+                    cache_key = f"email_verify_otp:{target_doc}"
+                    stored_otp = frappe.cache.get_value(cache_key)
+                    if stored_otp and str(stored_otp).strip() == otp_entered:
+                        frappe.cache.delete_value(cache_key)
+                        now = frappe.utils.now_datetime()
+                        frappe.db.set_value(doctype, target_doc, {
+                            "is_email_verified": 1,
+                            "email_verified_on": now
+                        }, update_modified=False)
+                        frappe.db.commit()
+                        matched = True
 
         if matched:
+            active_email = updated_new_email or for_user
             from society_erp.api.menu import get_resident_menu
-            menu_data = get_resident_menu(for_user=for_user)
-            prompt = (
-                "🎉 *Email Verified Successfully!*\n\n"
-                "Your email address and mobile number are both verified.\n"
-                "Full access to society services is now unlocked:\n\n"
-                + menu_data.get("welcome_message", "Select any society service below:")
+            menu_data = get_resident_menu(for_user=active_email, channel="WhatsApp")
+            menu_options = menu_data.get("options", [])
+
+            # Format formatted menu options list for WhatsApp
+            action_options = []
+            for opt in menu_options:
+                val = opt.get("id") or opt.get("value") or opt.get("action")
+                lbl = opt.get("label") or opt.get("title")
+                action_options.append({"label": lbl, "value": val})
+
+            success_heading = (
+                f"🎉 *Email Updated & Verified Successfully!*\n\n"
+                f"Your registered email has been updated to `{active_email}` and verified.\n"
+                f"Full access to society services is now unlocked:\n\n"
+                if updated_new_email else
+                f"🎉 *Email Verified Successfully!*\n\n"
+                f"Your email address and mobile number are both verified.\n"
+                f"Full access to society services is now unlocked:\n\n"
             )
+            prompt = success_heading + menu_data.get("welcome_message", "Select any society service below:")
             return {
                 "title": "Email Verified",
                 "icon": "✅",
                 "summary_text": prompt,
                 "prompt": prompt,
-                "options": menu_data.get("options", [])
+                "options": action_options
             }
         else:
             prompt = (

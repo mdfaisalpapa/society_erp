@@ -101,6 +101,12 @@ frappe.ready(function() {
             callback: function(r) {
                 $targetBtn.prop('disabled', false).html(origBtnText);
                 if (r && r.message && r.message.status === 'success') {
+                    if (r.message.wa_link) {
+                        $('#btn-wa-verify').attr('href', r.message.wa_link);
+                    }
+                    if (r.message.tg_link) {
+                        $('#btn-tg-verify').attr('href', r.message.tg_link);
+                    }
                     showStateVerify(r.message.message || 'OTP sent successfully to your registered email.');
                 }
             },

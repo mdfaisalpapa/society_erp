@@ -28,6 +28,8 @@ def get_context(context):
             "tenant_name",
             "mobile_no",
             "email",
+            "is_email_verified",
+            "is_mobile_verified",
         ],
         as_dict=True,
     )
@@ -45,6 +47,8 @@ def get_context(context):
                 "owner_name",
                 "mobile_no",
                 "email",
+                "is_email_verified",
+                "is_mobile_verified",
             ],
             as_dict=True,
         )
@@ -60,6 +64,8 @@ def get_context(context):
                     "owner_name",
                     "mobile_no",
                     "email",
+                    "is_email_verified",
+                    "is_mobile_verified",
                 ],
                 as_dict=True,
             )
@@ -87,6 +93,18 @@ def get_context(context):
     )
     context.is_tenant = bool(tenant)
     context.is_owner = bool(owner)
+    context.is_email_verified = bool(resident.get("is_email_verified"))
+    context.is_mobile_verified = bool(resident.get("is_mobile_verified"))
+
+    # Fetch bot handles from Society ERP Settings
+    bot_settings = frappe.db.get_value(
+        "Society ERP Settings",
+        None,
+        ["whatsapp_bot_number", "telegram_bot_username"],
+        as_dict=True,
+    ) or {}
+    context.whatsapp_bot_number = (bot_settings.get("whatsapp_bot_number") or "17374243710").replace("+", "").replace(" ", "").replace("-", "")
+    context.telegram_bot_username = (bot_settings.get("telegram_bot_username") or "kvciii_bot").lstrip("@")
 
     # 4. Fetch registered owner details for this flat.
     owner_details = frappe.db.get_value(
@@ -198,8 +216,9 @@ def _validate_mobile_number(mobile):
 @frappe.whitelist()
 def send_mobile_update_otp(new_mobile):
     """
-    Validates new mobile, generates a 6-digit OTP, caches it for 5 minutes,
-    and sends an authorization email to the logged-in user.
+    Validates new mobile, generates a 6-digit OTP, caches it for 10 minutes,
+    and returns bot deep-link details (WhatsApp and Telegram) for resident-initiated verification,
+    while also emailing the OTP as fallback.
     """
     if frappe.session.user == "Guest":
         frappe.throw(_("Please log in to update your mobile number."), frappe.PermissionError)
@@ -207,15 +226,22 @@ def send_mobile_update_otp(new_mobile):
     user = frappe.session.user
     valid_mobile = _validate_mobile_number(new_mobile)
 
-    # Generate 6-digit cryptographic-random-like numeric OTP
+    # Generate 6-digit numeric OTP
     otp = f"{random.randint(100000, 999999)}"
 
-    # Cache OTP for 5 minutes (300 seconds)
+    # Cache OTP for 10 minutes (600 seconds)
     cache_key = f"mobile_update_otp:{user}"
     frappe.cache().set_value(
         cache_key,
         {"otp": str(otp), "new_mobile": valid_mobile},
-        expires_in_sec=300,
+        expires_in_sec=600,
+    )
+    # Also index by new_mobile for incoming WhatsApp bot message
+    clean_10 = valid_mobile[-10:]
+    frappe.cache().set_value(
+        f"mobile_verify_link:{clean_10}",
+        {"user": user, "otp": str(otp), "new_mobile": valid_mobile},
+        expires_in_sec=600,
     )
 
     # Format email message
@@ -229,7 +255,7 @@ def send_mobile_update_otp(new_mobile):
         <div style="margin: 20px 0; padding: 15px; background: #f1f5f9; border-radius: 8px; text-align: center;">
             <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #173d5b;">{otp}</span>
         </div>
-        <p style="color: #64748b; font-size: 12px;">This OTP is valid for <strong>5 minutes</strong>. If you did not initiate this request, please contact the AoA Estate Office immediately.</p>
+        <p style="color: #64748b; font-size: 12px;">This OTP is valid for <strong>10 minutes</strong>. You can verify either by entering this code above, or by tapping the WhatsApp/Telegram verification button.</p>
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
         <p style="color: #94a3b8; font-size: 11px;">Kendriya Vihar Chennai Phase III Apartment Owners’ Association</p>
     </div>
@@ -244,12 +270,31 @@ def send_mobile_update_otp(new_mobile):
         )
     except Exception as e:
         frappe.log_error(f"Failed to send mobile update OTP to {user}: {str(e)}", "Mobile Update OTP")
-        frappe.throw(_("Failed to deliver OTP email. Please ensure your email settings are active or try again."))
+
+    # Fetch bot settings
+    bot_settings = frappe.db.get_value(
+        "Society ERP Settings",
+        None,
+        ["whatsapp_bot_number", "telegram_bot_username"],
+        as_dict=True,
+    ) or {}
+    wa_num = (bot_settings.get("whatsapp_bot_number") or "17374243710").replace("+", "").replace(" ", "").replace("-", "")
+    tg_user = (bot_settings.get("telegram_bot_username") or "kvciii_bot").lstrip("@")
+
+    # Construct user-initiated WhatsApp link pre-filled with VERIFY message
+    wa_msg = f"VERIFY {otp}"
+    import urllib.parse
+    wa_link = f"https://wa.me/{wa_num}?text={urllib.parse.quote(wa_msg)}"
+    tg_link = f"https://t.me/{tg_user}?start={otp}"
 
     return {
         "status": "success",
-        "message": _("A 6-digit OTP has been sent to your registered email ({0}).").format(user),
+        "message": _("Verification code generated. Send via WhatsApp / Telegram or enter the OTP received in your email."),
         "target_email": user,
+        "new_mobile": valid_mobile,
+        "otp": otp,
+        "wa_link": wa_link,
+        "tg_link": tg_link,
     }
 
 
