@@ -875,10 +875,13 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
         for st in raw_data["sub_tiles"]:
             options.append(st)
 
-    options.append({
-        "label": "🔙 Back to Main Menu",
-        "value": "menu"
-    })
+    # Avoid duplicate 'menu' option if sub_tiles already added a menu option
+    has_menu_option = any(opt.get("value") == "menu" for opt in options)
+    if not has_menu_option:
+        options.append({
+            "label": "🔙 Back to Main Menu",
+            "value": "menu"
+        })
 
     return {
         "title": meta["title"],
