@@ -5,7 +5,7 @@ from society_erp.www.resident.settings.index import get_tile_settings
 
 @frappe.whitelist()
 @portal_api
-def get_resident_menu(for_user: str = None) -> dict:
+def get_resident_menu(for_user: str = None, channel: str = None) -> dict:
     """
     Returns the dynamically filtered and ordered menu for the resident/committee member,
     strictly adhering to the Master Switch Settings (Society ERP Settings) and role-based
@@ -15,23 +15,27 @@ def get_resident_menu(for_user: str = None) -> dict:
         for_user = frappe.session.user
 
     user_email = (for_user or "").strip().lower()
+    channel_norm = (channel or "").strip().lower()
 
     if not user_email or user_email in ("guest", "none", "null", "undefined"):
+        # For Telegram, prompt contact sharing to link account. For WhatsApp, mobile is extracted automatically.
+        unauth_options = []
+        if channel_norm != "whatsapp":
+            unauth_options.append({
+                "id": "verify_contact",
+                "label": "📱 Share Contact to Login",
+                "desc": "1-Click Verify Mobile Number",
+                "action": "share_contact",
+                "request_contact": True,
+            })
+
         return {
             "is_owner": False,
             "is_committee": False,
             "committee_role": "",
             "welcome_message": "🏢 *Welcome to Kendriya Vihar Phase-3!*\n\n👋 Please tap *📱 Share Contact to Login* below to securely verify your mobile number and access your flat details:",
-            "options": [
-                {
-                    "id": "verify_contact",
-                    "label": "📱 Share Contact to Login",
-                    "desc": "1-Click Verify Mobile Number",
-                    "action": "share_contact",
-                    "request_contact": True,
-                },
-            ],
-            "count": 1,
+            "options": unauth_options,
+            "count": len(unauth_options),
         }
 
     # 1. Resolve Resident Role (Tenant vs Owner) & Committee Membership
@@ -78,21 +82,10 @@ def get_resident_menu(for_user: str = None) -> dict:
                 f"Please verify your mobile number to access society services."
             )
 
-        from society_erp.api.sso import generate_portal_link
-        sso_res = generate_portal_link(for_user=user_email, target_route="/resident?standalone=1")
-        verify_url = sso_res.get("url") if isinstance(sso_res, dict) else ""
+        verify_options = []
 
-        verify_options = [
-            {
-                "id": "verify_contact",
-                "label": "🔐 Open Resident Portal",
-                "desc": "Verify details via Web",
-                "action": "open_verify_portal",
-                "web_app_url": verify_url,
-            }
-        ]
-
-        if not resident.get("is_mobile_verified"):
+        # Only on Telegram prompt "Share Contact" if mobile is unverified
+        if not resident.get("is_mobile_verified") and channel_norm == "telegram":
             verify_options.append({
                 "id": "share_contact",
                 "label": "📱 Share Contact to Verify Mobile",
