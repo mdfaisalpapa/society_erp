@@ -85,21 +85,32 @@ def ensure_linked_resident_account(doc, role, display_name):
     email = normalize_email(doc.email)
     doc.email = email
 
-    # Once linked, do not silently switch this record to another account
-    # just because its email was edited.
+    old_user_to_check = None
+
+    # Handle linked user email updates
     if doc.linked_user:
         linked_email = frappe.db.get_value("User", doc.linked_user, "email")
         if not linked_email:
-            frappe.throw(
-                _("The linked User {0} no longer exists. Please correct the link.")
-                .format(doc.linked_user)
-            )
+            # Linked user was deleted or invalid; allow re-linking
+            doc.linked_user = None
+        elif linked_email.strip().lower() != email:
+            # Check if user has permission to update email (Desk manager or programmatic bypass)
+            is_manager = False
+            if frappe.flags.allow_email_relink or getattr(doc, "flags", {}).get("allow_email_relink"):
+                is_manager = True
+            elif frappe.session and frappe.session.user:
+                current_roles = frappe.get_roles(frappe.session.user)
+                if any(r in current_roles for r in ("System Manager", "Administrator", "Estate Manager", "Society Manager")):
+                    is_manager = True
 
-        if linked_email.strip().lower() != email:
-            frappe.throw(
-                _("The email does not match the linked User account. "
-                  "Update the User email or have an Administrator correct the link first.")
-            )
+            if is_manager:
+                old_user_to_check = doc.linked_user
+                doc.linked_user = None
+            else:
+                frappe.throw(
+                    _("The email does not match the linked User account. "
+                      "Update the User email or have an Administrator correct the link first.")
+                )
 
     user_name = ensure_resident_user(
         email=email,
@@ -116,6 +127,11 @@ def ensure_linked_resident_account(doc, role, display_name):
             update_modified=False,
         )
         doc.linked_user = user_name
+
+    # If the user account changed, check if old user account should be deactivated
+    if old_user_to_check and old_user_to_check != user_name:
+        dummy_doc = frappe._dict({"name": doc.name, "linked_user": old_user_to_check, "email": None})
+        deactivate_user_if_unused(dummy_doc)
 
     return user_name
 

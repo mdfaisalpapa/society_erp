@@ -19,6 +19,12 @@ frappe.ui.form.on("Owners", {
     email(frm) {
         if (frm.doc.email) {
             frm.set_value("email", frm.doc.email.trim().toLowerCase());
+            if (frm.doc.linked_user && frm.doc.linked_user.toLowerCase() !== frm.doc.email.trim().toLowerCase()) {
+                frappe.show_alert({
+                    message: __("Updating email will automatically re-link or provision a User account for {0}.", [frm.doc.email]),
+                    indicator: "blue"
+                });
+            }
         }
     }
 });

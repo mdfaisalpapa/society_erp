@@ -204,4 +204,173 @@ frappe.ready(function() {
             setTimeout(() => $inputMobile.focus(), 300);
         }, 350);
     }
+
+    // 3. Email Update Modal Elements & State Management
+    const $emailModal = $('#modal-update-email');
+    const $emailAlert = $('#modal-email-otp-alert');
+    const $emailStateRequest = $('#email-otp-state-request');
+    const $emailStateVerify = $('#email-otp-state-verify');
+    const $inputEmail = $('#input-new-email');
+    const $inputEmailOtp = $('#input-email-otp-code');
+    const $btnSendEmailOtp = $('#btn-send-email-otp');
+    const $btnVerifyEmailOtp = $('#btn-verify-email-otp');
+    const $btnResendEmailOtp = $('#btn-resend-email-otp');
+    const $btnBackEmail = $('#btn-back-to-email-request');
+    const $displayEmail = $('#display-user-email');
+    const $spanTargetNewEmail = $('#span-target-new-email');
+
+    let currentPendingEmail = '';
+
+    function showEmailAlert(msg, type) {
+        $emailAlert.removeClass('d-none alert-success alert-danger alert-info alert-warning')
+                   .addClass('alert-' + (type || 'info'))
+                   .html(msg);
+    }
+
+    function hideEmailAlert() {
+        $emailAlert.addClass('d-none').empty();
+    }
+
+    function showEmailStateRequest() {
+        hideEmailAlert();
+        $emailStateRequest.removeClass('d-none');
+        $emailStateVerify.addClass('d-none');
+        $inputEmailOtp.val('');
+    }
+
+    function showEmailStateVerify(msg) {
+        $emailStateRequest.addClass('d-none');
+        $emailStateVerify.removeClass('d-none');
+        $spanTargetNewEmail.text(currentPendingEmail);
+        $inputEmailOtp.val('').focus();
+        if (msg) {
+            showEmailAlert(msg, 'success');
+        } else {
+            hideEmailAlert();
+        }
+    }
+
+    $('#btn-open-edit-email').on('click', function(e) {
+        e.preventDefault();
+        showEmailStateRequest();
+        $inputEmail.val('');
+        $emailModal.modal('show');
+        setTimeout(() => $inputEmail.focus(), 300);
+    });
+
+    $btnBackEmail.on('click', function(e) {
+        e.preventDefault();
+        showEmailStateRequest();
+        $inputEmail.focus();
+    });
+
+    function sendEmailOtp(isResend) {
+        const rawEmail = $inputEmail.val().trim().toLowerCase();
+        if (!rawEmail || !rawEmail.includes('@') || !rawEmail.includes('.')) {
+            showEmailAlert('Please enter a valid email address.', 'warning');
+            $inputEmail.focus();
+            return;
+        }
+
+        currentPendingEmail = rawEmail;
+        const $targetBtn = isResend ? $btnResendEmailOtp : $btnSendEmailOtp;
+        const origBtnText = $targetBtn.html();
+
+        $targetBtn.prop('disabled', true).html('Sending Code…');
+        hideEmailAlert();
+
+        frappe.call({
+            method: 'society_erp.www.resident.profile.index.send_email_update_otp',
+            args: {
+                new_email: currentPendingEmail
+            },
+            callback: function(r) {
+                $targetBtn.prop('disabled', false).html(origBtnText);
+                if (r && r.message && r.message.status === 'success') {
+                    showEmailStateVerify(r.message.message);
+                }
+            },
+            error: function(err) {
+                $targetBtn.prop('disabled', false).html(origBtnText);
+                const errMsg = err && err.message ? err.message : 'Failed to send verification code. Please try again.';
+                showEmailAlert(errMsg, 'danger');
+            }
+        });
+    }
+
+    $btnSendEmailOtp.on('click', function(e) {
+        e.preventDefault();
+        sendEmailOtp(false);
+    });
+
+    $btnResendEmailOtp.on('click', function(e) {
+        e.preventDefault();
+        sendEmailOtp(true);
+    });
+
+    function verifyAndUpdateEmail() {
+        const otpVal = $inputEmailOtp.val().trim();
+        if (!otpVal || otpVal.length < 6) {
+            showEmailAlert('Please enter the full 6-digit verification code.', 'warning');
+            $inputEmailOtp.focus();
+            return;
+        }
+
+        const origBtnText = $btnVerifyEmailOtp.html();
+        $btnVerifyEmailOtp.prop('disabled', true).html('Verifying…');
+        hideEmailAlert();
+
+        frappe.call({
+            method: 'society_erp.www.resident.profile.index.verify_and_update_email',
+            args: {
+                new_email: currentPendingEmail,
+                otp: otpVal
+            },
+            callback: function(r) {
+                $btnVerifyEmailOtp.prop('disabled', false).html(origBtnText);
+                if (r && r.message && r.message.status === 'success') {
+                    const updatedEmail = r.message.new_email || currentPendingEmail;
+                    $displayEmail.text(updatedEmail);
+                    $emailModal.modal('hide');
+
+                    frappe.show_alert({
+                        message: __('Email updated successfully!'),
+                        indicator: 'green'
+                    }, 5);
+
+                    frappe.msgprint({
+                        title: __('Email Updated'),
+                        indicator: 'green',
+                        message: __('Your registered email address has been successfully updated to <b>{0}</b>.', [frappe.utils.escape_html(updatedEmail)])
+                    });
+                }
+            },
+            error: function(err) {
+                $btnVerifyEmailOtp.prop('disabled', false).html(origBtnText);
+                const errMsg = err && err.message ? err.message : 'Invalid code. Please check and try again.';
+                showEmailAlert(errMsg, 'danger');
+            }
+        });
+    }
+
+    $btnVerifyEmailOtp.on('click', function(e) {
+        e.preventDefault();
+        verifyAndUpdateEmail();
+    });
+
+    $inputEmailOtp.on('keypress', function(e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            verifyAndUpdateEmail();
+        }
+    });
+
+    if (urlParams.get('modal') === 'update_email' || urlParams.get('open_modal') === 'update_email') {
+        setTimeout(function() {
+            showEmailStateRequest();
+            $inputEmail.val('');
+            $emailModal.modal('show');
+            setTimeout(() => $inputEmail.focus(), 300);
+        }, 350);
+    }
 });

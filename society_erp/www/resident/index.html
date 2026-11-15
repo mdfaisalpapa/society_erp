@@ -31,280 +31,132 @@
         </div>
         {% endif %}
 
-        <!-- Modules Grid (3 tiles/row on mobile, 4 tiles/row on desktop) -->
+        <!-- Modules Grid (Standardized 8-Hub Architecture) -->
         <div class="row mt-4 portal-grid">
 
             <!-- 0. AoA Committee Portal (RESTRICTED TO COMMITTEE MEMBERS) -->
             {% if is_committee_member %}
-            <div class="col-4 col-md-3 mb-4">
+            <div class="col-6 col-md-4 col-lg-3 mb-4">
                 <a href="/resident/committee" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover border-danger" style="background: linear-gradient(180deg, #fff9f9 0%, #fff 100%);">
                         <div class="card-body">
                             <h1 class="card-title mt-2">🏛️</h1>
-                            <h5 class="card-title mt-3 font-weight-bold text-danger">Committee</h5>
-                            <p class="text-muted small portal-desc mb-0">Approvals & Notices</p>
+                            <h5 class="card-title mt-3 font-weight-bold text-danger">Committee Portal</h5>
+                            <p class="text-muted small portal-desc mb-0">Resident Mgmt, Operations & Governance</p>
                         </div>
                     </div>
                 </a>
             </div>
             {% endif %}
-            
-            <!-- 1. Flat & Profile Details (Common) -->
-            {% if tiles.get('profile', True) %}
-            <div class="col-4 col-md-3 mb-4">
+
+            <!-- Hub 1. Flat & Ownership -->
+            {% if tiles.get('profile', True) or tiles.get('owners', True) %}
+            <div class="col-6 col-md-4 col-lg-3 mb-4">
                 <a href="/resident/profile" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
                         <div class="card-body">
                             <h1 class="card-title mt-2">👤</h1>
-                            <h5 class="card-title mt-3">Flat Details</h5>
-                            <p class="text-muted small portal-desc mb-0">Profile & Property Info</p>
+                            <h5 class="card-title mt-3 font-weight-bold">Flat & Ownership</h5>
+                            <p class="text-muted small portal-desc mb-0">Flat Info, UDS, EB & Owner Deeds</p>
                         </div>
                     </div>
                 </a>
             </div>
             {% endif %}
 
-            <!-- 2. Owner Details (RESTRICTED TO OWNERS) -->
-            {% if is_owner and tiles.get('owners', True) %}
-            <div class="col-4 col-md-3 mb-4">
-                <a href="/resident/owners" class="portal-card-link d-block h-100">
-                    <div class="card h-100 text-center shadow-sm transition-hover border-warning">
-                        <div class="card-body">
-                            <h1 class="card-title mt-2">📜</h1>
-                            <h5 class="card-title mt-3">Owner Details</h5>
-                            <p class="text-muted small portal-desc mb-0">Current & Past Owners</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- 3. Society Dues (Common) -->
-            {% if tiles.get('dues', True) %}
-            <div class="col-4 col-md-3 mb-4">
+            <!-- Hub 2. Accounts & Dues -->
+            {% if tiles.get('dues', True) or tiles.get('financials', True) %}
+            <div class="col-6 col-md-4 col-lg-3 mb-4">
                 <a href="/resident/dues" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
                         <div class="card-body">
-                            <h1 class="card-title mt-2">📊</h1>
-                            <h5 class="card-title mt-3">Check Dues</h5>
-                            <p class="text-muted small portal-desc mb-0">Maintenance & Ledger</p>
+                            <h1 class="card-title mt-2">💳</h1>
+                            <h5 class="card-title mt-3 font-weight-bold">Accounts & Dues</h5>
+                            <p class="text-muted small portal-desc mb-0">Maintenance Ledger & Live Statements</p>
                         </div>
                     </div>
                 </a>
             </div>
             {% endif %}
 
-            <!-- 3b. Society Financials (Common) -->
-            {% if tiles.get('financials', True) %}
-            <div class="col-4 col-md-3 mb-4">
-                <a href="/resident/financials" class="portal-card-link d-block h-100">
+            <!-- Hub 3. Residents & Tenants -->
+            {% if tiles.get('family', True) or (is_owner and tiles.get('tenants', True)) %}
+            <div class="col-6 col-md-4 col-lg-3 mb-4">
+                <a href="{% if is_owner and tiles.get('tenants', True) %}/resident/tenants{% else %}/resident/family{% endif %}" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
-                        <div class="card-body">
-                            <h1 class="card-title mt-2">📈</h1>
-                            <h5 class="card-title mt-3">Financials</h5>
-                            <p class="text-muted small portal-desc mb-0">P&L & Balance Sheet</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- 4. Tenant Management (RESTRICTED TO OWNERS) -->
-            {% if is_owner and tiles.get('tenants', True) %}
-            <div class="col-4 col-md-3 mb-4">
-                <a href="/resident/tenants" class="portal-card-link d-block h-100">
-                    <div class="card h-100 text-center shadow-sm transition-hover border-warning">
                         <div class="card-body">
                             <h1 class="card-title mt-2">🏠</h1>
-                            <h5 class="card-title mt-3">Tenant Mgmt</h5>
-                            <p class="text-muted small portal-desc mb-0">Manage Leases & Tenants</p>
+                            <h5 class="card-title mt-3 font-weight-bold">Residents & Tenants</h5>
+                            <p class="text-muted small portal-desc mb-0">Family Members & Tenant Leases</p>
                         </div>
                     </div>
                 </a>
             </div>
             {% endif %}
 
-            <!-- 5. Book Facility (Common) -->
-            {% if tiles.get('book_facility', True) %}
-            <div class="col-4 col-md-3 mb-4">
-                <a href="/resident/book_facility" class="portal-card-link d-block h-100">
-                    <div class="card h-100 text-center shadow-sm transition-hover">
-                        <div class="card-body">
-                            <h1 class="card-title mt-2">🏛️</h1>
-                            <h5 class="card-title mt-3">Book Facility</h5>
-                            <p class="text-muted small portal-desc mb-0">Community Hall & Amenities</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- 6. Visitor Management (Common) -->
-            {% if tiles.get('visitors', True) %}
-            <div class="col-4 col-md-3 mb-4">
-                <a href="/resident/visitors" class="portal-card-link d-block h-100">
-                    <div class="card h-100 text-center shadow-sm transition-hover">
-                        <div class="card-body">
-                            <h1 class="card-title mt-2">🎫</h1>
-                            <h5 class="card-title mt-3">Gate Pass</h5>
-                            <p class="text-muted small portal-desc mb-0">Pre-Approve Visitors</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- 7. Maintenance Tickets (Common) -->
-            {% if tiles.get('maintenance', True) %}
-            <div class="col-4 col-md-3 mb-4">
-                <a href="/resident/maintenance" class="portal-card-link d-block h-100">
-                    <div class="card h-100 text-center shadow-sm transition-hover">
-                        <div class="card-body">
-                            <h1 class="card-title mt-2">🛠️</h1>
-                            <h5 class="card-title mt-3">Maintenance</h5>
-                            <p class="text-muted small portal-desc mb-0">Raise & Track Tickets</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- 8. Vehicles & Parking (Common) -->
-            {% if tiles.get('vehicles', True) %}
-            <div class="col-4 col-md-3 mb-4">
+            <!-- Hub 4. Vehicles & Parking -->
+            {% if tiles.get('vehicles', True) or tiles.get('parking', True) %}
+            <div class="col-6 col-md-4 col-lg-3 mb-4">
                 <a href="/resident/vehicles" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
                         <div class="card-body">
                             <h1 class="card-title mt-2">🚗</h1>
-                            <h5 class="card-title mt-3">Vehicles & Parking</h5>
-                            <p class="text-muted small portal-desc mb-0">Manage Cars, Bikes & Slots</p>
+                            <h5 class="card-title mt-3 font-weight-bold">Vehicles & Parking</h5>
+                            <p class="text-muted small portal-desc mb-0">Vehicle Passes & Parking Slots</p>
                         </div>
                     </div>
                 </a>
             </div>
             {% endif %}
 
-            <!-- 9. Family Members (Common) -->
-            {% if tiles.get('family', True) %}
-            <div class="col-4 col-md-3 mb-4">
-                <a href="/resident/family" class="portal-card-link d-block h-100">
+            <!-- Hub 5. Visitors & Domestic Staff -->
+            {% if tiles.get('visitors', True) or tiles.get('staff', True) %}
+            <div class="col-6 col-md-4 col-lg-3 mb-4">
+                <a href="/resident/visitors" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
                         <div class="card-body">
-                            <h1 class="card-title mt-2">👨‍👩‍👧‍👦</h1>
-                            <h5 class="card-title mt-3">Family</h5>
-                            <p class="text-muted small portal-desc mb-0">Manage Family Members</p>
+                            <h1 class="card-title mt-2">🎫</h1>
+                            <h5 class="card-title mt-3 font-weight-bold">Visitors & Staff</h5>
+                            <p class="text-muted small portal-desc mb-0">Gate Passes & Domestic Helpers</p>
                         </div>
                     </div>
                 </a>
             </div>
             {% endif %}
 
-            <!-- 10. Domestic Staff (Common) -->
-            {% if tiles.get('staff', True) %}
-            <div class="col-4 col-md-3 mb-4">
-                <a href="/resident/staff" class="portal-card-link d-block h-100">
+            <!-- Hub 6. Helpdesk & Services -->
+            {% if tiles.get('maintenance', True) or tiles.get('book_facility', True) or tiles.get('work_permits', True) %}
+            <div class="col-6 col-md-4 col-lg-3 mb-4">
+                <a href="/resident/maintenance" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
                         <div class="card-body">
-                            <h1 class="card-title mt-2">🧹</h1>
-                            <h5 class="card-title mt-3">Domestic Staff</h5>
-                            <p class="text-muted small portal-desc mb-0">Maids, Drivers & Cooks</p>
+                            <h1 class="card-title mt-2">🛠️</h1>
+                            <h5 class="card-title mt-3 font-weight-bold">Helpdesk & Services</h5>
+                            <p class="text-muted small portal-desc mb-0">Maintenance, Halls & Work Permits</p>
                         </div>
                     </div>
                 </a>
             </div>
             {% endif %}
 
-            <!-- 10b. Resident Pets (Common) -->
-            {% if tiles.get('pets', True) %}
-            <div class="col-4 col-md-3 mb-4">
-                <a href="/resident/pets" class="portal-card-link d-block h-100">
-                    <div class="card h-100 text-center shadow-sm transition-hover">
-                        <div class="card-body">
-                            <h1 class="card-title mt-2">🐾</h1>
-                            <h5 class="card-title mt-3">Pets</h5>
-                            <p class="text-muted small portal-desc mb-0">Register & Vaccinations</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- 11. Notice Board (Common) -->
-            {% if tiles.get('notices', True) %}
-            <div class="col-4 col-md-3 mb-4">
+            <!-- Hub 7. Community & Notices -->
+            {% if tiles.get('notices', True) or tiles.get('classifieds', True) or tiles.get('voting', True) or tiles.get('pets', True) %}
+            <div class="col-6 col-md-4 col-lg-3 mb-4">
                 <a href="/resident/notices" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover">
                         <div class="card-body">
-                            <h1 class="card-title mt-2">📋</h1>
-                            <h5 class="card-title mt-3">Notice Board</h5>
-                            <p class="text-muted small portal-desc mb-0">Society Announcements</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- 11b. Resident Classifieds & Marketplace (Common) -->
-            {% if tiles.get('classifieds', True) %}
-            <div class="col-4 col-md-3 mb-4">
-                <a href="/resident/classifieds" class="portal-card-link d-block h-100">
-                    <div class="card h-100 text-center shadow-sm transition-hover">
-                        <div class="card-body">
                             <h1 class="card-title mt-2">📢</h1>
-                            <h5 class="card-title mt-3">Classifieds</h5>
-                            <p class="text-muted small portal-desc mb-0">Rent, Sell & Services</p>
+                            <h5 class="card-title mt-3 font-weight-bold">Community & Notices</h5>
+                            <p class="text-muted small portal-desc mb-0">Notice Board, Classifieds & Polls</p>
                         </div>
                     </div>
                 </a>
             </div>
             {% endif %}
 
-            <!-- 13. Polls & Voting (Common) -->
-            {% if tiles.get('voting', True) %}
-            <div class="col-4 col-md-3 mb-4">
-                <a href="/consensus-vote" class="portal-card-link d-block h-100">
-                    <div class="card h-100 text-center shadow-sm transition-hover border-primary">
-                        <div class="card-body">
-                            <h1 class="card-title mt-2">🗳️</h1>
-                            <h5 class="card-title mt-3 font-weight-bold text-primary">Polls & Voting</h5>
-                            <p class="text-muted small portal-desc mb-0">Elections, Resolutions & Electorate</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- 12. Work Permit Management (RESTRICTED TO OWNERS) -->
-            {% if is_owner and tiles.get('work_permits', True) %}
-            <div class="col-4 col-md-3 mb-4">
-                <a href="/resident/work_permits" class="portal-card-link d-block h-100">
-                    <div class="card h-100 text-center shadow-sm transition-hover border-warning">
-                        <div class="card-body">
-                            <h1 class="card-title mt-2">👷</h1>
-                            <h5 class="card-title mt-3">Work Permits</h5>
-                            <p class="text-muted small portal-desc mb-0">Contractors & Approvals</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- 14. Settings & Notifications (Common) -->
-            <div class="col-4 col-md-3 mb-4">
-                <a href="/resident/settings" class="portal-card-link d-block h-100">
-                    <div class="card h-100 text-center shadow-sm transition-hover">
-                        <div class="card-body">
-                            <h1 class="card-title mt-2">⚙️</h1>
-                            <h5 class="card-title mt-3">Settings</h5>
-                            <p class="text-muted small portal-desc mb-0">Alerts & Notifications</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-
-            <!-- 15. Emergency SOS & Contacts (Common) -->
+            <!-- Hub 8. Emergency SOS & Contacts -->
             {% if enable_emergency_sos and tiles.get('emergency', True) %}
-            <div class="col-4 col-md-3 mb-4">
+            <div class="col-6 col-md-4 col-lg-3 mb-4">
                 <a href="/resident/emergency" class="portal-card-link d-block h-100">
                     <div class="card h-100 text-center shadow-sm transition-hover border-danger" style="background: linear-gradient(180deg, #fff5f5 0%, #fff 100%);">
                         <div class="card-body">
@@ -316,6 +168,19 @@
                 </a>
             </div>
             {% endif %}
+
+            <!-- Settings Tile -->
+            <div class="col-6 col-md-4 col-lg-3 mb-4">
+                <a href="/resident/settings" class="portal-card-link d-block h-100">
+                    <div class="card h-100 text-center shadow-sm transition-hover">
+                        <div class="card-body">
+                            <h1 class="card-title mt-2">⚙️</h1>
+                            <h5 class="card-title mt-3 font-weight-bold">Settings</h5>
+                            <p class="text-muted small portal-desc mb-0">Alerts & Notifications</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
         </div>
 
         <!-- Footer Actions -->

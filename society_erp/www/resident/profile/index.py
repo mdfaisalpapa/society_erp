@@ -317,3 +317,153 @@ def verify_and_update_mobile(new_mobile, otp):
         "message": _("Mobile number updated successfully."),
         "mobile_no": target_mobile,
     }
+
+
+@frappe.whitelist()
+def send_email_update_otp(new_email):
+    """
+    Validates new email, generates a 6-digit OTP, caches it for 5 minutes,
+    and sends an authorization code to the NEW email address (to verify ownership of the new email),
+    while also sending a security notification to the CURRENT registered email.
+    """
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Please log in to update your email address."), frappe.PermissionError)
+
+    user = frappe.session.user
+    if not new_email or "@" not in new_email:
+        frappe.throw(_("Please provide a valid email address."))
+
+    valid_new_email = new_email.strip().lower()
+
+    if valid_new_email == user.strip().lower():
+        frappe.throw(_("The new email is the same as your current registered email."))
+
+    # Generate 6-digit OTP
+    otp = f"{random.randint(100000, 999999)}"
+
+    # Cache OTP for 5 minutes (300 seconds)
+    cache_key = f"email_update_otp:{user}"
+    frappe.cache().set_value(
+        cache_key,
+        {"otp": str(otp), "new_email": valid_new_email},
+        expires_in_sec=300,
+    )
+
+    # Format email verification message to the NEW email
+    subject = _("Verify Your New Email - KVC3 AoA Portal")
+    message = f"""
+    <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.6;">
+        <h2 style="color: #173d5b; margin-top: 0;">Email Verification Request</h2>
+        <p>Dear Resident,</p>
+        <p>You have requested to set this email address as your registered login email on the Kendriya Vihar Chennai Phase III Portal.</p>
+        <p>Your one-time authorization code (OTP) is:</p>
+        <div style="margin: 20px 0; padding: 15px; background: #f1f5f9; border-radius: 8px; text-align: center;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #173d5b;">{otp}</span>
+        </div>
+        <p style="color: #64748b; font-size: 12px;">This code is valid for <strong>5 minutes</strong>. If you did not initiate this request, you can safely ignore this email.</p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+        <p style="color: #94a3b8; font-size: 11px;">Kendriya Vihar Chennai Phase III Apartment Owners’ Association</p>
+    </div>
+    """
+
+    try:
+        frappe.sendmail(
+            recipients=[valid_new_email],
+            subject=subject,
+            message=message,
+            now=True,
+        )
+    except Exception as e:
+        frappe.log_error(f"Failed to send email update OTP to {valid_new_email}: {str(e)}", "Email Update OTP")
+        frappe.throw(_("Failed to deliver verification email. Please check the email address and try again."))
+
+    # Also notify current email
+    try:
+        frappe.sendmail(
+            recipients=[user],
+            subject=_("Security Notice: Email Address Update Initiated"),
+            message=f"<p>A request was made to update your portal login email to <b>{valid_new_email}</b>. If this wasn't you, please contact the AoA Office immediately.</p>",
+            now=False,
+        )
+    except Exception:
+        pass
+
+    return {
+        "status": "success",
+        "message": _("A 6-digit OTP has been sent to your new email address ({0}).").format(valid_new_email),
+        "target_email": valid_new_email,
+    }
+
+
+@frappe.whitelist()
+def verify_and_update_email(new_email, otp):
+    """
+    Verifies OTP and re-points/updates User and Owners/Tenants records safely.
+    """
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Please log in to update your email address."), frappe.PermissionError)
+
+    user = frappe.session.user
+    user_email = user.strip().lower()
+
+    if not otp or not str(otp).strip():
+        frappe.throw(_("Please enter the 6-digit verification code."))
+
+    cache_key = f"email_update_otp:{user}"
+    cached_data = frappe.cache().get_value(cache_key)
+
+    if not cached_data:
+        frappe.throw(_("The OTP has expired or was not requested. Please request a new OTP."))
+
+    expected_otp = str(cached_data.get("otp", "")).strip()
+    target_email = (cached_data.get("new_email") or new_email or "").strip().lower()
+
+    if str(otp).strip() != expected_otp:
+        frappe.throw(_("Invalid OTP. Please check the code sent to your new email and try again."))
+
+    frappe.flags.allow_email_relink = True
+
+    # 1. Update linked Owners documents
+    owner_names = frappe.get_all(
+        "Owners",
+        filters={"active": 1},
+        or_filters={"linked_user": user, "email": user_email},
+        pluck="name",
+    )
+    for o_name in owner_names:
+        o_doc = frappe.get_doc("Owners", o_name)
+        o_doc.email = target_email
+        o_doc.flags.allow_email_relink = True
+        o_doc.save(ignore_permissions=True)
+
+    # 2. Update linked Tenants documents if tenant
+    tenant_names = frappe.get_all(
+        "Tenants",
+        filters={"active": 1},
+        or_filters={"linked_user": user, "email": user_email},
+        pluck="name",
+    )
+    for t_name in tenant_names:
+        t_doc = frappe.get_doc("Tenants", t_name)
+        t_doc.email = target_email
+        t_doc.flags.allow_email_relink = True
+        t_doc.save(ignore_permissions=True)
+
+    # 3. Update Channel Identity if linked to old email
+    channel_identities = frappe.get_all(
+        "Channel Identity",
+        filters={"resident_email": user_email},
+        pluck="name"
+    )
+    for ci_name in channel_identities:
+        frappe.db.set_value("Channel Identity", ci_name, "resident_email", target_email)
+
+    # Cleanup OTP from cache
+    frappe.cache().delete_value(cache_key)
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "message": _("Email address updated successfully to {0}. Please log in with your new email in future.").format(target_email),
+        "new_email": target_email,
+    }

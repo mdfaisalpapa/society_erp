@@ -81,135 +81,177 @@
         </div>
         {% endif %}
 
-        <!-- Sticky Segmented Control / Pill Navigation (Hidden in Standalone View) -->
+        <!-- Sticky Segmented Control / Pill Navigation (Preserved in Standalone View) -->
         <div class="committee-sticky-nav mb-3">
-            {% if not is_standalone %}
-            <div class="d-flex align-items-center justify-content-between flex-wrap py-2 border-bottom bg-white">
-                <ul class="nav nav-pills committee-nav-pills" id="committeeTabs" role="tablist">
-                    {% if tiles.get('tenants', True) %}
+            <div class="py-2 border-bottom bg-white">
+                <!-- Tier 1: 4 Primary Categories -->
+                <ul class="nav nav-pills committee-category-pills mb-2" id="committeeCategoryTabs" role="tablist">
                     <li class="nav-item">
-                        <a class="nav-link font-weight-bold" id="tab-tenants" data-toggle="pill" href="#pane-tenants" role="tab" data-module="tenants">
-                            <span class="tab-icon">🏠</span><span class="tab-label">Tenants</span> <span class="badge badge-warning ml-1" id="badge-tenants">{{ counts.tenants_pending }}</span>
+                        <a class="nav-link active font-weight-bold" id="cat-tab-resident_mgmt" data-toggle="pill" href="#cat-pane-resident_mgmt" role="tab" data-cat="resident_mgmt">
+                            👥 Resident Management
                         </a>
                     </li>
-                    {% endif %}
-                    {% if tiles.get('vehicles', True) %}
                     <li class="nav-item">
-                        <a class="nav-link font-weight-bold" id="tab-vehicles" data-toggle="pill" href="#pane-vehicles" role="tab" data-module="vehicles">
-                            <span class="tab-icon">🚗</span><span class="tab-label">Vehicles</span> <span class="badge badge-warning ml-1" id="badge-vehicles">{{ counts.vehicles_pending }}</span>
+                        <a class="nav-link font-weight-bold" id="cat-tab-facility_ops" data-toggle="pill" href="#cat-pane-facility_ops" role="tab" data-cat="facility_ops">
+                            🛠️ Facility Monitoring
                         </a>
                     </li>
-                    {% endif %}
-                    {% if tiles.get('work_permits', True) %}
                     <li class="nav-item">
-                        <a class="nav-link font-weight-bold" id="tab-work_permits" data-toggle="pill" href="#pane-work_permits" role="tab" data-module="work_permits">
-                            <span class="tab-icon">👷</span><span class="tab-label">Permits</span> <span class="badge badge-warning ml-1" id="badge-permits">{{ counts.permits_pending }}</span>
+                        <a class="nav-link font-weight-bold" id="cat-tab-governance" data-toggle="pill" href="#cat-pane-governance" role="tab" data-cat="governance">
+                            ⚖️ Committee Working
                         </a>
                     </li>
-                    {% endif %}
-                    {% if tiles.get('family', True) %}
                     <li class="nav-item">
-                        <a class="nav-link font-weight-bold" id="tab-family" data-toggle="pill" href="#pane-family" role="tab" data-module="family">
-                            <span class="tab-icon">👨‍👩‍👦</span><span class="tab-label">Family</span> <span class="badge badge-warning ml-1" id="badge-family">{{ counts.family_pending }}</span>
+                        <a class="nav-link font-weight-bold" id="cat-tab-plant_assets" data-toggle="pill" href="#cat-pane-plant_assets" role="tab" data-cat="plant_assets">
+                            💧 Asset & Stock Monitoring
                         </a>
                     </li>
-                    {% endif %}
-                    {% if tiles.get('pets', True) %}
-                    <li class="nav-item">
-                        <a class="nav-link font-weight-bold" id="tab-pets" data-toggle="pill" href="#pane-pets" role="tab" data-module="pets">
-                            <span class="tab-icon">🐾</span><span class="tab-label">Pets</span> <span class="badge badge-warning ml-1" id="badge-pets">{{ counts.pets_pending }}</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if tiles.get('maintenance', True) %}
-                    <li class="nav-item">
-                        <a class="nav-link font-weight-bold" id="tab-tickets" data-toggle="pill" href="#pane-tickets" role="tab" data-module="tickets">
-                            <span class="tab-icon">🛠️</span><span class="tab-label">Tickets</span> <span class="badge badge-danger ml-1" id="badge-tickets">{{ counts.tickets_open }}</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if tiles.get('book_facility', True) %}
-                    <li class="nav-item">
-                        <a class="nav-link font-weight-bold" id="tab-facility_bookings" data-toggle="pill" href="#pane-facility_bookings" role="tab" data-module="facility_bookings">
-                            <span class="tab-icon">🏛️</span><span class="tab-label">Hall Bookings</span> <span class="badge badge-warning ml-1" id="badge-facility_bookings">{{ counts.facility_bookings_pending }}</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if tiles.get('classifieds', True) %}
-                    <li class="nav-item">
-                        <a class="nav-link font-weight-bold" id="tab-classifieds" data-toggle="pill" href="#pane-classifieds" role="tab" data-module="classifieds">
-                            <span class="tab-icon">📢</span><span class="tab-label">Classifieds</span> <span class="badge badge-warning ml-1" id="badge-classifieds">{{ counts.classifieds_pending }}</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if tiles.get('notices', True) %}
-                    <li class="nav-item">
-                        <a class="nav-link font-weight-bold" id="tab-notices" data-toggle="pill" href="#pane-notices" role="tab" data-module="notices">
-                            <span class="tab-icon">📋</span><span class="tab-label">Notices</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item">
-                        <a class="nav-link font-weight-bold" id="tab-resolutions" data-toggle="pill" href="#pane-resolutions" role="tab" data-module="resolutions">
-                            <span class="tab-icon">⚖️</span><span class="tab-label">Resolutions</span> <span class="badge badge-warning ml-1" id="badge-resolutions">{{ counts.resolutions_pending }}</span>
-                        </a>
-                    </li>
-                    {% if enable_emergency_sos and tiles.get('emergency', True) %}
-                    <li class="nav-item">
-                        <a class="nav-link font-weight-bold text-danger" id="tab-emergency" data-toggle="pill" href="#pane-emergency" role="tab" data-module="emergency">
-                            <span class="tab-icon">🚨</span><span class="tab-label">Emergency SOS</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if tiles.get('facility_staff', True) %}
-                    <li class="nav-item">
-                        <a class="nav-link font-weight-bold text-info" id="tab-facility_staff" data-toggle="pill" href="#pane-facility_staff" role="tab" data-module="facility_staff">
-                            <span class="tab-icon">🛡️</span><span class="tab-label">Security & Staff</span> <span class="badge badge-success ml-1" id="badge-facility_staff">{{ counts.facility_on_duty }}</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if tiles.get('water_log', True) or tiles.get('water_tanker', True) %}
-                    <li class="nav-item">
-                        <a class="nav-link font-weight-bold text-primary" id="tab-water_log" data-toggle="pill" href="#pane-water_log" role="tab" data-module="water_log">
-                            <span class="tab-icon">💧</span><span class="tab-label">Water & Sumps</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if tiles.get('cleaning_log', True) %}
-                    <li class="nav-item">
-                        <a class="nav-link font-weight-bold text-success" id="tab-cleaning_log" data-toggle="pill" href="#pane-cleaning_log" role="tab" data-module="cleaning_log">
-                            <span class="tab-icon">🧹</span><span class="tab-label">Housekeeping Proofs</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if tiles.get('tank_cleaning', True) %}
-                    <li class="nav-item">
-                        <a class="nav-link font-weight-bold text-dark" id="tab-tank_cleaning" data-toggle="pill" href="#pane-tank_cleaning" role="tab" data-module="tank_cleaning">
-                            <span class="tab-icon">🚰</span><span class="tab-label">OHT Tank Cleaning</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if tiles.get('amc_log', True) %}
-                    <li class="nav-item">
-                        <a class="nav-link font-weight-bold text-secondary" id="tab-amc_log" data-toggle="pill" href="#pane-amc_log" role="tab" data-module="amc_log">
-                            <span class="tab-icon">⚙️</span><span class="tab-label">Asset AMC</span> <span class="badge badge-info ml-1" id="badge-amc_log">{{ counts.amc_logs_total or 0 }}</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if tiles.get('chemical_log', True) %}
-                    <li class="nav-item">
-                        <a class="nav-link font-weight-bold text-warning" id="tab-chemical_log" data-toggle="pill" href="#pane-chemical_log" role="tab" data-module="chemical_log">
-                            <span class="tab-icon">🧪</span><span class="tab-label">STP Chemicals</span> <span class="badge badge-danger ml-1" id="badge-chemical_log">{{ counts.chemical_low_count or 0 }}</span>
-                        </a>
-                    </li>
-                    {% endif %}
                 </ul>
 
-                <button class="btn btn-outline-secondary btn-sm ml-auto d-md-none mt-2" type="button" data-toggle="collapse" data-target="#committeeFilterCollapse" aria-expanded="false" aria-controls="committeeFilterCollapse">
-                    ⚙️ Search & Filters
-                </button>
+                <!-- Tier 2: Sub-tabs within category -->
+                <div class="tab-content" id="committeeCategoryContent">
+                    <!-- Sub-tabs for Resident Management -->
+                    <div class="tab-pane fade show active" id="cat-pane-resident_mgmt" role="tabpanel">
+                        <ul class="nav nav-pills committee-nav-pills" id="tabs-resident_mgmt" role="tablist">
+                            {% if tiles.get('tenants', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold active" id="tab-tenants" data-toggle="pill" href="#pane-tenants" role="tab" data-module="tenants">
+                                    <span class="tab-icon">🏠</span><span class="tab-label">Tenants</span> <span class="badge badge-warning ml-1" id="badge-tenants">{{ counts.tenants_pending }}</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if tiles.get('vehicles', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold" id="tab-vehicles" data-toggle="pill" href="#pane-vehicles" role="tab" data-module="vehicles">
+                                    <span class="tab-icon">🚗</span><span class="tab-label">Vehicles</span> <span class="badge badge-warning ml-1" id="badge-vehicles">{{ counts.vehicles_pending }}</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if tiles.get('work_permits', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold" id="tab-work_permits" data-toggle="pill" href="#pane-work_permits" role="tab" data-module="work_permits">
+                                    <span class="tab-icon">👷</span><span class="tab-label">Permits</span> <span class="badge badge-warning ml-1" id="badge-permits">{{ counts.permits_pending }}</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if tiles.get('family', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold" id="tab-family" data-toggle="pill" href="#pane-family" role="tab" data-module="family">
+                                    <span class="tab-icon">👨‍👩‍👦</span><span class="tab-label">Family</span> <span class="badge badge-warning ml-1" id="badge-family">{{ counts.family_pending }}</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if tiles.get('pets', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold" id="tab-pets" data-toggle="pill" href="#pane-pets" role="tab" data-module="pets">
+                                    <span class="tab-icon">🐾</span><span class="tab-label">Pets</span> <span class="badge badge-warning ml-1" id="badge-pets">{{ counts.pets_pending }}</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if tiles.get('book_facility', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold" id="tab-facility_bookings" data-toggle="pill" href="#pane-facility_bookings" role="tab" data-module="facility_bookings">
+                                    <span class="tab-icon">🏛️</span><span class="tab-label">Hall Bookings</span> <span class="badge badge-warning ml-1" id="badge-facility_bookings">{{ counts.facility_bookings_pending }}</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if tiles.get('classifieds', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold" id="tab-classifieds" data-toggle="pill" href="#pane-classifieds" role="tab" data-module="classifieds">
+                                    <span class="tab-icon">📢</span><span class="tab-label">Classifieds</span> <span class="badge badge-warning ml-1" id="badge-classifieds">{{ counts.classifieds_pending }}</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <!-- Sub-tabs for Facility Operations & Monitoring -->
+                    <div class="tab-pane fade" id="cat-pane-facility_ops" role="tabpanel">
+                        <ul class="nav nav-pills committee-nav-pills" id="tabs-facility_ops" role="tablist">
+                            {% if tiles.get('maintenance', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold" id="tab-tickets" data-toggle="pill" href="#pane-tickets" role="tab" data-module="tickets">
+                                    <span class="tab-icon">🛠️</span><span class="tab-label">Tickets</span> <span class="badge badge-danger ml-1" id="badge-tickets">{{ counts.tickets_open }}</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if tiles.get('facility_staff', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold text-info" id="tab-facility_staff" data-toggle="pill" href="#pane-facility_staff" role="tab" data-module="facility_staff">
+                                    <span class="tab-icon">🛡️</span><span class="tab-label">Staff & Security</span> <span class="badge badge-success ml-1" id="badge-facility_staff">{{ counts.facility_on_duty }}</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if tiles.get('cleaning_log', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold text-success" id="tab-cleaning_log" data-toggle="pill" href="#pane-cleaning_log" role="tab" data-module="cleaning_log">
+                                    <span class="tab-icon">🧹</span><span class="tab-label">Photo Proofs</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if enable_emergency_sos and tiles.get('emergency', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold text-danger" id="tab-emergency" data-toggle="pill" href="#pane-emergency" role="tab" data-module="emergency">
+                                    <span class="tab-icon">🚨</span><span class="tab-label">Emergency SOS</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <!-- Sub-tabs for Committee Working & Governance -->
+                    <div class="tab-pane fade" id="cat-pane-governance" role="tabpanel">
+                        <ul class="nav nav-pills committee-nav-pills" id="tabs-governance" role="tablist">
+                            {% if tiles.get('notices', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold" id="tab-notices" data-toggle="pill" href="#pane-notices" role="tab" data-module="notices">
+                                    <span class="tab-icon">📋</span><span class="tab-label">Notices</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold" id="tab-resolutions" data-toggle="pill" href="#pane-resolutions" role="tab" data-module="resolutions">
+                                    <span class="tab-icon">⚖️</span><span class="tab-label">Resolutions</span> <span class="badge badge-warning ml-1" id="badge-resolutions">{{ counts.resolutions_pending }}</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Sub-tabs for Asset & Stock Monitoring -->
+                    <div class="tab-pane fade" id="cat-pane-plant_assets" role="tabpanel">
+                        <ul class="nav nav-pills committee-nav-pills" id="tabs-plant_assets" role="tablist">
+                            {% if tiles.get('water_log', True) or tiles.get('water_tanker', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold text-primary" id="tab-water_log" data-toggle="pill" href="#pane-water_log" role="tab" data-module="water_log">
+                                    <span class="tab-icon">💧</span><span class="tab-label">Water / Sump</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if tiles.get('tank_cleaning', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold text-dark" id="tab-tank_cleaning" data-toggle="pill" href="#pane-tank_cleaning" role="tab" data-module="tank_cleaning">
+                                    <span class="tab-icon">🚰</span><span class="tab-label">OHT</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if tiles.get('amc_log', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold text-secondary" id="tab-amc_log" data-toggle="pill" href="#pane-amc_log" role="tab" data-module="amc_log">
+                                    <span class="tab-icon">⚙️</span><span class="tab-label">AMC</span> <span class="badge badge-info ml-1" id="badge-amc_log">{{ counts.amc_logs_total or 0 }}</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if tiles.get('chemical_log', True) %}
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold text-warning" id="tab-chemical_log" data-toggle="pill" href="#pane-chemical_log" role="tab" data-module="chemical_log">
+                                    <span class="tab-icon">🧪</span><span class="tab-label">STP Chemicals</span> <span class="badge badge-danger ml-1" id="badge-chemical_log">{{ counts.chemical_low_count or 0 }}</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
             </div>
-            {% endif %}
 
             <!-- Compact Action & Search Bar (collapsible on mobile, always open in standalone) -->
             <div class="{% if is_standalone %}d-block{% else %}collapse d-md-block{% endif %} mt-2" id="committeeFilterCollapse">
@@ -729,6 +771,25 @@
         z-index: 1050;
         background: #fff;
     }
+}
+
+/* Committee Category Tabs */
+.committee-category-pills .nav-link {
+    font-size: 0.95rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    background-color: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    transition: all 0.2s ease;
+}
+.committee-category-pills .nav-link.active {
+    background-color: #1e293b !important;
+    color: #ffffff !important;
+    border-color: #1e293b !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 /* Frappe Confirm Dialog accessible button styling */

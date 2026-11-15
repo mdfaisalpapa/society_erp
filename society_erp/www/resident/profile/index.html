@@ -61,8 +61,12 @@
                                     <tr>
                                         <th width="40%" class="text-muted pl-0">Login Email:</th>
                                         <td>
-                                            <span class="font-weight-bold text-dark">{{ resident_email }}</span>
-                                            <small class="d-block text-muted" style="font-size: 0.75rem;">(Primary ID &bull; Read-only)</small>
+                                            <div class="d-flex align-items-center justify-content-between flex-wrap">
+                                                <span class="font-weight-bold text-dark" id="display-user-email">{{ resident_email }}</span>
+                                                <button type="button" class="btn btn-outline-primary btn-sm ml-2 px-2 py-1" id="btn-open-edit-email" style="font-size: 0.8rem; border-radius: 6px;">
+                                                    ✏️ Edit Email
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                     <tr>
@@ -264,6 +268,79 @@
                                 </button>
                                 <button type="button" class="btn btn-link btn-sm text-primary p-0" id="btn-resend-otp">
                                     🔄 Resend OTP
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Update Registered Email Modal (Bottom Sheet on Mobile) -->
+        <div class="modal fade" id="modal-update-email" tabindex="-1" role="dialog" aria-labelledby="modalEmailTitle" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
+                    <div class="modal-header bg-primary text-white py-3">
+                        <h5 class="modal-title font-weight-bold" id="modalEmailTitle">
+                            📧 Update Registered Email
+                        </h5>
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="opacity: 0.9;">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <div id="modal-email-otp-alert" class="alert d-none py-2 px-3 small font-weight-bold mb-3" role="alert"></div>
+
+                        <!-- STATE 1: Enter New Email -->
+                        <div id="email-otp-state-request">
+                            <p class="text-muted small mb-3">
+                                Enter your new email address. A verification code will be sent to the new address to ensure you have access to it.
+                            </p>
+
+                            <div class="form-group mb-3">
+                                <label for="input-new-email" class="small font-weight-bold text-dark">New Email Address</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-light text-muted border-right-0">✉️</span>
+                                    </div>
+                                    <input type="email" class="form-control border-left-0 font-weight-bold" id="input-new-email" placeholder="e.g. name@example.com" autocomplete="email">
+                                </div>
+                                <small class="form-text text-muted">We will send a 6-digit confirmation code to this email.</small>
+                            </div>
+
+                            <button type="button" class="btn btn-primary btn-block py-2 font-weight-bold" id="btn-send-email-otp">
+                                ✉️ Send Verification Code
+                            </button>
+                        </div>
+
+                        <!-- STATE 2: Enter Email OTP & Verify -->
+                        <div id="email-otp-state-verify" class="d-none">
+                            <div class="text-center mb-3">
+                                <div style="font-size: 2.2rem;">📬</div>
+                                <h6 class="font-weight-bold mb-1 text-dark">Enter Email Verification Code</h6>
+                                <p class="text-muted small mb-1">
+                                    A 6-digit code was sent to:
+                                </p>
+                                <span class="badge badge-light border px-2 py-1 font-weight-normal text-dark" id="span-target-new-email"></span>
+                            </div>
+
+                            <div class="form-group text-center mb-3">
+                                <label for="input-email-otp-code" class="sr-only">6-digit Code</label>
+                                <input type="text" class="form-control text-center font-weight-bold" id="input-email-otp-code" placeholder="• • • • • •" maxlength="6" style="font-size: 1.6rem; letter-spacing: 8px; max-width: 240px; margin: 0 auto;" autocomplete="one-time-code">
+                                <small class="form-text text-muted mt-2">Code expires in 5 minutes</small>
+                            </div>
+
+                            <button type="button" class="btn btn-success btn-block py-2 font-weight-bold mb-2" id="btn-verify-email-otp">
+                                ✅ Verify & Update Email
+                            </button>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                                <button type="button" class="btn btn-link btn-sm text-muted p-0" id="btn-back-to-email-request">
+                                    ← Change Email
+                                </button>
+                                <button type="button" class="btn btn-link btn-sm text-primary p-0" id="btn-resend-email-otp">
+                                    🔄 Resend Code
                                 </button>
                             </div>
                         </div>

@@ -1972,6 +1972,32 @@ frappe.ready(function () {
                     const hashTab = (window.location.hash || "").replace("#pane-", "").replace("#tab-", "").replace("#", "").trim();
                     const urlParams = new URLSearchParams(window.location.search);
                     const paramTab = urlParams.get("tab") || hashTab;
+                    const paramCat = urlParams.get("cat");
+
+                    // Map module/tab to its category
+                    const tabToCat = {
+                        "tenants": "resident_mgmt",
+                        "vehicles": "resident_mgmt",
+                        "work_permits": "resident_mgmt",
+                        "family": "resident_mgmt",
+                        "pets": "resident_mgmt",
+                        "facility_bookings": "resident_mgmt",
+                        "classifieds": "resident_mgmt",
+                        "tickets": "facility_ops",
+                        "facility_staff": "facility_ops",
+                        "cleaning_log": "facility_ops",
+                        "emergency": "facility_ops",
+                        "notices": "governance",
+                        "resolutions": "governance",
+                        "water_log": "plant_assets",
+                        "water_tanker": "plant_assets",
+                        "tank_cleaning": "plant_assets",
+                        "amc_log": "plant_assets",
+                        "chemical_log": "plant_assets"
+                    };
+
+                    const targetCat = paramCat || (paramTab && tabToCat[paramTab]) || "resident_mgmt";
+                    $(`#cat-tab-${targetCat}`).tab("show");
 
                     if (paramTab) {
                         const $targetTab = $(`#tab-${paramTab}`);
@@ -1987,10 +2013,15 @@ frappe.ready(function () {
                             $filterResGroup.addClass("d-none");
                             $filterPendingSwitchGroup.removeClass("d-none");
                         }
-                    } else if (!$("#committeeTabs .nav-link.active").is(":visible")) {
-                        const $firstVisible = $("#committeeTabs .nav-link:visible").first();
-                        if ($firstVisible.length) {
-                            $firstVisible.tab("show");
+                    } else {
+                        // Activate first sub-tab of the active category
+                        const $firstTabInCat = $(`#tabs-${targetCat} .nav-link:visible`).first();
+                        if ($firstTabInCat.length) {
+                            $firstTabInCat.tab("show");
+                            const targetPaneId = $firstTabInCat.attr("href");
+                            if (targetPaneId) {
+                                $(targetPaneId).addClass("show active").siblings().removeClass("show active");
+                            }
                         }
                     }
                 }
@@ -2018,6 +2049,21 @@ frappe.ready(function () {
     $switchPending.on("change", applyFilterAndRender);
     $selectResolutionFilter.on("change", applyFilterAndRender);
     $("#btn-refresh-data").on("click", loadCommitteeData);
+
+    // Category pill click handler to auto-activate first visible sub-tab
+    $('#committeeCategoryTabs a[data-toggle="pill"]').on("shown.bs.tab", function (e) {
+        const cat = $(e.target).data("cat");
+        if (cat) {
+            const $subTab = $(`#tabs-${cat} .nav-link:visible`).first();
+            if ($subTab.length) {
+                $subTab.tab("show");
+                const targetPaneId = $subTab.attr("href");
+                if (targetPaneId) {
+                    $(targetPaneId).addClass("show active").siblings().removeClass("show active");
+                }
+            }
+        }
+    });
 
     // Dynamic Filter switcher when switching tabs
     $('a[data-toggle="pill"]').on("shown.bs.tab", function (e) {
