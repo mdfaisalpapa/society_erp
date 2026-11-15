@@ -212,9 +212,9 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
     act_lower = act.lower()
 
     # If action_id is 'menu', route cleanly to get_resident_menu
-    if act_lower in ("menu", "main_menu"):
+    if act_lower in ("menu", "main_menu", "hi", "hello", "hey"):
         from society_erp.api.menu import get_resident_menu
-        menu_data = get_resident_menu(for_user=for_user)
+        menu_data = get_resident_menu(for_user=for_user, channel="WhatsApp")
         return {
             "title": "Main Menu",
             "icon": "🏢",
@@ -358,7 +358,7 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                     "icon": "📩",
                     "summary_text": prompt,
                     "prompt": prompt,
-                    "options": [{"label": "🏠 Main Menu", "value": "menu"}]
+                    "options": []
                 }
 
     # Handle email input for verification or update (e.g. user typed "mdfaisalpapa@gmail.com")
@@ -408,7 +408,7 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                 "icon": "📩",
                 "summary_text": prompt,
                 "prompt": prompt,
-                "options": [{"label": "🏠 Main Menu", "value": "menu"}]
+                "options": []
             }
         else:
             # User's typed email does NOT match the registered record!
@@ -428,10 +428,6 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                     {
                         "label": "✏️ Change Email",
                         "value": f"change_email:{user_input_email}"
-                    },
-                    {
-                        "label": "🏠 Main Menu",
-                        "value": "menu"
                     }
                 ]
             }
@@ -487,7 +483,7 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                     "icon": "📩",
                     "summary_text": prompt,
                     "prompt": prompt,
-                    "options": [{"label": "🏠 Main Menu", "value": "menu"}]
+                    "options": []
                 }
 
     # Handle 6-digit OTP reply (e.g. user typed "849201")
@@ -524,8 +520,10 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                 # Ensure resident user exists and is linked
                 from society_erp.account_management import ensure_resident_user
                 res_first_name = frappe.db.get_value(doctype, target_doc, "owner_name" if doctype == "Owners" else "tenant_name") or "Resident"
-                role = "Resident" if doctype == "Owners" else "Tenant"
-                ensure_resident_user(new_email, res_first_name, role)
+                role = "Flat Owner" if doctype == "Owners" else "Flat Tenant"
+                user_name = ensure_resident_user(new_email, res_first_name, role)
+                if user_name:
+                    frappe.db.set_value(doctype, target_doc, "linked_user", user_name)
 
                 # Update linked Channel Identity records
                 frappe.db.sql(
