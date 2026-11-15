@@ -59,6 +59,30 @@
    "label": "Email"
   },
   {
+   "default": "0",
+   "fieldname": "is_email_verified",
+   "fieldtype": "Check",
+   "label": "Is Email Verified"
+  },
+  {
+   "fieldname": "email_verified_on",
+   "fieldtype": "Datetime",
+   "label": "Email Verified On",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_mobile_verified",
+   "fieldtype": "Check",
+   "label": "Is Mobile Verified"
+  },
+  {
+   "fieldname": "mobile_verified_on",
+   "fieldtype": "Datetime",
+   "label": "Mobile Verified On",
+   "read_only": 1
+  },
+  {
    "fieldname": "telegram_chat_id",
    "fieldtype": "Data",
    "label": "Telegram Chat ID"

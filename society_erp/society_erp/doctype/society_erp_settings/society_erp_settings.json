@@ -106,6 +106,23 @@
    "fieldname": "telegram_bot_token",
    "fieldtype": "Password",
    "label": "Telegram Bot Token"
+  },
+  {
+   "fieldname": "section_break_bots",
+   "fieldtype": "Section Break",
+   "label": "Bot Verification Settings"
+  },
+  {
+   "description": "WhatsApp Bot Phone Number (e.g. 919876543210 with country code, no +)",
+   "fieldname": "whatsapp_bot_number",
+   "fieldtype": "Data",
+   "label": "WhatsApp Bot Number"
+  },
+  {
+   "description": "Telegram Bot Username (e.g. KendriyaViharPhase3Bot without @)",
+   "fieldname": "telegram_bot_username",
+   "fieldtype": "Data",
+   "label": "Telegram Bot Username"
   }
  ],
  "grid_page_length": 50,

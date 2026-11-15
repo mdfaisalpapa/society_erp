@@ -206,3 +206,100 @@ def deactivate_user_if_unused(doc):
         if user.enabled:
             user.enabled = 0
             user.save(ignore_permissions=True)
+
+
+def on_session_creation(login_manager=None):
+    """
+    Auto-verify email on successful web portal session creation.
+    When a user logs in via web, their email is considered verified.
+    """
+    user = frappe.session.user
+    if not user or user in ("Guest", "Administrator"):
+        return
+
+    now = frappe.utils.now_datetime()
+    user_email = frappe.db.get_value("User", user, "email") or user
+
+    # Mark Owners records as verified
+    owners = frappe.get_all(
+        "Owners",
+        filters=[
+            ["active", "=", 1],
+            ["is_email_verified", "=", 0],
+            ["email", "=", user_email]
+        ],
+        pluck="name"
+    )
+    for o_name in owners:
+        frappe.db.set_value("Owners", o_name, {
+            "is_email_verified": 1,
+            "email_verified_on": now
+        }, update_modified=False)
+
+    # Mark Tenants records as verified
+    tenants = frappe.get_all(
+        "Tenants",
+        filters=[
+            ["active", "=", 1],
+            ["is_email_verified", "=", 0],
+            ["email", "=", user_email]
+        ],
+        pluck="name"
+    )
+    for t_name in tenants:
+        frappe.db.set_value("Tenants", t_name, {
+            "is_email_verified": 1,
+            "email_verified_on": now
+        }, update_modified=False)
+
+    if owners or tenants:
+        frappe.db.commit()
+
+
+def mark_mobile_verified(mobile_no):
+    """
+    Mark mobile number as verified across active Owners and Tenants.
+    Called when a user sends a message or completes OTP via WhatsApp or Telegram.
+    """
+    if not mobile_no:
+        return
+
+    # Clean mobile number
+    clean_mobile = "".join(filter(str.isdigit, str(mobile_no)))
+    if len(clean_mobile) > 10:
+        clean_mobile = clean_mobile[-10:]
+
+    if not clean_mobile:
+        return
+
+    now = frappe.utils.now_datetime()
+
+    # Search for matching Owners
+    matching_owners = frappe.db.sql("""
+        SELECT name FROM `tabOwners`
+        WHERE active = 1 AND is_mobile_verified = 0
+          AND (RIGHT(REGEXP_REPLACE(mobile_no, '[^0-9]', ''), 10) = %s)
+    """, (clean_mobile,), as_dict=True)
+
+    for row in matching_owners:
+        frappe.db.set_value("Owners", row.name, {
+            "is_mobile_verified": 1,
+            "mobile_verified_on": now
+        }, update_modified=False)
+
+    # Search for matching Tenants
+    matching_tenants = frappe.db.sql("""
+        SELECT name FROM `tabTenants`
+        WHERE active = 1 AND is_mobile_verified = 0
+          AND (RIGHT(REGEXP_REPLACE(mobile_no, '[^0-9]', ''), 10) = %s)
+    """, (clean_mobile,), as_dict=True)
+
+    for row in matching_tenants:
+        frappe.db.set_value("Tenants", row.name, {
+            "is_mobile_verified": 1,
+            "mobile_verified_on": now
+        }, update_modified=False)
+
+    if matching_owners or matching_tenants:
+        frappe.db.commit()
+

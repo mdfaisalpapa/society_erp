@@ -29,7 +29,7 @@ def get_context(context):
         filters={"active": 1},
         fields=[
             "name", "flat", "tenant_name", "mobile_no",
-            "email", "start_date", "end_date"
+            "email", "start_date", "end_date", "is_email_verified", "is_mobile_verified"
         ],
         order_by="flat asc",
     )
@@ -52,7 +52,7 @@ def get_context(context):
             filters={"active": 1},
             fields=[
                 "name", "flat", "owner_name",
-                "mobile_no", "email", "is_aoa_member"
+                "mobile_no", "email", "is_aoa_member", "is_email_verified", "is_mobile_verified"
             ],
             order_by="flat asc",
         )
@@ -85,6 +85,21 @@ def get_context(context):
     context.is_tenant = bool(tenant)
     context.is_owner = bool(owner)
     context.not_a_resident = False
+
+    # Contact Verification Status
+    is_email_verified = bool(resident.get("is_email_verified"))
+    is_mobile_verified = bool(resident.get("is_mobile_verified"))
+    context.is_email_verified = is_email_verified
+    context.is_mobile_verified = is_mobile_verified
+    context.is_fully_verified = is_email_verified and is_mobile_verified
+    context.resident_email = resident.get("email") or ""
+    context.resident_mobile = resident.get("mobile_no") or ""
+
+    # Bot link generation for verification
+    from society_erp.api.verification import get_verification_status
+    v_info = get_verification_status(for_user=user_email)
+    context.whatsapp_verification_link = v_info.get("whatsapp_verification_link", "")
+    context.telegram_verification_link = v_info.get("telegram_verification_link", "")
 
     # Check if the resident is an authorized Committee Member (is_aoa_member = 1) or System Manager
     is_committee_member = False

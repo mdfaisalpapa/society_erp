@@ -28,13 +28,23 @@ def resolve_chat_user(channel: str, channel_user_id: str, phone_number: str = No
     channel_norm = "WhatsApp" if channel_lower in ("whatsapp", "wa") else ("Telegram" if channel_lower in ("telegram", "tg") else channel.strip().capitalize())
     user_id_norm = str(channel_user_id).strip()
 
-    # 1. If phone_number was provided, attempt 1-click auto-registration / linking
+    # Clean phone if provided or from WhatsApp user ID
+    clean_phone = None
     if phone_number:
         clean_phone = "".join(c for c in str(phone_number) if c.isdigit())
-        if len(clean_phone) > 10:
-            clean_phone = clean_phone[-10:]
+    elif channel_norm == "WhatsApp":
+        clean_phone = "".join(c for c in str(channel_user_id) if c.isdigit())
 
-        if clean_phone:
+    if clean_phone and len(clean_phone) > 10:
+        clean_phone = clean_phone[-10:]
+
+    # Auto-verify mobile for incoming WhatsApp/Telegram activity
+    if clean_phone:
+        from society_erp.account_management import mark_mobile_verified
+        mark_mobile_verified(clean_phone)
+
+    # 1. If phone_number was provided, attempt 1-click auto-registration / linking
+    if phone_number and clean_phone:
             # Match in Owners or Tenants
             matched_owner = frappe.db.sql(
                 """

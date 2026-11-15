@@ -38,7 +38,7 @@ def get_resident_menu(for_user: str = None) -> dict:
     tenant = frappe.db.get_value(
         "Tenants",
         {"email": user_email, "active": 1},
-        ["name", "flat", "tenant_name"],
+        ["name", "flat", "tenant_name", "mobile_no", "is_email_verified", "is_mobile_verified"],
         as_dict=True
     )
     owner = None
@@ -46,9 +46,59 @@ def get_resident_menu(for_user: str = None) -> dict:
         owner = frappe.db.get_value(
             "Owners",
             {"email": user_email, "active": 1},
-            ["name", "flat", "owner_name", "is_aoa_member"],
+            ["name", "flat", "owner_name", "mobile_no", "is_aoa_member", "is_email_verified", "is_mobile_verified"],
             as_dict=True
         )
+
+    resident = tenant or owner
+
+    # Requirement 3: Enforce verification gate.
+    # Main menu options are only displayed for email and mobile verified users.
+    if resident and not (resident.get("is_email_verified") and resident.get("is_mobile_verified")):
+        res_name = resident.get("tenant_name") or resident.get("owner_name")
+        missing = []
+        if not resident.get("is_email_verified"):
+            missing.append("📧 Email Address")
+        if not resident.get("is_mobile_verified"):
+            missing.append("📱 Mobile Number")
+
+        missing_str = " and ".join(missing)
+        welcome_msg = (
+            f"🏢 *Welcome to Kendriya Vihar Phase-3!*\n\n"
+            f"Hello *{res_name}* (Flat: `{resident.get('flat')}`)\n\n"
+            f"⚠️ *Account Verification Required*\n"
+            f"To access society services and dues, please verify your {missing_str}.\n"
+            f"Tap below to complete verification:"
+        )
+
+        from society_erp.api.sso import generate_portal_link
+        sso_res = generate_portal_link(for_user=user_email, target_route="/resident?standalone=1")
+        verify_url = sso_res.get("url") if isinstance(sso_res, dict) else ""
+
+        return {
+            "is_owner": bool(owner),
+            "is_committee": False,
+            "committee_role": "",
+            "verification_pending": True,
+            "welcome_message": welcome_msg,
+            "options": [
+                {
+                    "id": "verify_contact",
+                    "label": "🔐 Complete Verification",
+                    "desc": f"Verify {missing_str}",
+                    "action": "open_verify_portal",
+                    "web_app_url": verify_url,
+                },
+                {
+                    "id": "share_contact",
+                    "label": "📱 Share Contact to Verify Mobile",
+                    "desc": "1-Click Instant Mobile Verification",
+                    "action": "share_contact",
+                    "request_contact": True,
+                }
+            ],
+            "count": 2,
+        }
 
     is_owner = bool(owner)
     is_committee = False

@@ -72,6 +72,45 @@ frappe.ready(function() {
         }
     }
 
+    // Global verification handlers
+    window.sendEmailOTP = function() {
+        const $btn = $('#btn-send-email-otp');
+        $btn.prop('disabled', true).text('Sending...');
+        frappe.call({
+            method: 'society_erp.api.verification.send_email_verification_otp',
+            callback: function(r) {
+                $btn.prop('disabled', false).text('📩 Resend Code');
+                if (!r.exc) {
+                    $('#email-otp-box').slideDown();
+                    $('#email-otp-status').text('Code sent! Check your inbox.');
+                    frappe.show_alert({message: r.message.message || 'Verification code sent!', indicator: 'green'});
+                }
+            }
+        });
+    };
+
+    window.submitEmailOTP = function() {
+        const otp = $('#email-otp-input').val().trim();
+        if (!otp || otp.length < 6) {
+            frappe.msgprint(__('Please enter the complete 6-digit code.'));
+            return;
+        }
+        frappe.call({
+            method: 'society_erp.api.verification.verify_email_otp',
+            args: { otp: otp },
+            callback: function(r) {
+                if (!r.exc && r.message && r.message.success) {
+                    frappe.msgprint({
+                        title: __('Verified'),
+                        indicator: 'green',
+                        message: __('Email verified successfully! Reloading portal...')
+                    });
+                    setTimeout(function() { window.location.reload(); }, 1200);
+                }
+            }
+        });
+    };
+
     // Initialize the dashboard scripts
     new ResidentDashboard();
 });

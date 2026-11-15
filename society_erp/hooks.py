@@ -121,6 +121,7 @@ web_include_css = [
 
 # Inject routing flag during authentication
 on_login = "society_erp.hooks_override.redirect_after_login"
+on_session_creation = "society_erp.account_management.on_session_creation"
 override_whitelisted_methods = {
     "frappe.core.doctype.user.user.update_password":
         "society_erp.password_reset.update_password",
