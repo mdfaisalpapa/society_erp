@@ -259,6 +259,130 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
             "options": menu_data.get("options", []),
         }
 
+    # Handle email input for verification (e.g. user typed "mdfaisalpapa@gmail.com")
+    if "@" in act and "." in act and " " not in act:
+        user_input_email = act.strip().lower()
+        # Find active resident by email or by for_user
+        res_owner = frappe.db.get_value("Owners", {"email": user_input_email, "active": 1}, ["name", "flat", "owner_name", "email"], as_dict=True)
+        res_tenant = frappe.db.get_value("Tenants", {"email": user_input_email, "active": 1}, ["name", "flat", "tenant_name", "email"], as_dict=True)
+        target_res = res_tenant or res_owner
+
+        # Fallback check by for_user if input email matches record email
+        if not target_res and for_user:
+            target_res = frappe.db.get_value("Owners", {"email": for_user, "active": 1}, ["name", "flat", "owner_name", "email"], as_dict=True) or \
+                         frappe.db.get_value("Tenants", {"email": for_user, "active": 1}, ["name", "flat", "tenant_name", "email"], as_dict=True)
+
+        if target_res and target_res.get("email", "").strip().lower() == user_input_email:
+            # Generate and send 6-digit OTP
+            import random, string
+            otp = "".join(random.choices(string.digits, k=6))
+            frappe.cache.set_value(f"email_verify_otp:{target_res.name}", otp, expires_in_sec=600)
+
+            subject = f"🔐 Your Kendriya Vihar Email Verification Code: {otp}"
+            res_display_name = target_res.get("tenant_name") or target_res.get("owner_name")
+            message = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <h3 style="color: #1e3a8a; margin-top: 0;">Kendriya Vihar Phase-3</h3>
+                <p>Hello <strong>{res_display_name}</strong> (Flat: {target_res.flat}),</p>
+                <p>Please use the following 6-digit verification code to confirm your email address:</p>
+                <div style="font-size: 28px; font-weight: bold; letter-spacing: 6px; text-align: center; padding: 15px; background: #f8fafc; border-radius: 6px; color: #1e293b; margin: 15px 0;">
+                    {otp}
+                </div>
+                <p style="font-size: 13px; color: #64748b;">This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
+            </div>
+            """
+            try:
+                frappe.sendmail(recipients=[user_input_email], subject=subject, message=message, now=True)
+            except Exception as e:
+                frappe.log_error("Email Verification OTP Error", str(e))
+
+            prompt = (
+                f"📩 *Verification Code Sent!*\n\n"
+                f"A 6-digit verification code has been emailed to `{user_input_email}`.\n\n"
+                f"👉 Please reply with the *6-digit OTP* (e.g. `123456`) to verify your email."
+            )
+            return {
+                "title": "Email OTP Sent",
+                "icon": "📩",
+                "summary_text": prompt,
+                "prompt": prompt,
+                "options": [{"label": "🏠 Main Menu", "value": "menu"}]
+            }
+        else:
+            prompt = (
+                f"❌ *Email Does Not Match Records*\n\n"
+                f"The email address `{user_input_email}` does not match the registered email for this flat.\n\n"
+                f"Please verify and type your registered email address, or contact the Estate Office to update your records."
+            )
+            return {
+                "title": "Email Mismatch",
+                "icon": "⚠️",
+                "summary_text": prompt,
+                "prompt": prompt,
+                "options": [{"label": "🏠 Main Menu", "value": "menu"}]
+            }
+
+    # Handle 6-digit OTP reply (e.g. user typed "849201")
+    if act.isdigit() and len(act) == 6:
+        otp_entered = act.strip()
+        matched = False
+        target_doc = None
+        doctype = None
+
+        if for_user:
+            # Check owner or tenant
+            owner_doc = frappe.db.get_value("Owners", {"email": for_user, "active": 1}, ["name"], as_dict=True)
+            tenant_doc = frappe.db.get_value("Tenants", {"email": for_user, "active": 1}, ["name"], as_dict=True)
+            if tenant_doc:
+                target_doc = tenant_doc.name
+                doctype = "Tenants"
+            elif owner_doc:
+                target_doc = owner_doc.name
+                doctype = "Owners"
+
+        if target_doc:
+            cache_key = f"email_verify_otp:{target_doc}"
+            stored_otp = frappe.cache.get_value(cache_key)
+            if stored_otp and str(stored_otp).strip() == otp_entered:
+                frappe.cache.delete_value(cache_key)
+                now = frappe.utils.now_datetime()
+                frappe.db.set_value(doctype, target_doc, {
+                    "is_email_verified": 1,
+                    "email_verified_on": now
+                }, update_modified=False)
+                frappe.db.commit()
+                matched = True
+
+        if matched:
+            from society_erp.api.menu import get_resident_menu
+            menu_data = get_resident_menu(for_user=for_user)
+            prompt = (
+                "🎉 *Email Verified Successfully!*\n\n"
+                "Your email address and mobile number are both verified.\n"
+                "Full access to society services is now unlocked:\n\n"
+                + menu_data.get("welcome_message", "Select any society service below:")
+            )
+            return {
+                "title": "Email Verified",
+                "icon": "✅",
+                "summary_text": prompt,
+                "prompt": prompt,
+                "options": menu_data.get("options", [])
+            }
+        else:
+            prompt = (
+                "❌ *Invalid or Expired Code*\n\n"
+                "The 6-digit OTP entered is invalid or has expired.\n"
+                "Please type your email address again to receive a fresh verification code."
+            )
+            return {
+                "title": "Invalid OTP",
+                "icon": "⚠️",
+                "summary_text": prompt,
+                "prompt": prompt,
+                "options": [{"label": "🏠 Main Menu", "value": "menu"}]
+            }
+
     # Special handling for direct open actions (e.g. when selected in WhatsApp)
     if act_lower.startswith("open_comm_"):
         from society_erp.api.committee_menu import get_committee_sub_tiles
@@ -296,37 +420,35 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                 ]
             }
 
-    # Handling for open_<act>_portal (e.g. open_dues_portal, open_profile_portal)
+    # Handling for open_<act>_portal (e.g. open_dues_portal, open_profile_portal, open_verify_portal)
     if act_lower.startswith("open_") and act_lower.endswith("_portal"):
         base_act = act_lower[5:-7]
-        meta = SERVICE_REGISTRY.get(base_act)
-        if meta and meta.get("target_route"):
-            from society_erp.api.sso import generate_portal_link
-            sso_res = generate_portal_link(for_user=for_user, target_route=meta["target_route"])
-            sso_url = sso_res.get("url") or (sso_res.get("data", {}).get("url") if isinstance(sso_res, dict) else "")
-            prompt = (
-                f"{meta['icon']} *{meta['title']}*\n\n"
-                f"🔗 Tap the secure link below to open this portal in your browser:\n\n"
-                f"{sso_url}\n\n"
-                f"_(Link is valid for 15 minutes. Tap below to proceed)_"
-            )
-            return {
-                "title": meta["title"],
-                "icon": meta["icon"],
-                "summary_text": prompt,
-                "prompt": prompt,
-                "sso_url": sso_url,
-                "options": [
-                    {
-                        "label": f"🔙 Back to {meta['title'][:15]}",
-                        "value": base_act
-                    },
-                    {
-                        "label": "🏠 Main Menu",
-                        "value": "menu"
-                    }
-                ]
-            }
+        target_route = "/resident?standalone=1" if base_act == "verify" else (SERVICE_REGISTRY.get(base_act, {}).get("target_route") or f"/resident/{base_act}?standalone=1")
+        title = "Resident Portal" if base_act == "verify" else (SERVICE_REGISTRY.get(base_act, {}).get("title") or "Portal")
+        icon = "🔐" if base_act == "verify" else (SERVICE_REGISTRY.get(base_act, {}).get("icon") or "🔗")
+
+        from society_erp.api.sso import generate_portal_link
+        sso_res = generate_portal_link(for_user=for_user, target_route=target_route)
+        sso_url = sso_res.get("url") or (sso_res.get("data", {}).get("url") if isinstance(sso_res, dict) else "")
+        prompt = (
+            f"{icon} *{title}*\n\n"
+            f"🔗 Tap the secure link below to open in your browser:\n\n"
+            f"{sso_url}\n\n"
+            f"_(Link is valid for 15 minutes. Tap below to proceed)_"
+        )
+        return {
+            "title": title,
+            "icon": icon,
+            "summary_text": prompt,
+            "prompt": prompt,
+            "sso_url": sso_url,
+            "options": [
+                {
+                    "label": "🏠 Main Menu",
+                    "value": "menu"
+                }
+            ]
+        }
 
     meta = SERVICE_REGISTRY.get(act_lower)
     if not meta:

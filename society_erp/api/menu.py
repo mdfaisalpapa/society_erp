@@ -38,7 +38,7 @@ def get_resident_menu(for_user: str = None) -> dict:
     tenant = frappe.db.get_value(
         "Tenants",
         {"email": user_email, "active": 1},
-        ["name", "flat", "tenant_name", "mobile_no", "is_email_verified", "is_mobile_verified"],
+        ["name", "flat", "tenant_name", "email", "mobile_no", "is_email_verified", "is_mobile_verified"],
         as_dict=True
     )
     owner = None
@@ -46,7 +46,7 @@ def get_resident_menu(for_user: str = None) -> dict:
         owner = frappe.db.get_value(
             "Owners",
             {"email": user_email, "active": 1},
-            ["name", "flat", "owner_name", "mobile_no", "is_aoa_member", "is_email_verified", "is_mobile_verified"],
+            ["name", "flat", "owner_name", "email", "mobile_no", "is_aoa_member", "is_email_verified", "is_mobile_verified"],
             as_dict=True
         )
 
@@ -56,20 +56,27 @@ def get_resident_menu(for_user: str = None) -> dict:
     # Main menu options are only displayed for email and mobile verified users.
     if resident and not (resident.get("is_email_verified") and resident.get("is_mobile_verified")):
         res_name = resident.get("tenant_name") or resident.get("owner_name")
-        missing = []
-        if not resident.get("is_email_verified"):
-            missing.append("📧 Email Address")
-        if not resident.get("is_mobile_verified"):
-            missing.append("📱 Mobile Number")
+        reg_email = (resident.get("email") or "").strip()
+        
+        # Format masked email e.g. 'mdfa***@gmail.com'
+        from society_erp.www.index import mask_email
+        masked_e = mask_email(reg_email) if reg_email else "No email registered"
 
-        missing_str = " and ".join(missing)
-        welcome_msg = (
-            f"🏢 *Welcome to Kendriya Vihar Phase-3!*\n\n"
-            f"Hello *{res_name}* (Flat: `{resident.get('flat')}`)\n\n"
-            f"⚠️ *Account Verification Required*\n"
-            f"To access society services and dues, please verify your {missing_str}.\n"
-            f"Tap below to complete verification:"
-        )
+        if not resident.get("is_email_verified"):
+            welcome_msg = (
+                f"🏢 *Welcome to Kendriya Vihar Phase-3!*\n\n"
+                f"Hello *{res_name}* (Flat: `{resident.get('flat')}`)\n\n"
+                f"📱 *Mobile:* Verified ✅\n"
+                f"📧 *Email:* `{masked_e}` (Unverified ⚠️)\n\n"
+                f"👉 Please type and reply with your *complete email address* to receive a 6-digit verification code."
+            )
+        else:
+            welcome_msg = (
+                f"🏢 *Welcome to Kendriya Vihar Phase-3!*\n\n"
+                f"Hello *{res_name}* (Flat: `{resident.get('flat')}`)\n\n"
+                f"⚠️ *Account Verification Required*\n"
+                f"Please verify your mobile number to access society services."
+            )
 
         from society_erp.api.sso import generate_portal_link
         sso_res = generate_portal_link(for_user=user_email, target_route="/resident?standalone=1")
@@ -78,15 +85,13 @@ def get_resident_menu(for_user: str = None) -> dict:
         verify_options = [
             {
                 "id": "verify_contact",
-                "label": "🔐 Complete Verification",
-                "desc": f"Verify {missing_str}",
+                "label": "🔐 Open Resident Portal",
+                "desc": "Verify details via Web",
                 "action": "open_verify_portal",
                 "web_app_url": verify_url,
             }
         ]
 
-        # Only prompt "Share Contact" on Telegram where mobile number is not automatically provided in webhook
-        # On WhatsApp, phone number is already verified directly from sender wa_id
         if not resident.get("is_mobile_verified"):
             verify_options.append({
                 "id": "share_contact",
