@@ -574,7 +574,13 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
             for opt in menu_options:
                 val = opt.get("id") or opt.get("value") or opt.get("action")
                 lbl = opt.get("label") or opt.get("title")
-                action_options.append({"label": lbl, "value": val})
+                action_options.append({
+                    "id": val,
+                    "value": val,
+                    "label": lbl,
+                    "title": lbl,
+                    "desc": opt.get("desc", "")
+                })
 
             success_heading = (
                 f"🎉 *Email Updated & Verified Successfully!*\n\n"
@@ -585,7 +591,7 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                 f"Your email address and mobile number are both verified.\n"
                 f"Full access to society services is now unlocked:\n\n"
             )
-            prompt = success_heading + menu_data.get("welcome_message", "Select any society service below:")
+            prompt = success_heading + (menu_data.get("welcome_message") or "Select any society service below:")
             return {
                 "title": "Email Verified",
                 "icon": "✅",
