@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import flt, fmt_money
+from frappe.utils import flt, fmt_money, format_date
 from society_erp.resident_portal import get_verified_owner_records
 from society_erp.api.utils import portal_api
 
@@ -90,8 +90,10 @@ def get_ownership_history(for_user: str = None) -> dict:
             "mobile": o.mobile_no or "-",
             "email": o.email or "-",
             "active": bool(o.active),
-            "start_date": str(o.start_date) if o.start_date else "-",
-            "end_date": str(o.end_date) if o.end_date else "-"
+            "start_date": format_date(o.start_date, "dd-MM-yyyy") if o.start_date else "-",
+            "end_date": format_date(o.end_date, "dd-MM-yyyy") if o.end_date else "-",
+            "formatted_start_date": format_date(o.start_date, "dd-MM-yyyy") if o.start_date else "-",
+            "formatted_end_date": format_date(o.end_date, "dd-MM-yyyy") if o.end_date else "-"
         }
         if o.active == 1 and not current:
             current = item

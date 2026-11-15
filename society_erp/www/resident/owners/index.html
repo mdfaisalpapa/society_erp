@@ -62,7 +62,7 @@
                         <p class="mb-0">✉️ {{ current_owner.email or 'N/A' }}</p>
                         
                         <p class="mb-1 mt-3 text-muted">Ownership Start Date</p>
-                        <p><strong>{{ current_owner.start_date or 'N/A' }}</strong></p>
+                        <p><strong>{{ current_owner.formatted_start_date or current_owner.start_date or 'N/A' }}</strong></p>
                     </div>
                 </div>
                 
@@ -97,8 +97,8 @@
                             <tr>
                                 <td><strong>{{ past.owner_name }}</strong></td>
                                 <td class="text-muted">{{ past.name }}</td>
-                                <td>{{ past.start_date or 'Unknown' }}</td>
-                                <td>{{ past.end_date or 'Unknown' }}</td>
+                                <td>{{ past.formatted_start_date or past.start_date or 'Unknown' }}</td>
+                                <td>{{ past.formatted_end_date or past.end_date or 'Unknown' }}</td>
                             </tr>
                             {% else %}
                             <tr>
@@ -126,8 +126,8 @@
                             </div>
                         </div>
                         <div class="d-flex justify-content-between align-items-center small text-muted pt-2 border-top mt-1">
-                            <span>From: <strong>{{ past.start_date or 'Unknown' }}</strong></span>
-                            <span>To: <strong>{{ past.end_date or 'Present' }}</strong></span>
+                            <span>From: <strong>{{ past.formatted_start_date or past.start_date or 'Unknown' }}</strong></span>
+                            <span>To: <strong>{{ past.formatted_end_date or past.end_date or 'Present' }}</strong></span>
                         </div>
                     </div>
                     {% else %}

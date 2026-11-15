@@ -27,7 +27,7 @@ SERVICE_REGISTRY = {
     "financials": {
         "title": "Society Financial Statements",
         "icon": "📈",
-        "summary": "• Fiscal Year: 2026-2027\n• Audited Statements: P&L, Balance Sheet, Income & Expenditure, Sinking & Corpus Funds\n\nTap below to inspect verified audited statements:",
+        "summary": "• Fiscal Year: 2026-2027\n• Statements: Profit & Loss, Balance Sheet, Income & Expenditure, Sinking & Corpus Funds\n\nTap below to view live financial statements from ERPNext:",
         "target_route": "/resident/financials?standalone=1",
         "btn_label": "📈 View Financials & P&L (WebApp)"
     },
@@ -263,10 +263,25 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                         f"• Current Outstanding: *{raw_data.get('formatted_dues')}*"
                     )
                 elif act == "owners":
+                    curr_owner = raw_data.get("current_owner") or {}
+                    if isinstance(curr_owner, dict):
+                        owner_name = curr_owner.get("name") or "Not registered"
+                        start_d = curr_owner.get("formatted_start_date") or curr_owner.get("start_date") or "-"
+                        mobile_str = curr_owner.get("mobile") or "-"
+                        email_str = curr_owner.get("email") or "-"
+                        owner_summary = (
+                            f"*{owner_name}*\n"
+                            f"• Since: *{start_d}*\n"
+                            f"• Contact: 📞 `{mobile_str}` | ✉️ `{email_str}`"
+                        )
+                    else:
+                        owner_summary = str(curr_owner)
+
+                    prev_count = len(raw_data.get("previous_owners", [])) or raw_data.get("count", 0)
                     summary_text = (
                         f"• Flat: `{raw_data.get('flat')}`\n"
-                        f"• Current Registered Owner: *{raw_data.get('current_owner')}*\n"
-                        f"• Total Historic Transfers: {raw_data.get('count', 0)}"
+                        f"• Current Registered Owner: {owner_summary}\n"
+                        f"• Total Historic Transfers: {prev_count}"
                     )
                 elif act == "classifieds":
                     my_s = raw_data.get("my_summary", "None")

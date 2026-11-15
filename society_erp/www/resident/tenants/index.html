@@ -49,7 +49,7 @@
                     </div>
                     <p class="mb-1">📞 {{ t.mobile_no }} | 📧 {{ t.email or 'N/A' }}</p>
                     <p class="mb-1"><small>Status: {{ t.registration_status }}</small></p>
-                    <p class="mb-2"><small>Lease: {{ t.start_date }} to {{ t.end_date or 'Ongoing' }}</small></p>
+                    <p class="mb-2"><small>Lease: {{ t.formatted_start_date or t.start_date }} to {{ t.formatted_end_date or t.end_date or 'Ongoing' }}</small></p>
                     
                     {% if t.active %}
                         <button class="btn btn-danger btn-sm btn-deactivate mb-2" data-id="{{ t.name }}">🛑 Vacate Tenant</button>

@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import format_date
 
 def get_context(context):
     context.is_standalone = bool(frappe.form_dict.get("standalone"))
@@ -42,6 +43,8 @@ def get_context(context):
     context.previous_owners = []
 
     for owner in owners_history:
+        owner["formatted_start_date"] = format_date(owner.start_date, "dd-MM-yyyy") if owner.start_date else "-"
+        owner["formatted_end_date"] = format_date(owner.end_date, "dd-MM-yyyy") if owner.end_date else "-"
         if owner.active == 1:
             context.current_owner = owner
         else:

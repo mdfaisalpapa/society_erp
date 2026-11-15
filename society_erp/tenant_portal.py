@@ -46,6 +46,8 @@ def get_tenants(for_user=None):
         status_lbl = "🟢 Active" if t.active else "⚪ Past"
         s_date = format_date(t.start_date, "dd-MM-yyyy") if t.start_date else "-"
         e_date = format_date(t.end_date, "dd-MM-yyyy") if t.end_date else "Ongoing"
+        t["formatted_start_date"] = s_date
+        t["formatted_end_date"] = e_date
         lines.append(
             f"• 👤 *{t.tenant_name}* ({status_lbl})\n"
             f"  📞 `{t.mobile_no or '-'}` | ✉️ `{t.email or '-'}`\n"
