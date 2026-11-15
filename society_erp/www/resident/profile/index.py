@@ -226,6 +226,11 @@ def send_mobile_update_otp(new_mobile):
     user = frappe.session.user
     valid_mobile = _validate_mobile_number(new_mobile)
 
+    # Check if this mobile number is already registered to another user account
+    existing_user = frappe.db.get_value("User", {"mobile_no": valid_mobile, "name": ["!=", user]}, "name")
+    if existing_user:
+        frappe.throw(_("Mobile number {0} is already registered to another user account ({1}).").format(valid_mobile, existing_user))
+
     # Generate 6-digit numeric OTP
     otp = f"{random.randint(100000, 999999)}"
 
@@ -329,7 +334,10 @@ def verify_and_update_mobile(new_mobile, otp):
 
     # 1. Update User document
     if frappe.db.exists("User", user):
-        frappe.db.set_value("User", user, "mobile_no", target_mobile)
+        try:
+            frappe.db.set_value("User", user, "mobile_no", target_mobile)
+        except Exception as e:
+            frappe.log_error(f"Failed to update User mobile_no for {user}: {e}", "Mobile Update")
 
     # 2. Update linked Owners documents (Reset is_mobile_verified = 0 pending bot 1-click verification)
     owner_names = frappe.get_all(

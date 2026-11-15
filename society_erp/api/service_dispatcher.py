@@ -178,7 +178,7 @@ SERVICE_REGISTRY = {
 
 @frappe.whitelist()
 @portal_api
-def get_service_details(action_id: str, for_user: str = None) -> dict:
+def get_service_details(action_id: str, for_user: str = None, sender_phone: str = None) -> dict:
     """
     Unified Single-Node Dispatcher for Universal Chatbot.
     Given an action_id (e.g. 'dues', 'visitors', 'tickets', or sub-action like 'open_comm_vehicles'),
@@ -188,8 +188,13 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
     act = (action_id or "").strip()
     act_lower = act.lower()
 
-    # If action_id is 'menu', route cleanly to get_resident_menu
-    if act_lower in ("menu", "main_menu", "hi", "hello", "hey", "start"):
+    # If incoming action starts with /start, strip command and whitespace
+    if act.startswith("/start"):
+        act = re.sub(r"^/start\s*", "", act).strip()
+        act_lower = act.lower()
+
+    # If action_id is 'menu' or empty, route cleanly to get_resident_menu
+    if not act or act_lower in ("menu", "main_menu", "hi", "hello", "hey", "start"):
         from society_erp.api.menu import get_resident_menu
         menu_data = get_resident_menu(for_user=for_user, channel="WhatsApp")
         raw_options = menu_data.get("options", [])
@@ -242,7 +247,6 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                 otp_to_verify = digits
 
         # Check if this is a web portal mobile update initiated verification: "VERIFY <otp>"
-        target_email = for_user
         if otp_to_verify:
             # Check cached mobile_update_otp
             if for_user:
@@ -250,8 +254,6 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                 cached = frappe.cache.get_value(cache_key)
                 if cached and str(cached.get("otp", "")).strip() == otp_to_verify:
                     new_mobile = cached.get("new_mobile")
-                    from society_erp.www.resident.profile.index import verify_and_update_mobile
-                    # Direct update via profile module logic
                     from society_erp.account_management import mark_mobile_verified
                     mark_mobile_verified(new_mobile)
                     frappe.cache.delete_value(cache_key)
@@ -259,7 +261,11 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                     frappe.cache.delete_value(f"mobile_verify_link:{clean_m}")
 
                     # Update User and Owners/Tenants
-                    frappe.db.set_value("User", for_user, "mobile_no", new_mobile)
+                    try:
+                        frappe.db.set_value("User", for_user, "mobile_no", new_mobile)
+                    except Exception as e:
+                        frappe.log_error(f"User mobile update error: {e}", "Mobile Update")
+
                     frappe.db.sql(
                         "UPDATE `tabOwners` SET mobile_no = %s, is_mobile_verified = 1, mobile_verified_on = NOW() WHERE active = 1 AND email = %s",
                         (new_mobile, for_user)
@@ -285,22 +291,129 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
                         "options": menu_data.get("options", []),
                     }
 
-        if not mobile_to_verify and for_user:
-            # Check owner or tenant mobile
-            m = frappe.db.get_value("Owners", {"email": for_user, "active": 1}, "mobile_no") or \
-                frappe.db.get_value("Tenants", {"email": for_user, "active": 1}, "mobile_no")
-            if m:
-                mobile_to_verify = "".join(filter(str.isdigit, str(m)))[-10:]
+        # 1-Click Verification Link handling ("VERIFY <flat> <mobile>" or "VERIFY_<mobile>")
+        clean_sender = "".join(filter(str.isdigit, str(sender_phone or "")))
+        if len(clean_sender) > 10:
+            clean_sender = clean_sender[-10:]
 
-        if mobile_to_verify:
-            from society_erp.account_management import mark_mobile_verified
-            mark_mobile_verified(mobile_to_verify)
+        target_resident = None
+        # Try matching flat from message parts if present (e.g. TC2-110)
+        found_flat = None
+        for p in parts[1:]:
+            p_upper = p.upper().strip()
+            if re.match(r"^[A-Z]{1,3}\d?-\d{2,4}$", p_upper):
+                found_flat = p_upper
+                break
 
+        if found_flat:
+            target_resident = frappe.db.get_value("Owners", {"flat": found_flat, "active": 1}, ["name", "flat", "owner_name", "email", "mobile_no"], as_dict=True) or \
+                              frappe.db.get_value("Tenants", {"flat": found_flat, "active": 1}, ["name", "flat", "tenant_name", "email", "mobile_no"], as_dict=True)
+
+        if not target_resident and for_user:
+            target_resident = frappe.db.get_value("Owners", {"email": for_user, "active": 1}, ["name", "flat", "owner_name", "email", "mobile_no"], as_dict=True) or \
+                              frappe.db.get_value("Tenants", {"email": for_user, "active": 1}, ["name", "flat", "tenant_name", "email", "mobile_no"], as_dict=True)
+
+        if not target_resident and mobile_to_verify:
+            target_resident = frappe.db.sql(
+                """
+                SELECT name, flat, owner_name, email, mobile_no FROM `tabOwners`
+                WHERE active = 1 AND RIGHT(REGEXP_REPLACE(mobile_no, '[^0-9]', ''), 10) = %s
+                LIMIT 1
+                """,
+                (mobile_to_verify,),
+                as_dict=True,
+            )
+            if target_resident:
+                target_resident = target_resident[0]
+            else:
+                target_resident = frappe.db.sql(
+                    """
+                    SELECT name, flat, tenant_name, email, mobile_no FROM `tabTenants`
+                    WHERE active = 1 AND RIGHT(REGEXP_REPLACE(mobile_no, '[^0-9]', ''), 10) = %s
+                    LIMIT 1
+                    """,
+                    (mobile_to_verify,),
+                    as_dict=True,
+                )
+                if target_resident:
+                    target_resident = target_resident[0]
+
+        # Flat label
+        res_flat = target_resident.get("flat") if target_resident else (found_flat or "your flat")
+
+        # Check DB registered mobile
+        reg_mobile = ""
+        if target_resident and target_resident.get("mobile_no"):
+            reg_mobile = "".join(filter(str.isdigit, str(target_resident.get("mobile_no"))))[-10:]
+
+        target_verify_mobile = mobile_to_verify or reg_mobile
+
+        # VALIDATION 1: Check if sender mobile is available and matches
+        if clean_sender:
+            if target_verify_mobile and clean_sender != target_verify_mobile:
+                prompt = (
+                    f"❌ *Mobile Verification Failed*\n\n"
+                    f"The mobile number you are sending this message from does not match the registered mobile number for flat *{res_flat}*.\n\n"
+                    f"Please log in to the resident portal at https://kvc3aoa.co.in/login to update your mobile number first, and then try verification."
+                )
+                return {
+                    "title": "Mobile Mismatch",
+                    "icon": "❌",
+                    "summary_text": prompt,
+                    "prompt": prompt,
+                    "options": [{"label": "🏠 Main Menu", "value": "menu"}],
+                }
+
+        # VALIDATION 2: Check if target_verify_mobile matches database record
+        if not target_resident or (reg_mobile and target_verify_mobile and reg_mobile != target_verify_mobile):
+            prompt = (
+                f"❌ *Mobile Number Not Registered*\n\n"
+                f"The mobile number *{target_verify_mobile or 'provided'}* does not match our records for flat *{res_flat}*.\n\n"
+                f"Please log in to the resident portal at https://kvc3aoa.co.in/login to update your registered mobile number first, and then try verification."
+            )
+            return {
+                "title": "Mobile Mismatch",
+                "icon": "❌",
+                "summary_text": prompt,
+                "prompt": prompt,
+                "options": [{"label": "🏠 Main Menu", "value": "menu"}],
+            }
+
+        # Verification successful! Mark mobile as verified in Owners and Tenants
+        from society_erp.account_management import mark_mobile_verified
+        mark_mobile_verified(target_verify_mobile)
+
+        # Also link Channel Identity if sender_phone / channel_user_id is available
+        if target_resident.get("email") and sender_phone:
+            user_id_norm = str(sender_phone).strip()
+            # Determine channel: digits only => WhatsApp, otherwise telegram or as configured
+            channel_name = "WhatsApp" if user_id_norm.isdigit() and len(user_id_norm) >= 10 else "Telegram"
+            existing_ci = frappe.db.get_value(
+                "Channel Identity",
+                {"channel": channel_name, "channel_user_id": user_id_norm},
+                "name"
+            )
+            if existing_ci:
+                frappe.db.set_value("Channel Identity", existing_ci, {
+                    "resident_email": target_resident.get("email"),
+                    "verified": 1
+                })
+            else:
+                frappe.get_doc({
+                    "doctype": "Channel Identity",
+                    "channel": channel_name,
+                    "channel_user_id": user_id_norm,
+                    "resident_email": target_resident.get("email"),
+                    "verified": 1
+                }).insert(ignore_permissions=True)
+            frappe.db.commit()
+
+        user_for_menu = target_resident.get("email") or for_user
         from society_erp.api.menu import get_resident_menu
-        menu_data = get_resident_menu(for_user=for_user, channel="WhatsApp")
+        menu_data = get_resident_menu(for_user=user_for_menu, channel="WhatsApp")
         prompt = (
-            "✅ *Mobile Number Verified Successfully!*\n\n"
-            "Thank you! Your mobile number is now verified in Kendriya Vihar Phase-III records.\n\n"
+            f"✅ *Mobile Number Verified Successfully!*\n\n"
+            f"Thank you! Mobile number *{target_verify_mobile}* is now verified for flat *{res_flat}* in Kendriya Vihar Phase-III records.\n\n"
             + menu_data.get("welcome_message", "Select any society service below:")
         )
         return {
