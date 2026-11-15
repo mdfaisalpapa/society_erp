@@ -29,9 +29,9 @@
         </div>
         <div class="alert alert-danger">Your account is not linked to an active flat. Please contact the Estate Office.</div>
     {% else %}
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
             <div>
-                <h2 class="mb-1 font-weight-bold">📜 Property Ownership Details</h2>
+                <h2 class="mb-1 font-weight-bold">👤 Flat & Ownership</h2>
                 <p class="text-muted mb-0">Flat <strong>{{ flat_number }}</strong> &bull; Kendriya Vihar Phase-III</p>
             </div>
             <div class="mt-2 mt-md-0">
@@ -41,6 +41,22 @@
     <a href="/resident" class="btn btn-outline-secondary btn-sm">🔙 Back to Resident Portal</a>
 {% endif %}
             </div>
+        </div>
+
+        <!-- Hub Segmented Navigation Tabs -->
+        <div class="mb-4">
+            <ul class="nav nav-pills hub-nav-pills p-1 bg-white border shadow-sm rounded-pill d-inline-flex" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link font-weight-bold px-3 py-1 rounded-pill text-muted" href="/resident/profile{% if is_standalone %}?standalone=1{% endif %}">
+                        👤 Flat Details & Profile
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active font-weight-bold px-3 py-1 rounded-pill" href="/resident/owners{% if is_standalone %}?standalone=1{% endif %}">
+                        📜 Ownership Records & Deeds
+                    </a>
+                </li>
+            </ul>
         </div>
 
         <h4 class="mb-3 text-success">Current Owner (Flat {{ flat_number }})</h4>
