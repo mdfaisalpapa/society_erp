@@ -73,7 +73,7 @@ def get_resident_menu(for_user: str = None) -> dict:
     enable_sos = frappe.db.get_single_value("Society ERP Settings", "enable_emergency_sos")
     enable_emergency_sos = bool(int(enable_sos)) if enable_sos is not None else True
 
-    # 3. Build Menu Options adhering strictly to resident/index.html sequence, labels & icons
+    # 3. Build Streamlined 8-Hub Menu Options (strictly <= 10 items for WhatsApp & Telegram UX)
     options = []
 
     # 0. AoA Committee Portal (RESTRICTED TO COMMITTEE MEMBERS)
@@ -81,168 +81,87 @@ def get_resident_menu(for_user: str = None) -> dict:
         options.append({
             "id": "committee",
             "label": "🏛️ Committee",
-            "desc": "Approvals & Notices",
+            "desc": "Approvals, Governance & Agency Monitoring",
             "action": "committee"
         })
 
-    # 1. Flat & Profile Details (Common)
-    if user_tiles.get("profile", True):
+    # 1. Flat & Ownership (Combines Property Specifications + Owner History)
+    if user_tiles.get("profile", True) or user_tiles.get("owners", True):
         options.append({
-            "id": "profile",
-            "label": "👤 Flat Details",
-            "desc": "Profile & Property Info",
-            "action": "profile"
+            "id": "profile_ownership",
+            "label": "👤 Flat & Ownership",
+            "desc": "Flat Info, UDS, EB & Owner Deeds",
+            "action": "profile_ownership"
         })
 
-    # 2. Owner Details (RESTRICTED TO OWNERS)
-    if is_owner and user_tiles.get("owners", True):
+    # 2. Accounts & Dues (Combines Maintenance Ledger + Live Society Financials)
+    if user_tiles.get("dues", True) or user_tiles.get("financials", True):
         options.append({
-            "id": "owners",
-            "label": "📜 Owner Details",
-            "desc": "Current & Past Owners",
-            "action": "owners"
+            "id": "accounts_dues",
+            "label": "💳 Accounts & Dues",
+            "desc": "Maintenance Ledger & Financial Statements",
+            "action": "accounts_dues"
         })
 
-    # 3. Society Dues (Common)
-    if user_tiles.get("dues", True):
+    # 3. Residents & Tenants (Combines Family Members + Tenant Management)
+    if user_tiles.get("family", True) or (is_owner and user_tiles.get("tenants", True)):
         options.append({
-            "id": "dues",
-            "label": "📊 Check Dues",
-            "desc": "Maintenance & Ledger",
-            "action": "dues"
+            "id": "residents_tenants",
+            "label": "🏠 Residents & Tenants",
+            "desc": "Family Members & Tenant Leases",
+            "action": "residents_tenants"
         })
 
-    # 3b. Society Financials (Common)
-    if user_tiles.get("financials", True):
+    # 4. Vehicles & Parking
+    if user_tiles.get("vehicles", True) or user_tiles.get("parking", True):
         options.append({
-            "id": "financials",
-            "label": "📈 Financials",
-            "desc": "P&L & Balance Sheet",
-            "action": "financials"
-        })
-
-    # 4. Tenant Management (RESTRICTED TO OWNERS)
-    if is_owner and user_tiles.get("tenants", True):
-        options.append({
-            "id": "tenants",
-            "label": "🏠 Tenant Mgmt",
-            "desc": "Register Leases & Tenants",
-            "action": "tenants"
-        })
-
-    # 5. Book Facility (Common)
-    if user_tiles.get("book_facility", True):
-        options.append({
-            "id": "book_facility",
-            "label": "🏛️ Book Facility",
-            "desc": "Clubhouse & Halls",
-            "action": "facilities"
-        })
-
-    # 6. Visitor Management (Common)
-    if user_tiles.get("visitors", True):
-        options.append({
-            "id": "visitors",
-            "label": "🎫 Gate Pass",
-            "desc": "Visitor Entry & OTP Pass",
-            "action": "visitors"
-        })
-
-    # 7. Maintenance Tickets (Common)
-    if user_tiles.get("maintenance", True):
-        options.append({
-            "id": "maintenance",
-            "label": "🛠️ Maintenance",
-            "desc": "Helpdesk & Issues",
-            "action": "tickets"
-        })
-
-    # 8. Vehicles & Parking (Common)
-    if user_tiles.get("vehicles", True):
-        options.append({
-            "id": "vehicles",
+            "id": "vehicles_parking",
             "label": "🚗 Vehicles & Parking",
-            "desc": "Parking Slots & Stickers",
-            "action": "vehicles"
+            "desc": "Vehicle Passes & Parking Slots",
+            "action": "vehicles_parking"
         })
 
-    # 9. Family Members (Common)
-    if user_tiles.get("family", True):
+    # 5. Visitors & Domestic Staff (Gate passes & Staff attendance)
+    if user_tiles.get("visitors", True) or user_tiles.get("staff", True):
         options.append({
-            "id": "family",
-            "label": "👨‍👩‍👧‍👦 Family",
-            "desc": "Members & ID Proofs",
-            "action": "family"
+            "id": "visitors_staff",
+            "label": "🎫 Visitors & Staff",
+            "desc": "Gate Entry Passes & Domestic Helpers",
+            "action": "visitors_staff"
         })
 
-    # 10. Domestic Staff (Common)
-    if user_tiles.get("staff", True):
+    # 6. Helpdesk & Services (Maintenance Tickets, Facility Bookings & Work Permits)
+    if user_tiles.get("maintenance", True) or user_tiles.get("book_facility", True) or user_tiles.get("work_permits", True):
         options.append({
-            "id": "staff",
-            "label": "🧹 Domestic Staff",
-            "desc": "Maids & Cooks Gate Attendance",
-            "action": "staff"
+            "id": "helpdesk_services",
+            "label": "🛠️ Helpdesk & Services",
+            "desc": "Maintenance, Hall Booking & Work Permits",
+            "action": "helpdesk_services"
         })
 
-    # 10b. Resident Pets (Common)
-    if user_tiles.get("pets", True):
+    # 7. Community & Notices (Notice Board, Classifieds, Polls & Pets)
+    if user_tiles.get("notices", True) or user_tiles.get("classifieds", True) or user_tiles.get("voting", True) or user_tiles.get("pets", True):
         options.append({
-            "id": "pets",
-            "label": "🐾 Pets",
-            "desc": "Registrations & Vaccinations",
-            "action": "pets"
+            "id": "community_notices",
+            "label": "📢 Community & Notices",
+            "desc": "Notice Board, Classifieds, Voting & Pets",
+            "action": "community_notices"
         })
 
-    # 11. Notice Board (Common)
-    if user_tiles.get("notices", True):
-        options.append({
-            "id": "notices",
-            "label": "📋 Notice Board",
-            "desc": "Official Circulars & Resolutions",
-            "action": "notices"
-        })
-
-    # 11b. Resident Classifieds & Marketplace (Common)
-    if user_tiles.get("classifieds", True):
-        options.append({
-            "id": "classifieds",
-            "label": "📢 Classifieds",
-            "desc": "Rent, Sell & Services",
-            "action": "classifieds"
-        })
-
-    # 13. Polls & Voting (Common)
-    if user_tiles.get("voting", True):
-        options.append({
-            "id": "voting",
-            "label": "🗳️ Polls & Voting",
-            "desc": "Elections, Resolutions & Electorate",
-            "action": "voting"
-        })
-
-    # 12. Work Permit Management (RESTRICTED TO OWNERS)
-    if is_owner and user_tiles.get("work_permits", True):
-        options.append({
-            "id": "work_permits",
-            "label": "👷 Work Permits",
-            "desc": "Contractors & Approvals",
-            "action": "permits"
-        })
-
-    # 15. Emergency SOS & Contacts (Common)
+    # 8. Emergency SOS (if enabled)
     if enable_emergency_sos and user_tiles.get("emergency", True):
         options.append({
             "id": "emergency",
             "label": "🚨 Emergency SOS",
-            "desc": "Gate Security, Doctor & Police",
+            "desc": "Security Gate, Doctor & Contacts",
             "action": "emergency"
         })
 
-    # 16. Logout Option (Unlink Session)
+    # 9. Logout
     options.append({
         "id": "logout",
         "label": "🚪 Logout",
-        "desc": "Unlink Account & Clear Session",
+        "desc": "Unlink Account & Reset Session",
         "action": "logout"
     })
 

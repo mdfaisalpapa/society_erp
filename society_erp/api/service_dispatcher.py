@@ -127,8 +127,74 @@ SERVICE_REGISTRY = {
         "title": "AoA Managing Committee Portal",
         "icon": "🏛️",
         "method": "society_erp.api.committee_menu.get_committee_sub_tiles",
-        "target_route": "",
-        "btn_label": ""
+        "target_route": "/resident/committee?standalone=1",
+        "btn_label": "🌐 Open Full Committee Canvas (WebApp)"
+    },
+    # --- Consolidated 8-Hub Mappings ---
+    "profile_ownership": {
+        "title": "Flat & Ownership Details",
+        "icon": "👤",
+        "target_route": "/resident/profile?standalone=1",
+        "btn_label": "👤 View Flat Profile (WebApp)",
+        "sub_actions": [
+            {"label": "📜 Ownership History & Deeds (WebApp)", "route": "/resident/owners?standalone=1"},
+            {"label": "✏️ Update Mobile & Contacts (WebApp)", "route": "/resident/profile?standalone=1&modal=update_mobile"}
+        ]
+    },
+    "accounts_dues": {
+        "title": "Accounts & Society Dues",
+        "icon": "💳",
+        "target_route": "/resident/dues?standalone=1",
+        "btn_label": "💳 Pay Dues & View Ledger (WebApp)",
+        "sub_actions": [
+            {"label": "📈 Society Financials & P&L (WebApp)", "route": "/resident/financials?standalone=1"}
+        ]
+    },
+    "residents_tenants": {
+        "title": "Residents & Tenants",
+        "icon": "🏠",
+        "target_route": "/resident/family?standalone=1",
+        "btn_label": "👨‍👩‍👧‍👦 Family Members (WebApp)",
+        "sub_actions": [
+            {"label": "🏠 Tenant Management & Leases (WebApp)", "route": "/resident/tenants?standalone=1"}
+        ]
+    },
+    "vehicles_parking": {
+        "title": "Vehicles & Parking Allocation",
+        "icon": "🚗",
+        "target_route": "/resident/vehicles?standalone=1",
+        "btn_label": "🚗 Manage Vehicles & Parking (WebApp)"
+    },
+    "visitors_staff": {
+        "title": "Visitors & Domestic Staff",
+        "icon": "🎫",
+        "target_route": "/resident/visitors?standalone=1",
+        "btn_label": "📋 Visitor Passes & Logs (WebApp)",
+        "has_instant_pass": True,
+        "sub_actions": [
+            {"label": "🧹 Domestic Staff & Helper Attendance (WebApp)", "route": "/resident/staff?standalone=1"}
+        ]
+    },
+    "helpdesk_services": {
+        "title": "Helpdesk & Resident Services",
+        "icon": "🛠️",
+        "target_route": "/resident/maintenance?standalone=1",
+        "btn_label": "🛠️ Maintenance Tickets (WebApp)",
+        "sub_actions": [
+            {"label": "🏛️ Book Community Hall (WebApp)", "route": "/resident/book_facility?standalone=1"},
+            {"label": "👷 Work Permits & Contractor Passes (WebApp)", "route": "/resident/work_permits?standalone=1"}
+        ]
+    },
+    "community_notices": {
+        "title": "Community, Notices & Voting",
+        "icon": "📢",
+        "target_route": "/resident/notices?standalone=1",
+        "btn_label": "📋 Official Notice Board (WebApp)",
+        "sub_actions": [
+            {"label": "📢 Resident Marketplace Classifieds (WebApp)", "route": "/resident/classifieds?standalone=1"},
+            {"label": "🗳️ Polls & Governance Voting (WebApp)", "route": "/consensus-vote?standalone=1"},
+            {"label": "🐾 Pets Registry & Vaccinations (WebApp)", "route": "/resident/pets?standalone=1"}
+        ]
     }
 }
 
@@ -240,12 +306,90 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
     # 1. Fetch data from underlying API
     summary_text = ""
     raw_data = {}
-    if meta.get("summary"):
+
+    # Consolidated Hub synthesizers
+    if act == "profile_ownership":
+        from society_erp.api.profile_summary import get_flat_profile, get_ownership_history
+        p_res = get_flat_profile(for_user=for_user)
+        p_data = p_res.get("data", p_res) if isinstance(p_res, dict) else {}
+        o_res = get_ownership_history(for_user=for_user)
+        o_data = o_res.get("data", o_res) if isinstance(o_res, dict) else {}
+        curr_o = o_data.get("current_owner") or {}
+        o_name = curr_o.get("name") or p_data.get("resident_name") or "Owner"
+        s_date = curr_o.get("formatted_start_date") or "-"
+        summary_text = (
+            f"• Flat: `{p_data.get('flat')}` ({p_data.get('block')})\n"
+            f"• Registered Owner: *{o_name}* (Since: {s_date})\n"
+            f"• UDS: {p_data.get('uds')} sqft | Corpus: *{p_data.get('formatted_corpus')}*\n"
+            f"• EB Service: `{p_data.get('eb_service_no') or '-'}` | Property Tax: `{p_data.get('property_tax_no') or '-'}`"
+        )
+    elif act == "accounts_dues":
+        from society_erp.api.dues import get_flat_dues
+        d_res = get_flat_dues(for_user=for_user)
+        d_data = d_res.get("data", d_res) if isinstance(d_res, dict) else {}
+        summary_text = (
+            f"• Outstanding Maintenance: *{d_data.get('formatted_outstanding_balance', '₹ 0.00')}*\n"
+            f"• Unpaid Invoices on Record: {d_data.get('invoice_count', 0)}\n\n"
+            f"• Fiscal Year: 2026-2027\n"
+            f"• Society Statements: Profit & Loss, Balance Sheet, Sinking & Corpus Funds"
+        )
+    elif act == "residents_tenants":
+        from society_erp.api.resident_family import get_family_members
+        from society_erp.tenant_portal import get_tenants
+        f_res = get_family_members(for_user=for_user)
+        f_data = f_res.get("data", f_res) if isinstance(f_res, dict) else {}
+        t_res = get_tenants(for_user=for_user)
+        t_data = t_res.get("data", t_res) if isinstance(t_res, dict) else {}
+        f_count = len(f_data.get("members", []))
+        t_active = len(t_data.get("active_tenants", []))
+        t_total = t_data.get("count", 0)
+        summary_text = (
+            f"• Registered Family Members: *{f_count}*\n"
+            f"• Active Tenants: *{t_active}* (Total on Record: {t_total})\n\n"
+            f"Manage lease agreements, tenant registrations, and ID proofs below:"
+        )
+    elif act == "visitors_staff":
+        from society_erp.api.visitor import get_recent_visitors
+        from society_erp.api.domestic_staff import get_my_staff
+        v_res = get_recent_visitors(for_user=for_user)
+        v_data = v_res.get("data", v_res) if isinstance(v_res, dict) else {}
+        s_res = get_my_staff(for_user=for_user)
+        s_data = s_res.get("data", s_res) if isinstance(s_res, dict) else {}
+        v_count = v_data.get("count", 0)
+        s_count = len(s_data.get("staff", []))
+        summary_text = (
+            f"• Active Visitors / Passes: *{v_count}*\n"
+            f"• Linked Domestic Helpers: *{s_count}*\n\n"
+            f"Generate instant guest entry passes or inspect staff gate check-in:"
+        )
+    elif act == "helpdesk_services":
+        from society_erp.api.maintenance_portal import get_resident_tickets_summary
+        t_res = get_resident_tickets_summary(for_user=for_user)
+        t_data = t_res.get("data", t_res) if isinstance(t_res, dict) else {}
+        summary_text = (
+            f"• Open Helpdesk Complaints: *{t_data.get('open_tickets', 0)}*\n"
+            f"• Resolved Tickets: *{t_data.get('resolved_tickets', 0)}*\n\n"
+            f"Raise new maintenance requests, reserve community hall, or file work permits:"
+        )
+    elif act == "community_notices":
+        from society_erp.api.notices import get_active_notices
+        from society_erp.api.classifieds import get_classifieds
+        n_res = get_active_notices(for_user=for_user)
+        n_data = n_res.get("data", n_res) if isinstance(n_res, dict) else {}
+        c_res = get_classifieds(for_user=for_user)
+        c_data = c_res.get("data", c_res) if isinstance(c_res, dict) else {}
+        n_count = len(n_data.get("notices", []))
+        c_count = len(c_data.get("ads", []))
+        summary_text = (
+            f"• Active Society Circulars: *{n_count}*\n"
+            f"• Community Classifieds: *{c_count}*\n\n"
+            f"View official announcements, voting polls, classifieds, and pet registry:"
+        )
+    elif meta.get("summary"):
         summary_text = meta["summary"]
     elif meta.get("method"):
         try:
             fn = frappe.get_attr(meta["method"])
-            # Always try passing for_user first; if TypeError fallback to no args
             try:
                 res = fn(for_user=for_user)
             except TypeError:
@@ -319,6 +463,21 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
             "value": f"open_{act}_portal",
             "web_app_url": sso_url
         })
+
+    # If additional sub-actions exist in hub metadata, generate SSO for each
+    if meta.get("sub_actions") and for_user:
+        for sa in meta["sub_actions"]:
+            try:
+                from society_erp.api.sso import generate_portal_link
+                sa_sso = generate_portal_link(for_user=for_user, target_route=sa["route"])
+                sa_url = sa_sso.get("url") or (sa_sso.get("data", {}).get("url") if isinstance(sa_sso, dict) else "")
+                options.append({
+                    "label": sa["label"],
+                    "value": f"open_{sa.get('label')[:10].strip()}_sub",
+                    "web_app_url": sa_url
+                })
+            except Exception:
+                pass
 
     # If sub-tiles exist (e.g. committee sub-tiles)
     if raw_data.get("sub_tiles"):

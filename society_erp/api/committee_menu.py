@@ -50,222 +50,134 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
             {"signatory": cm.name, "signature_status": "Pending"}
         )
 
-    # Build sub-tiles in exact sequence of committeeTabs in resident/committee/index.html
+    # Build streamlined committee sub-tiles (strictly <= 10 items for WhatsApp & Telegram UX)
     sub_tiles = []
 
-    # 1. Tenants
-    if comm_tiles.get("tenants", True):
-        c = counts.get("tenants_pending", 0)
-        route = "/resident/committee?tab=tenants&standalone=1#pane-tenants"
-        sso = create_portal_link(user_email, target_route=route)
-        sub_tiles.append({
-            "id": "comm_tenants",
-            "module": "tenants",
-            "label": f"🏠 Tenants ({c} Pending)" if c > 0 else "🏠 Tenants",
-            "title": "Tenants",
-            "icon": "🏠",
-            "badge": c,
-            "badge_type": "warning" if c > 0 else "secondary",
-            "value": "open_comm_tenants",
-            "web_app_url": sso.get("url"),
-            "route": route
-        })
+    # 1. Direct WebApp Canvas Button
+    canvas_route = "/resident/committee?standalone=1"
+    sso_canvas = create_portal_link(user_email, target_route=canvas_route)
+    sub_tiles.append({
+        "id": "comm_canvas",
+        "module": "committee_canvas",
+        "label": "🌐 Full Committee Canvas",
+        "title": "Full Committee Portal",
+        "icon": "🌐",
+        "badge": 0,
+        "badge_type": "primary",
+        "value": "open_comm_canvas",
+        "web_app_url": sso_canvas.get("url"),
+        "route": canvas_route
+    })
 
-    # 2. Vehicles
-    if comm_tiles.get("vehicles", True):
-        c = counts.get("vehicles_pending", 0)
-        route = "/resident/committee?tab=vehicles&standalone=1#pane-vehicles"
-        sso = create_portal_link(user_email, target_route=route)
-        sub_tiles.append({
-            "id": "comm_vehicles",
-            "module": "vehicles",
-            "label": f"🚗 Vehicles ({c} Pending)" if c > 0 else "🚗 Vehicles",
-            "title": "Vehicles",
-            "icon": "🚗",
-            "badge": c,
-            "badge_type": "warning" if c > 0 else "secondary",
-            "value": "open_comm_vehicles",
-            "web_app_url": sso.get("url"),
-            "route": route
-        })
+    # 2. Tenants & Occupancy (Tenants + Family Pending)
+    c_ten = counts.get("tenants_pending", 0)
+    c_fam = counts.get("family_pending", 0)
+    c_res_total = c_ten + c_fam
+    route_ten = "/resident/committee?tab=tenants&standalone=1#pane-tenants"
+    sso_ten = create_portal_link(user_email, target_route=route_ten)
+    sub_tiles.append({
+        "id": "comm_tenants",
+        "module": "tenants",
+        "label": f"🏠 Tenants & Residents ({c_res_total} Pending)" if c_res_total > 0 else "🏠 Tenants & Residents",
+        "title": "Tenants & Residents",
+        "icon": "🏠",
+        "badge": c_res_total,
+        "badge_type": "warning" if c_res_total > 0 else "secondary",
+        "value": "open_comm_tenants",
+        "web_app_url": sso_ten.get("url"),
+        "route": route_ten
+    })
 
-    # 3. Work Permits
-    if comm_tiles.get("work_permits", True):
-        c = counts.get("permits_pending", 0)
-        route = "/resident/committee?tab=work_permits&standalone=1#pane-work_permits"
-        sso = create_portal_link(user_email, target_route=route)
-        sub_tiles.append({
-            "id": "comm_permits",
-            "module": "work_permits",
-            "label": f"👷 Permits ({c} Pending)" if c > 0 else "👷 Permits",
-            "title": "Permits",
-            "icon": "👷",
-            "badge": c,
-            "badge_type": "warning" if c > 0 else "secondary",
-            "value": "open_comm_permits",
-            "web_app_url": sso.get("url"),
-            "route": route
-        })
+    # 3. Vehicles & Parking
+    c_veh = counts.get("vehicles_pending", 0)
+    route_veh = "/resident/committee?tab=vehicles&standalone=1#pane-vehicles"
+    sso_veh = create_portal_link(user_email, target_route=route_veh)
+    sub_tiles.append({
+        "id": "comm_vehicles",
+        "module": "vehicles",
+        "label": f"🚗 Vehicles ({c_veh} Pending)" if c_veh > 0 else "🚗 Vehicles",
+        "title": "Vehicles",
+        "icon": "🚗",
+        "badge": c_veh,
+        "badge_type": "warning" if c_veh > 0 else "secondary",
+        "value": "open_comm_vehicles",
+        "web_app_url": sso_veh.get("url"),
+        "route": route_veh
+    })
 
-    # 4. Family Members
-    if comm_tiles.get("family", True):
-        c = counts.get("family_pending", 0)
-        route = "/resident/committee?tab=family&standalone=1#pane-family"
-        sso = create_portal_link(user_email, target_route=route)
-        sub_tiles.append({
-            "id": "comm_family",
-            "module": "family",
-            "label": f"👨‍👩‍👦 Family ({c} Pending)" if c > 0 else "👨‍👩‍👦 Family",
-            "title": "Family",
-            "icon": "👨‍👩‍👦",
-            "badge": c,
-            "badge_type": "warning" if c > 0 else "secondary",
-            "value": "open_comm_family",
-            "web_app_url": sso.get("url"),
-            "route": route
-        })
+    # 4. Tickets & Maintenance (Helpdesk + Work Permits)
+    c_tkt = counts.get("tickets_open", 0)
+    c_pmt = counts.get("permits_pending", 0)
+    route_tkt = "/resident/committee?tab=tickets&standalone=1#pane-tickets"
+    sso_tkt = create_portal_link(user_email, target_route=route_tkt)
+    tkt_label = f"🛠️ Tickets & Permits ({c_tkt} Open)" if c_tkt > 0 else "🛠️ Tickets & Permits"
+    if c_pmt > 0:
+        tkt_label += f" • {c_pmt} Pmt"
+    sub_tiles.append({
+        "id": "comm_tickets",
+        "module": "tickets",
+        "label": tkt_label,
+        "title": "Tickets & Maintenance",
+        "icon": "🛠️",
+        "badge": c_tkt + c_pmt,
+        "badge_type": "danger" if (c_tkt + c_pmt) > 0 else "secondary",
+        "value": "open_comm_tickets",
+        "web_app_url": sso_tkt.get("url"),
+        "route": route_tkt
+    })
 
-    # 5. Resident Pets
-    if comm_tiles.get("pets", True):
-        c = counts.get("pets_pending", 0)
-        route = "/resident/committee?tab=pets&standalone=1#pane-pets"
-        sso = create_portal_link(user_email, target_route=route)
-        sub_tiles.append({
-            "id": "comm_pets",
-            "module": "pets",
-            "label": f"🐾 Pets ({c} Pending)" if c > 0 else "🐾 Pets",
-            "title": "Pets",
-            "icon": "🐾",
-            "badge": c,
-            "badge_type": "warning" if c > 0 else "secondary",
-            "value": "open_comm_pets",
-            "web_app_url": sso.get("url"),
-            "route": route
-        })
+    # 5. Hall & Amenity Bookings
+    c_fac = counts.get("facility_bookings_pending", 0)
+    route_fac = "/resident/committee?tab=facility_bookings&standalone=1#pane-facility_bookings"
+    sso_fac = create_portal_link(user_email, target_route=route_fac)
+    sub_tiles.append({
+        "id": "comm_facilities",
+        "module": "facility_bookings",
+        "label": f"🏛️ Hall Bookings ({c_fac} Pending)" if c_fac > 0 else "🏛️ Hall Bookings",
+        "title": "Hall Bookings",
+        "icon": "🏛️",
+        "badge": c_fac,
+        "badge_type": "warning" if c_fac > 0 else "secondary",
+        "value": "open_comm_facilities",
+        "web_app_url": sso_fac.get("url"),
+        "route": route_fac
+    })
 
-    # 6. Maintenance Tickets
-    if comm_tiles.get("maintenance", True):
-        c = counts.get("tickets_open", 0)
-        route = "/resident/committee?tab=tickets&standalone=1#pane-tickets"
-        sso = create_portal_link(user_email, target_route=route)
-        sub_tiles.append({
-            "id": "comm_tickets",
-            "module": "tickets",
-            "label": f"🛠️ Tickets ({c} Open)" if c > 0 else "🛠️ Tickets",
-            "title": "Tickets",
-            "icon": "🛠️",
-            "badge": c,
-            "badge_type": "danger" if c > 0 else "secondary",
-            "value": "open_comm_tickets",
-            "web_app_url": sso.get("url"),
-            "route": route
-        })
-
-    # 7. Hall Bookings
-    if comm_tiles.get("book_facility", True):
-        c = counts.get("facility_bookings_pending", 0)
-        route = "/resident/committee?tab=facility_bookings&standalone=1#pane-facility_bookings"
-        sso = create_portal_link(user_email, target_route=route)
-        sub_tiles.append({
-            "id": "comm_facilities",
-            "module": "facility_bookings",
-            "label": f"🏛️ Hall Bookings ({c} Pending)" if c > 0 else "🏛️ Hall Bookings",
-            "title": "Hall Bookings",
-            "icon": "🏛️",
-            "badge": c,
-            "badge_type": "warning" if c > 0 else "secondary",
-            "value": "open_comm_facilities",
-            "web_app_url": sso.get("url"),
-            "route": route
-        })
-
-    # 8. Classifieds
-    if comm_tiles.get("classifieds", True):
-        c = counts.get("classifieds_pending", 0)
-        route = "/resident/committee?tab=classifieds&standalone=1#pane-classifieds"
-        sso = create_portal_link(user_email, target_route=route)
-        sub_tiles.append({
-            "id": "comm_classifieds",
-            "module": "classifieds",
-            "label": f"📢 Classifieds ({c} Pending)" if c > 0 else "📢 Classifieds",
-            "title": "Classifieds",
-            "icon": "📢",
-            "badge": c,
-            "badge_type": "warning" if c > 0 else "secondary",
-            "value": "open_comm_classifieds",
-            "web_app_url": sso.get("url"),
-            "route": route
-        })
-
-    # 9. Notice Board
-    if comm_tiles.get("notices", True):
-        route = "/resident/committee?tab=notices&standalone=1#pane-notices"
-        sso = create_portal_link(user_email, target_route=route)
-        sub_tiles.append({
-            "id": "comm_notices",
-            "module": "notices",
-            "label": "📋 Post Notices",
-            "title": "Notices",
-            "icon": "📋",
-            "badge": 0,
-            "badge_type": "secondary",
-            "value": "open_comm_notices",
-            "web_app_url": sso.get("url"),
-            "route": route
-        })
-
-    # 10. Resolutions
-    c = counts.get("resolutions_pending", 0)
-    route = "/resident/committee?tab=resolutions&standalone=1#pane-resolutions"
-    sso = create_portal_link(user_email, target_route=route)
+    # 6. Circulars & Resolutions (Notices + Resolutions)
+    c_res = counts.get("resolutions_pending", 0)
+    route_res = "/resident/committee?tab=resolutions&standalone=1#pane-resolutions"
+    sso_res = create_portal_link(user_email, target_route=route_res)
     sub_tiles.append({
         "id": "comm_resolutions",
         "module": "resolutions",
-        "label": f"⚖️ Resolutions ({c} Pending Vote)" if c > 0 else "⚖️ Resolutions",
-        "title": "Resolutions",
+        "label": f"⚖️ Resolutions & Notices ({c_res} Pending)" if c_res > 0 else "⚖️ Resolutions & Notices",
+        "title": "Resolutions & Notices",
         "icon": "⚖️",
-        "badge": c,
-        "badge_type": "warning" if c > 0 else "secondary",
+        "badge": c_res,
+        "badge_type": "warning" if c_res > 0 else "secondary",
         "value": "open_comm_resolutions",
-        "web_app_url": sso.get("url"),
-        "route": route
+        "web_app_url": sso_res.get("url"),
+        "route": route_res
     })
 
-    # 11. Emergency SOS
-    if enable_emergency_sos and comm_tiles.get("emergency", True):
-        route = "/resident/committee?tab=emergency&standalone=1#pane-emergency"
-        sso = create_portal_link(user_email, target_route=route)
-        sub_tiles.append({
-            "id": "comm_emergency",
-            "module": "emergency",
-            "label": "🚨 Emergency Directory",
-            "title": "Emergency SOS",
-            "icon": "🚨",
-            "badge": 0,
-            "badge_type": "danger",
-            "value": "open_comm_emergency",
-            "web_app_url": sso.get("url"),
-            "route": route
-        })
-
-    # 12. Facility & Security Staff
+    # 7. Facility & Agency Monitoring (Security, Water, Housekeeping, Tank, AMC, Chemicals)
     c_on_duty = counts.get("facility_on_duty", 0)
-    route = "/resident/committee?tab=facility_staff&standalone=1#pane-facility_staff"
-    sso = create_portal_link(user_email, target_route=route)
+    route_fac_mgmt = "/resident/committee?tab=facility_staff&standalone=1#pane-facility_staff"
+    sso_fac_mgmt = create_portal_link(user_email, target_route=route_fac_mgmt)
     sub_tiles.append({
-        "id": "comm_facility_staff",
-        "module": "facility_staff",
-        "label": f"🛡️ Security & Staff ({c_on_duty} On Duty)" if c_on_duty > 0 else "🛡️ Security & Staff",
-        "title": "Facility Staff",
-        "icon": "🛡️",
+        "id": "comm_agency_monitoring",
+        "module": "agency_monitoring",
+        "label": f"🏗️ Facility Monitoring ({c_on_duty} On Duty)" if c_on_duty > 0 else "🏗️ Facility Monitoring",
+        "title": "Facility Agency Oversight",
+        "icon": "🏗️",
         "badge": c_on_duty,
         "badge_type": "success" if c_on_duty > 0 else "secondary",
-        "value": "open_comm_facility_staff",
-        "web_app_url": sso.get("url"),
-        "route": route
+        "value": "open_comm_facility_monitoring",
+        "web_app_url": sso_fac_mgmt.get("url"),
+        "route": route_fac_mgmt
     })
 
-    # Add Return to Main Menu option at the bottom
+    # 8. Add Return to Main Menu option at the bottom
     sub_tiles.append({
         "id": "comm_menu_back",
         "module": "menu",
@@ -278,7 +190,12 @@ def get_committee_sub_tiles(for_user: str = None) -> dict:
 
     summary_lines = []
     for t in sub_tiles:
-        summary_lines.append(f"• {t['icon']} *{t['title']}*: {t['badge']} Pending" if t['badge'] > 0 else f"• {t['icon']} *{t['title']}*")
+        if t["value"] == "menu":
+            summary_lines.append(f"• {t['icon']} *{t['title']}*")
+        elif t.get("badge", 0) > 0:
+            summary_lines.append(f"• {t['icon']} *{t['title']}*: {t['badge']} Pending / Open")
+        else:
+            summary_lines.append(f"• {t['icon']} *{t['title']}*")
 
     summary_text = "\n".join(summary_lines)
 
