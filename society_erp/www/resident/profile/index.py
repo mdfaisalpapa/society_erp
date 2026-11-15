@@ -340,7 +340,11 @@ def verify_and_update_mobile(new_mobile, otp):
         pluck="name",
     )
     for o_name in owner_names:
-        frappe.db.set_value("Owners", o_name, "mobile_no", target_mobile)
+        frappe.db.set_value("Owners", o_name, {
+            "mobile_no": target_mobile,
+            "is_mobile_verified": 1,
+            "mobile_verified_on": frappe.utils.now_datetime(),
+        })
 
     # 3. Update linked Tenants documents if tenant
     tenant_names = frappe.get_all(
@@ -350,7 +354,15 @@ def verify_and_update_mobile(new_mobile, otp):
         pluck="name",
     )
     for t_name in tenant_names:
-        frappe.db.set_value("Tenants", t_name, "mobile_no", target_mobile)
+        frappe.db.set_value("Tenants", t_name, {
+            "mobile_no": target_mobile,
+            "is_mobile_verified": 1,
+            "mobile_verified_on": frappe.utils.now_datetime(),
+        })
+
+    # Mark mobile as verified in global helper
+    from society_erp.account_management import mark_mobile_verified
+    mark_mobile_verified(target_mobile)
 
     # Cleanup OTP from cache
     frappe.cache().delete_value(cache_key)

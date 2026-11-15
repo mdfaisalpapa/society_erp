@@ -71,34 +71,131 @@
 
                     <!-- Mobile Verification Card -->
                     <div class="col-md-6 mb-3">
-                        <div class="p-3 border rounded h-100 bg-light">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="font-weight-bold mb-0">📱 Registered Mobile</h6>
-                                {% if is_mobile_verified %}
-                                    <span class="badge badge-success px-2 py-1">🟢 Verified</span>
-                                {% else %}
-                                    <span class="badge badge-danger px-2 py-1">🔴 Unverified</span>
-                                {% endif %}
-                            </div>
-                            <p class="small text-muted mb-2"><code>{{ resident_mobile or "Not Registered" }}</code></p>
+                        <div class="p-3 border rounded h-100 bg-light d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="font-weight-bold mb-0">📱 Registered Mobile</h6>
+                                    {% if is_mobile_verified %}
+                                        <span class="badge badge-success px-2 py-1">🟢 Verified</span>
+                                    {% else %}
+                                        <span class="badge badge-danger px-2 py-1">🔴 Unverified</span>
+                                    {% endif %}
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <p class="small text-muted mb-0"><code id="current-resident-mobile">{{ resident_mobile or "Not Registered" }}</code></p>
+                                    <button type="button" class="btn btn-sm btn-link p-0 text-primary font-weight-bold" id="btn-open-change-mobile" style="text-decoration: underline; font-size: 0.85rem;">
+                                        ✏️ Change Mobile No
+                                    </button>
+                                </div>
 
-                            {% if not is_mobile_verified %}
-                            <div class="mt-2 d-flex flex-wrap" style="gap: 6px;">
-                                {% if whatsapp_verification_link %}
-                                <a href="{{ whatsapp_verification_link }}" target="_blank" class="btn btn-sm btn-success font-weight-bold text-white shadow-sm">
-                                    💬 Verify via WhatsApp
-                                </a>
-                                {% endif %}
-                                {% if telegram_verification_link %}
-                                <a href="{{ telegram_verification_link }}" target="_blank" class="btn btn-sm btn-info font-weight-bold text-white shadow-sm">
-                                    ✈️ Verify via Telegram
-                                </a>
+                                {% if not is_mobile_verified %}
+                                <div class="mt-2 d-flex flex-wrap" style="gap: 6px;">
+                                    {% if whatsapp_verification_link %}
+                                    <a id="link-verify-wa" href="{{ whatsapp_verification_link }}" target="_blank" class="btn btn-sm btn-success font-weight-bold text-white shadow-sm">
+                                        💬 Verify via WhatsApp
+                                    </a>
+                                    {% endif %}
+                                    {% if telegram_verification_link %}
+                                    <a id="link-verify-tg" href="{{ telegram_verification_link }}" target="_blank" class="btn btn-sm btn-info font-weight-bold text-white shadow-sm">
+                                        ✈️ Verify via Telegram
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                <small class="form-text text-muted mt-2">
+                                    💡 Tap above to open WhatsApp/Telegram. Sending the pre-filled verification message immediately verifies your phone number.
+                                </small>
                                 {% endif %}
                             </div>
-                            <small class="form-text text-muted mt-2">
-                                💡 Tap above to open WhatsApp/Telegram. Sending the pre-filled verification message immediately verifies your phone number.
-                            </small>
-                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Update Mobile Number Modal -->
+                <div class="modal fade" id="modal-update-mobile" tabindex="-1" role="dialog" aria-labelledby="modalUpdateMobileTitle" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
+                            <div class="modal-header bg-white border-bottom align-items-center">
+                                <h5 class="modal-title font-weight-bold text-dark" id="modalUpdateMobileTitle">
+                                    📱 Change Registered Mobile Number
+                                </h5>
+                                <button type="button" class="close text-muted" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+
+                            <div class="modal-body p-4">
+                                <!-- Alert inside modal -->
+                                <div id="modal-otp-alert" class="alert d-none small mb-3" role="alert"></div>
+
+                                <!-- STATE 1: Enter New Mobile & Request OTP -->
+                                <div id="otp-state-request">
+                                    <p class="text-muted small mb-3">
+                                        Enter your new 10-digit mobile number. We will send a 6-digit verification code (OTP) to your registered email <strong>{{ resident_email }}</strong> to authorize this change.
+                                    </p>
+
+                                    <div class="form-group mb-4">
+                                        <label for="input-new-mobile" class="font-weight-600 text-dark small mb-1">New Mobile Number</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text bg-light text-muted border-right-0 font-weight-bold">+91</span>
+                                            </div>
+                                            <input type="tel" class="form-control border-left-0 font-weight-bold" id="input-new-mobile" placeholder="e.g. 9876543210" maxlength="10" autocomplete="tel">
+                                        </div>
+                                        <small class="form-text text-muted">Enter a valid 10-digit Indian mobile number.</small>
+                                    </div>
+
+                                    <button type="button" class="btn btn-primary btn-block py-2 font-weight-bold" id="btn-send-mobile-otp">
+                                        ✉️ Send Email OTP
+                                    </button>
+                                </div>
+
+                                <!-- STATE 2: Enter OTP & Verify -->
+                                <div id="otp-state-verify" class="d-none">
+                                    <div class="text-center mb-3">
+                                        <div style="font-size: 2.2rem;">📬</div>
+                                        <h6 class="font-weight-bold mb-1 text-dark">Enter Email OTP</h6>
+                                        <p class="text-muted small mb-1">
+                                            A 6-digit verification code has been emailed to:
+                                        </p>
+                                        <span class="badge badge-light border px-2 py-1 font-weight-normal text-dark">{{ resident_email }}</span>
+                                    </div>
+
+                                    <!-- User Initiated WhatsApp / Telegram Instant Verification -->
+                                    <div class="card bg-light border-0 p-3 mb-3 text-center" style="border-radius: 8px;">
+                                        <p class="small font-weight-bold text-dark mb-2">⚡ Or Verify Instantly from New Phone:</p>
+                                        <a id="btn-wa-verify" href="#" target="_blank" class="btn btn-success btn-sm btn-block font-weight-bold mb-2">
+                                            💬 Send Verification on WhatsApp
+                                        </a>
+                                        <a id="btn-tg-verify" href="#" target="_blank" class="btn btn-info btn-sm btn-block font-weight-bold text-white mb-1">
+                                            ✈️ Send Verification on Telegram
+                                        </a>
+                                        <small class="text-muted mt-1" style="font-size: 11px;">Tap to send the verification code directly from your WhatsApp/Telegram.</small>
+                                    </div>
+
+                                    <div class="text-center my-2 text-muted small font-weight-bold">
+                                        ── OR ENTER 6-DIGIT CODE ──
+                                    </div>
+
+                                    <div class="form-group text-center mb-3">
+                                        <label for="input-mobile-otp-code" class="sr-only">6-digit OTP</label>
+                                        <input type="text" class="form-control text-center font-weight-bold" id="input-mobile-otp-code" placeholder="• • • • • •" maxlength="6" style="font-size: 1.6rem; letter-spacing: 8px; max-width: 240px; margin: 0 auto;" autocomplete="one-time-code">
+                                        <small class="form-text text-muted mt-2">Code expires in 10 minutes</small>
+                                    </div>
+
+                                    <button type="button" class="btn btn-primary btn-block py-2 font-weight-bold mb-2" id="btn-verify-mobile-otp">
+                                        ✅ Verify & Save Mobile Number
+                                    </button>
+
+                                    <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                                        <button type="button" class="btn btn-link btn-sm text-muted p-0" id="btn-back-to-request">
+                                            ← Change Number
+                                        </button>
+                                        <button type="button" class="btn btn-link btn-sm text-primary p-0" id="btn-resend-mobile-otp">
+                                            🔄 Resend OTP
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
