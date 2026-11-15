@@ -542,39 +542,27 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
 
         if matched:
             active_email = updated_new_email or for_user
-            from society_erp.api.menu import get_resident_menu
-            menu_data = get_resident_menu(for_user=active_email, channel="WhatsApp")
-            menu_options = menu_data.get("options", [])
-
-            # Format formatted menu options list for WhatsApp
-            action_options = []
-            for opt in menu_options:
-                val = opt.get("id") or opt.get("value") or opt.get("action")
-                lbl = opt.get("label") or opt.get("title")
-                action_options.append({
-                    "id": val,
-                    "value": val,
-                    "label": lbl,
-                    "title": lbl,
-                    "desc": opt.get("desc", "")
-                })
 
             success_heading = (
                 f"🎉 *Email Updated & Verified Successfully!*\n\n"
-                f"Your registered email has been updated to `{active_email}` and verified.\n"
-                f"Full access to society services is now unlocked:\n\n"
+                f"Your registered email has been updated to `{active_email}` and verified.\n\n"
+                f"Tap *🏠 Main Menu* below to view your flat dashboard and society services:"
                 if updated_new_email else
                 f"🎉 *Email Verified Successfully!*\n\n"
-                f"Your email address and mobile number are both verified.\n"
-                f"Full access to society services is now unlocked:\n\n"
+                f"Your email address and mobile number are both verified.\n\n"
+                f"Tap *🏠 Main Menu* below to view your flat dashboard and society services:"
             )
-            prompt = success_heading + (menu_data.get("welcome_message") or "Select any society service below:")
             return {
                 "title": "Email Verified",
                 "icon": "✅",
-                "summary_text": prompt,
-                "prompt": prompt,
-                "options": action_options
+                "summary_text": success_heading,
+                "prompt": success_heading,
+                "options": [
+                    {
+                        "label": "🏠 Main Menu",
+                        "value": "menu"
+                    }
+                ]
             }
         else:
             prompt = (
