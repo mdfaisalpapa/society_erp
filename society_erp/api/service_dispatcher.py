@@ -226,9 +226,10 @@ def get_service_details(action_id: str, for_user: str = None) -> dict:
             "options": action_options,
         }
 
-    # Handle incoming verification messages (e.g. "VERIFY TC2-411 9445698019" or "VERIFY 814610")
-    if act_lower.startswith("verify"):
-        parts = act.split()
+    # Handle incoming verification messages (e.g. "VERIFY TC2-411 9445698019", "VERIFY 814610", "VERIFY_9445698019", "/start VERIFY_9445698019")
+    clean_act = act.replace("/start", "").replace("_", " ").strip()
+    if clean_act.lower().startswith("verify"):
+        parts = clean_act.split()
         mobile_to_verify = None
         otp_to_verify = None
 

@@ -245,15 +245,24 @@ frappe.ready(function() {
                 if (r && r.message && r.message.status === 'success') {
                     const updatedMobile = r.message.mobile_no || currentPendingMobile;
                     $('#current-resident-mobile').text(updatedMobile);
+
+                    // Update bot links on the page if present
+                    if (r.message.whatsapp_verification_link) {
+                        $('#link-verify-wa').attr('href', r.message.whatsapp_verification_link);
+                    }
+                    if (r.message.telegram_verification_link) {
+                        $('#link-verify-tg').attr('href', r.message.telegram_verification_link);
+                    }
+
                     $mobileModal.modal('hide');
 
                     frappe.msgprint({
-                        title: __('Mobile Updated & Verified'),
-                        indicator: 'green',
-                        message: __('Your registered mobile number has been updated to <b>{0}</b> and verified. Reloading portal...', [frappe.utils.escape_html(updatedMobile)])
+                        title: __('Mobile Number Changed'),
+                        indicator: 'blue',
+                        message: __('Your registered mobile number has been changed to <b>{0}</b>.<br><br>As per security policy, please tap <b>Verify via WhatsApp</b> or <b>Telegram</b> to complete 1-click bot verification and unlock access.', [frappe.utils.escape_html(updatedMobile)])
                     });
 
-                    setTimeout(function() { window.location.reload(); }, 1200);
+                    setTimeout(function() { window.location.reload(); }, 2000);
                 }
             },
             error: function(err) {

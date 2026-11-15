@@ -173,9 +173,9 @@ frappe.ready(function() {
                     }, 5);
 
                     frappe.msgprint({
-                        title: __('Mobile Updated'),
-                        indicator: 'green',
-                        message: __('Your registered mobile number has been successfully updated to <b>{0}</b>.', [frappe.utils.escape_html(updatedMobile)])
+                        title: __('Mobile Number Changed'),
+                        indicator: 'blue',
+                        message: __('Your registered mobile number has been updated to <b>{0}</b>.<br><br>Please complete 1-click verification via WhatsApp or Telegram bot to verify and activate it.', [frappe.utils.escape_html(updatedMobile)])
                     });
                 }
             },

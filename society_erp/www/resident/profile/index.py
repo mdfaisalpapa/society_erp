@@ -331,8 +331,7 @@ def verify_and_update_mobile(new_mobile, otp):
     if frappe.db.exists("User", user):
         frappe.db.set_value("User", user, "mobile_no", target_mobile)
 
-    # 2. Update linked Owners documents
-    # Find by linked_user or email
+    # 2. Update linked Owners documents (Reset is_mobile_verified = 0 pending bot 1-click verification)
     owner_names = frappe.get_all(
         "Owners",
         filters={"active": 1},
@@ -342,11 +341,11 @@ def verify_and_update_mobile(new_mobile, otp):
     for o_name in owner_names:
         frappe.db.set_value("Owners", o_name, {
             "mobile_no": target_mobile,
-            "is_mobile_verified": 1,
-            "mobile_verified_on": frappe.utils.now_datetime(),
+            "is_mobile_verified": 0,
+            "mobile_verified_on": None,
         })
 
-    # 3. Update linked Tenants documents if tenant
+    # 3. Update linked Tenants documents if tenant (Reset is_mobile_verified = 0 pending bot 1-click verification)
     tenant_names = frappe.get_all(
         "Tenants",
         filters={"active": 1},
@@ -356,13 +355,13 @@ def verify_and_update_mobile(new_mobile, otp):
     for t_name in tenant_names:
         frappe.db.set_value("Tenants", t_name, {
             "mobile_no": target_mobile,
-            "is_mobile_verified": 1,
-            "mobile_verified_on": frappe.utils.now_datetime(),
+            "is_mobile_verified": 0,
+            "mobile_verified_on": None,
         })
 
-    # Mark mobile as verified in global helper
-    from society_erp.account_management import mark_mobile_verified
-    mark_mobile_verified(target_mobile)
+    # Generate 1-click bot verification links for the updated mobile
+    from society_erp.api.verification import get_verification_status
+    v_info = get_verification_status(for_user=user_email)
 
     # Cleanup OTP from cache
     frappe.cache().delete_value(cache_key)
@@ -371,8 +370,11 @@ def verify_and_update_mobile(new_mobile, otp):
 
     return {
         "status": "success",
-        "message": _("Mobile number updated successfully."),
+        "message": _("Mobile number updated to {0}. Please complete 1-click verification via WhatsApp or Telegram bot to verify and activate it.").format(target_mobile),
         "mobile_no": target_mobile,
+        "is_mobile_verified": False,
+        "whatsapp_verification_link": v_info.get("whatsapp_verification_link", ""),
+        "telegram_verification_link": v_info.get("telegram_verification_link", ""),
     }
 
 
