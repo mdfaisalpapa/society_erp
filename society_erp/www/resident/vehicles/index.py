@@ -88,15 +88,21 @@ def get_context(context):
     # Fetch Banking & UPI settings for vehicle sticker payment
     from frappe.utils import flt
     settings = frappe.get_single("Society ERP Settings")
+    beneficiary = getattr(settings, "bank_account_beneficiary_name", None) or "Apartment Owners Association"
+    account_no = getattr(settings, "bank_account_number", None) or "4139313654"
+    ifsc = getattr(settings, "bank_ifsc_code", None) or "CBIN0283135"
+    bank_name = getattr(settings, "bank_name", None) or "Central Bank of India"
+    fee = flt(getattr(settings, "vehicle_sticker_fee", None) or 50.0)
+
     context.bank_details = {
-        "beneficiary": getattr(settings, "bank_account_beneficiary_name", "Apartment Owners Association"),
-        "account_no": getattr(settings, "bank_account_number", "4139313654"),
-        "ifsc": getattr(settings, "bank_ifsc_code", "CBIN0283135"),
-        "bank_name": getattr(settings, "bank_name", "Central Bank of India"),
-        "fee": flt(getattr(settings, "vehicle_sticker_fee", 50.0)),
+        "beneficiary": str(beneficiary).strip(),
+        "account_no": str(account_no).strip(),
+        "ifsc": str(ifsc).strip(),
+        "bank_name": str(bank_name).strip(),
+        "fee": fee,
     }
-    acc_clean = context.bank_details["account_no"].strip()
-    ifsc_clean = context.bank_details["ifsc"].strip()
+    acc_clean = context.bank_details["account_no"]
+    ifsc_clean = context.bank_details["ifsc"]
     fee_val = f"{int(context.bank_details['fee']) if context.bank_details['fee'].is_integer() else context.bank_details['fee']}"
     # NPCI standard Account + IFSC virtual payment address format: <Account>@<IFSC>.ifsc.npci
     context.upi_intent_uri = f"upi://pay?pa={acc_clean}@{ifsc_clean}.ifsc.npci&pn=APARTMENT%20OWNERS%20ASSOCIATION&am={fee_val}&cu=INR"
