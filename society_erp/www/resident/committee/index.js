@@ -298,8 +298,8 @@ frappe.ready(function () {
                                     ✅ Approve
                                 </button>
                             ` : `
-                                <button type="button" class="btn btn-sm btn-secondary py-1 px-2" disabled title="Cannot approve without verified UPI payment details">
-                                    🔒 Unpaid
+                                <button type="button" class="btn btn-sm btn-primary py-1 px-2 btn-action" data-doctype="Resident Vehicle" data-docname="${v.name}" data-action="Approved" data-title="Record Payment & Approve Sticker" data-require-payment="1" title="Mark as paid by entering UTR & date, then approve">
+                                    💳 Mark Paid & Approve
                                 </button>
                             `}
                             <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 btn-action" data-doctype="Resident Vehicle" data-docname="${v.name}" data-action="Rejected" data-title="Reject Vehicle Registration">
@@ -332,8 +332,8 @@ frappe.ready(function () {
                                     ✅ Approve Sticker
                                 </button>
                             ` : `
-                                <button type="button" class="btn btn-secondary btn-sm flex-grow-1 mr-2 font-weight-bold" disabled title="Cannot approve without verified UPI payment details">
-                                    🔒 Awaiting Payment
+                                <button type="button" class="btn btn-primary btn-sm flex-grow-1 mr-2 font-weight-bold btn-action" data-doctype="Resident Vehicle" data-docname="${v.name}" data-action="Approved" data-title="Record Payment & Approve Sticker" data-require-payment="1" title="Mark as paid by entering UTR & date, then approve">
+                                    💳 Mark Paid & Approve
                                 </button>
                             `}
                             <button type="button" class="btn btn-outline-danger btn-sm font-weight-bold btn-action" data-doctype="Resident Vehicle" data-docname="${v.name}" data-action="Rejected" data-title="Reject Vehicle Registration">
@@ -2118,8 +2118,9 @@ frappe.ready(function () {
         const action = $btn.data("action");
         const title = $btn.data("title") || `${action} ${doctype}`;
         const showRemarks = $btn.data("show-remarks") || (action === "Rejected" || doctype === "Maintenance Ticket");
+        const requirePayment = $btn.data("require-payment") || false;
 
-        pendingActionData = { doctype, docname, action };
+        pendingActionData = { doctype, docname, action, requirePayment };
 
         $actionTitle.text(title);
         $actionSummary.html(`Are you sure you want to set <strong>${doctype} ${escapeHtml(docname)}</strong> to <strong>${action}</strong>?`);
@@ -2131,6 +2132,13 @@ frappe.ready(function () {
             $("#modal-remarks-group").addClass("d-none");
         }
 
+        if (requirePayment) {
+            $("#modal-vehicle-payment-group").removeClass("d-none");
+            $("#modal-payment-utr").val("").focus();
+        } else {
+            $("#modal-vehicle-payment-group").addClass("d-none");
+        }
+
         $actionModal.modal("show");
     });
 
@@ -2138,8 +2146,33 @@ frappe.ready(function () {
         if (!pendingActionData) return;
 
         const remarks = $actionRemarks.val().trim();
-        const { doctype, docname, action } = pendingActionData;
+        const { doctype, docname, action, requirePayment } = pendingActionData;
         const origBtnText = $btnConfirmAction.html();
+
+        let paymentUtr = "";
+        let paymentDate = "";
+
+        if (requirePayment) {
+            paymentUtr = ($("#modal-payment-utr").val() || "").trim();
+            paymentDate = $("#modal-payment-date").val();
+            if (!paymentUtr || paymentUtr.length < 5) {
+                frappe.msgprint({
+                    title: __("Payment Details Required"),
+                    message: __("Please enter at least the last 5 digits of the UPI transaction ID / UTR."),
+                    indicator: "red"
+                });
+                $("#modal-payment-utr").focus();
+                return;
+            }
+            if (!paymentDate) {
+                frappe.msgprint({
+                    title: __("Payment Date Required"),
+                    message: __("Please select the payment date."),
+                    indicator: "red"
+                });
+                return;
+            }
+        }
 
         $btnConfirmAction.prop("disabled", true).html("Processing…");
 
@@ -2149,7 +2182,9 @@ frappe.ready(function () {
                 doctype: doctype,
                 docname: docname,
                 action: action,
-                remarks: remarks
+                remarks: remarks,
+                payment_reference_no: paymentUtr || null,
+                payment_date: paymentDate || null
             },
             callback: function (r) {
                 $btnConfirmAction.prop("disabled", false).html(origBtnText);

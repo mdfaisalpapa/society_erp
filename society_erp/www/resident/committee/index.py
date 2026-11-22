@@ -578,7 +578,7 @@ def get_committee_data(module_type="all"):
 
 
 @frappe.whitelist()
-def update_item_status(doctype, docname, action, remarks=None):
+def update_item_status(doctype, docname, action, remarks=None, payment_reference_no=None, payment_date=None):
     """
     Handles committee approval/rejection/status updates across target DocTypes:
     - Tenants: action in ('Verified Physically', 'Rejected')
@@ -627,6 +627,20 @@ def update_item_status(doctype, docname, action, remarks=None):
     elif doctype == "Resident Vehicle":
         if action in ("Approved", "Rejected", "Inactive"):
             if action == "Approved":
+                # If committee member entered/updated payment details
+                if payment_reference_no:
+                    clean_utr = payment_reference_no.strip()
+                    if len(clean_utr) < 5:
+                        frappe.throw(_("Please enter at least the last 5 digits of the UPI transaction ID / UTR."))
+                    doc.payment_reference_no = clean_utr
+                    if payment_date:
+                        doc.payment_date = payment_date
+                    elif not doc.get("payment_date"):
+                        doc.payment_date = today()
+                    if not doc.get("payment_amount"):
+                        fee_amt = flt(frappe.db.get_single_value("Society ERP Settings", "vehicle_sticker_fee") or 50.0)
+                        doc.payment_amount = fee_amt
+
                 utr = (doc.get("payment_reference_no") or "").strip()
                 if not utr:
                     frappe.throw(_("Cannot approve vehicle sticker: UPI Payment UTR / reference is required for approval."))
