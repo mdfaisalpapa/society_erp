@@ -367,7 +367,7 @@ frappe.ready(function () {
                             <th>Work Type</th>
                             <th>Contractor</th>
                             <th>Validity</th>
-                            <th>Status</th>
+                            <th>Deposit & Status</th>
                             <th class="text-right">Action</th>
                         </tr>
                     </thead>
@@ -378,27 +378,67 @@ frappe.ready(function () {
         items.forEach(w => {
             const isPend = w.status === "Pending";
             const borderClass = isPend ? "border-pending" : (w.status === "Rejected" ? "border-rejected" : "border-approved");
+            const isPaid = Boolean(w.payment_reference_no && w.payment_reference_no.trim());
+
+            let depositHtml = ``;
+            if (isPaid) {
+                const isShort = String(w.payment_reference_no).trim().length < 12;
+                depositHtml = `
+                    <div class="small mt-1">
+                        <span class="badge badge-success font-monospace">₹${w.deposit_amount || 5000} Deposit</span>
+                        <div class="font-weight-bold text-dark font-monospace mt-1" style="font-size: 11px;">
+                            ${isShort ? 'Last 5 Digits' : 'UTR'}: <span class="badge badge-light border text-dark">${escapeHtml(w.payment_reference_no)}</span>
+                        </div>
+                        <div class="text-muted" style="font-size: 10px;">📅 ${escapeHtml(w.payment_date || '')}</div>
+                        ${w.sales_invoice ? `<div class="text-info mt-1" style="font-size: 10px;"><a href="/api/method/society_erp.resident_portal.download_invoice_pdf?invoice_name=${encodeURIComponent(w.sales_invoice)}" target="_blank">🧾 Admin Inv: ${escapeHtml(w.sales_invoice)}</a></div>` : ''}
+                    </div>
+                `;
+            } else {
+                depositHtml = `<div class="small text-danger mt-1"><span class="badge badge-secondary">Unpaid Deposit</span></div>`;
+            }
+
+            if (w.status === "Completed") {
+                if (w.debris_cleared) {
+                    depositHtml += `
+                        <div class="small text-success mt-1 pt-1 border-top" style="font-size: 11px;">
+                            <strong>♻️ Debris Cleared (₹4,000 Refunded)</strong>
+                            ${w.refund_reference_no ? `<div class="text-muted font-monospace">Ref: ${escapeHtml(w.refund_reference_no)}</div>` : ''}
+                        </div>
+                    `;
+                } else {
+                    depositHtml += `<div class="small text-warning mt-1 pt-1 border-top" style="font-size: 11px;">⚠️ Debris Not Cleared (No Refund)</div>`;
+                }
+            }
 
             tableHtml += `
                 <tr>
                     <td><span class="comm-flat-badge">${escapeHtml(w.flat_number)}</span></td>
-                    <td class="font-weight-bold">${escapeHtml(w.name)}</td>
+                    <td class="font-weight-bold"><code>${escapeHtml(w.name)}</code></td>
                     <td><span class="badge badge-light border text-dark">${escapeHtml(w.work_type || 'General')}</span></td>
                     <td class="small">${escapeHtml(w.contractor_name || '-')}</td>
                     <td class="small text-muted">${formatDate(w.start_date)} to ${formatDate(w.end_date)}</td>
-                    <td>${getStatusBadge(w.status)}</td>
+                    <td>
+                        <div>${getStatusBadge(w.status)}</div>
+                        ${depositHtml}
+                    </td>
                     <td class="text-right">
                         ${isPend ? `
-                            <button type="button" class="btn btn-sm btn-success py-1 px-2 btn-action" data-doctype="Work Permit" data-docname="${w.name}" data-action="Approved" data-title="Approve Work Permit">
-                                ✅ Approve
-                            </button>
+                            ${isPaid ? `
+                                <button type="button" class="btn btn-sm btn-success py-1 px-2 btn-action" data-doctype="Work Permit" data-docname="${w.name}" data-action="Approved" data-title="Approve Work Permit">
+                                    ✅ Approve
+                                </button>
+                            ` : `
+                                <button type="button" class="btn btn-sm btn-primary py-1 px-2 btn-action" data-doctype="Work Permit" data-docname="${w.name}" data-action="Approved" data-title="Record ₹5,000 Deposit & Approve Permit" data-require-permit-deposit="1" title="Mark ₹5,000 deposit paid with UTR & date, then approve">
+                                    💳 Mark Paid & Approve
+                                </button>
+                            `}
                             <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 btn-action" data-doctype="Work Permit" data-docname="${w.name}" data-action="Rejected" data-title="Reject Work Permit">
                                 ❌ Reject
                             </button>
                         ` : `
                             ${w.status === 'Approved' ? `
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 btn-action" data-doctype="Work Permit" data-docname="${w.name}" data-action="Completed" data-title="Mark Work Permit Completed">
-                                    🏁 Complete
+                                <button type="button" class="btn btn-sm btn-outline-info py-1 px-2 btn-action" data-doctype="Work Permit" data-docname="${w.name}" data-action="Completed" data-title="Complete Work Permit & Process Debris Refund" data-permit-completion="1">
+                                    🏁 Complete & Refund
                                 </button>
                             ` : `<span class="text-muted small">Closed</span>`}
                         `}
@@ -416,18 +456,33 @@ frappe.ready(function () {
                     <div class="small text-muted mb-2">
                         <div>🔨 Work: <strong>${escapeHtml(w.work_type || 'General')}</strong> &bull; Contractor: ${escapeHtml(w.contractor_name || '-')}</div>
                         <div>📅 Validity: ${formatDate(w.start_date)} to ${formatDate(w.end_date)}</div>
+                        ${depositHtml}
                         ${w.remarks ? `<div class="mt-1 text-dark"><em>Note:</em> ${escapeHtml(w.remarks)}</div>` : ''}
                     </div>
                     ${isPend ? `
                         <div class="d-flex pt-2 border-top">
-                            <button type="button" class="btn btn-success btn-sm flex-grow-1 mr-2 font-weight-bold btn-action" data-doctype="Work Permit" data-docname="${w.name}" data-action="Approved" data-title="Approve Work Permit">
-                                ✅ Approve Permit
-                            </button>
+                            ${isPaid ? `
+                                <button type="button" class="btn btn-success btn-sm flex-grow-1 mr-2 font-weight-bold btn-action" data-doctype="Work Permit" data-docname="${w.name}" data-action="Approved" data-title="Approve Work Permit">
+                                    ✅ Approve Permit
+                                </button>
+                            ` : `
+                                <button type="button" class="btn btn-primary btn-sm flex-grow-1 mr-2 font-weight-bold btn-action" data-doctype="Work Permit" data-docname="${w.name}" data-action="Approved" data-title="Record ₹5,000 Deposit & Approve Permit" data-require-permit-deposit="1">
+                                    💳 Mark Paid & Approve
+                                </button>
+                            `}
                             <button type="button" class="btn btn-outline-danger btn-sm font-weight-bold btn-action" data-doctype="Work Permit" data-docname="${w.name}" data-action="Rejected" data-title="Reject Work Permit">
                                 ❌ Reject
                             </button>
                         </div>
-                    ` : ''}
+                    ` : `
+                        ${w.status === 'Approved' ? `
+                            <div class="pt-2 border-top">
+                                <button type="button" class="btn btn-outline-info btn-sm btn-block font-weight-bold btn-action" data-doctype="Work Permit" data-docname="${w.name}" data-action="Completed" data-title="Complete Work Permit & Process Debris Refund" data-permit-completion="1">
+                                    🏁 Complete & Debris Refund
+                                </button>
+                            </div>
+                        ` : ''}
+                    `}
                 </div>
             `;
         });
@@ -2119,8 +2174,10 @@ frappe.ready(function () {
         const title = $btn.data("title") || `${action} ${doctype}`;
         const showRemarks = $btn.data("show-remarks") || (action === "Rejected" || doctype === "Maintenance Ticket");
         const requirePayment = $btn.data("require-payment") || false;
+        const requirePermitDeposit = $btn.data("require-permit-deposit") || false;
+        const permitCompletion = $btn.data("permit-completion") || false;
 
-        pendingActionData = { doctype, docname, action, requirePayment };
+        pendingActionData = { doctype, docname, action, requirePayment, requirePermitDeposit, permitCompletion };
 
         $actionTitle.text(title);
         $actionSummary.html(`Are you sure you want to set <strong>${doctype} ${escapeHtml(docname)}</strong> to <strong>${action}</strong>?`);
@@ -2139,18 +2196,46 @@ frappe.ready(function () {
             $("#modal-vehicle-payment-group").addClass("d-none");
         }
 
+        if (requirePermitDeposit) {
+            $("#modal-permit-deposit-group").removeClass("d-none");
+            $("#modal-permit-utr").val("").focus();
+        } else {
+            $("#modal-permit-deposit-group").addClass("d-none");
+        }
+
+        if (permitCompletion) {
+            $("#modal-permit-completion-group").removeClass("d-none");
+            $("#modal-debris-cleared").prop("checked", true);
+            $("#modal-refund-utr-wrapper").removeClass("d-none");
+            $("#modal-refund-utr").val("");
+        } else {
+            $("#modal-permit-completion-group").addClass("d-none");
+        }
+
         $actionModal.modal("show");
+    });
+
+    // Toggle refund fields when debris checkbox changes
+    $(document).on("change", "#modal-debris-cleared", function () {
+        if ($(this).is(":checked")) {
+            $("#modal-refund-utr-wrapper").removeClass("d-none");
+        } else {
+            $("#modal-refund-utr-wrapper").addClass("d-none");
+        }
     });
 
     $btnConfirmAction.on("click", function () {
         if (!pendingActionData) return;
 
         const remarks = $actionRemarks.val().trim();
-        const { doctype, docname, action, requirePayment } = pendingActionData;
+        const { doctype, docname, action, requirePayment, requirePermitDeposit, permitCompletion } = pendingActionData;
         const origBtnText = $btnConfirmAction.html();
 
         let paymentUtr = "";
         let paymentDate = "";
+        let debrisCleared = null;
+        let refundUtr = "";
+        let refundDate = "";
 
         if (requirePayment) {
             paymentUtr = ($("#modal-payment-utr").val() || "").trim();
@@ -2174,6 +2259,36 @@ frappe.ready(function () {
             }
         }
 
+        if (requirePermitDeposit) {
+            paymentUtr = ($("#modal-permit-utr").val() || "").trim();
+            paymentDate = $("#modal-permit-date").val();
+            if (!paymentUtr || paymentUtr.length < 5) {
+                frappe.msgprint({
+                    title: __("Deposit Payment Required"),
+                    message: __("Please enter at least the last 5 digits of the ₹5,000 deposit UPI transaction ID / UTR."),
+                    indicator: "red"
+                });
+                $("#modal-permit-utr").focus();
+                return;
+            }
+            if (!paymentDate) {
+                frappe.msgprint({
+                    title: __("Payment Date Required"),
+                    message: __("Please select the payment date."),
+                    indicator: "red"
+                });
+                return;
+            }
+        }
+
+        if (permitCompletion) {
+            debrisCleared = $("#modal-debris-cleared").is(":checked") ? 1 : 0;
+            if (debrisCleared) {
+                refundUtr = ($("#modal-refund-utr").val() || "").trim();
+                refundDate = $("#modal-refund-date").val();
+            }
+        }
+
         $btnConfirmAction.prop("disabled", true).html("Processing…");
 
         frappe.call({
@@ -2184,7 +2299,10 @@ frappe.ready(function () {
                 action: action,
                 remarks: remarks,
                 payment_reference_no: paymentUtr || null,
-                payment_date: paymentDate || null
+                payment_date: paymentDate || null,
+                debris_cleared: debrisCleared,
+                refund_reference_no: refundUtr || null,
+                refund_date: refundDate || null
             },
             callback: function (r) {
                 $btnConfirmAction.prop("disabled", false).html(origBtnText);

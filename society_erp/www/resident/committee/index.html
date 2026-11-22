@@ -456,6 +456,43 @@
                             </div>
                         </div>
 
+                        <!-- Work Permit Deposit Entry Fields (for Unpaid Work Permits upon Approval) -->
+                        <div id="modal-permit-deposit-group" class="d-none bg-light p-3 rounded border mb-3">
+                            <h6 class="font-weight-bold text-dark mb-1">💳 Work Permit Security Deposit (₹5,000)</h6>
+                            <p class="text-muted small mb-2">Collect ₹5,000 via UPI (₹1,000 retained with invoice, ₹4,000 refundable on debris clearance).</p>
+                            <div class="form-group mb-2">
+                                <label for="modal-permit-utr" class="font-weight-bold small text-dark">Last 5 Digits of UPI / UTR <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control font-monospace font-weight-bold" id="modal-permit-utr" placeholder="e.g. 42268 or full 12 digits" minlength="5" maxlength="20">
+                                <small class="text-muted">Enter at least the last 5 digits of the deposit UPI transaction ID.</small>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label for="modal-permit-date" class="font-weight-bold small text-dark">Payment Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control font-weight-bold" id="modal-permit-date" value="{{ today_date }}">
+                            </div>
+                        </div>
+
+                        <!-- Work Permit Completion & Debris Clearance Modal Fields -->
+                        <div id="modal-permit-completion-group" class="d-none bg-light p-3 rounded border mb-3">
+                            <h6 class="font-weight-bold text-dark mb-1">🏁 Work Completion & Debris Clearance</h6>
+                            <div class="custom-control custom-checkbox mb-2">
+                                <input type="checkbox" class="custom-control-input" id="modal-debris-cleared" checked>
+                                <label class="custom-control-label font-weight-bold text-dark" for="modal-debris-cleared">
+                                    ♻️ Debris cleared by the owner (Eligible for ₹4,000 refund)
+                                </label>
+                            </div>
+                            <div id="modal-refund-utr-wrapper" class="pt-2 border-top">
+                                <p class="text-muted small mb-2">Refund ₹4,000 to owner via UPI. Enter refund UTR details below:</p>
+                                <div class="form-group mb-2">
+                                    <label for="modal-refund-utr" class="font-weight-bold small text-dark">Refund UPI UTR / Ref</label>
+                                    <input type="text" class="form-control font-monospace font-weight-bold" id="modal-refund-utr" placeholder="e.g. 98765 or full UTR">
+                                </div>
+                                <div class="form-group mb-0">
+                                    <label for="modal-refund-date" class="font-weight-bold small text-dark">Refund Date</label>
+                                    <input type="date" class="form-control font-weight-bold" id="modal-refund-date" value="{{ today_date }}">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="d-flex justify-content-end">
                             <button type="button" class="btn btn-light border mr-2" data-dismiss="modal">Cancel</button>
                             <button type="button" class="btn btn-primary font-weight-bold" id="btn-confirm-action">Confirm</button>

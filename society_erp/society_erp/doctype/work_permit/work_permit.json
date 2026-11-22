@@ -17,7 +17,18 @@
   "end_date",
   "status",
   "remarks",
-  "payment_id"
+  "payment_id",
+  "section_break_payment",
+  "deposit_amount",
+  "payment_reference_no",
+  "payment_date",
+  "sales_invoice",
+  "payment_entry",
+  "debris_cleared",
+  "refund_amount",
+  "refund_reference_no",
+  "refund_date",
+  "refund_payment_entry"
  ],
  "fields": [
   {
@@ -82,6 +93,67 @@
    "fieldname": "payment_id",
    "fieldtype": "Data",
    "label": "Payment ID"
+  },
+  {
+   "fieldname": "section_break_payment",
+   "fieldtype": "Section Break",
+   "label": "Deposit & Clearance Accounting"
+  },
+  {
+   "default": "5000",
+   "fieldname": "deposit_amount",
+   "fieldtype": "Currency",
+   "label": "Deposit Collected (INR)"
+  },
+  {
+   "fieldname": "payment_reference_no",
+   "fieldtype": "Data",
+   "label": "Payment Ref / UTR"
+  },
+  {
+   "fieldname": "payment_date",
+   "fieldtype": "Date",
+   "label": "Payment Date"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Admin / Retained Sales Invoice",
+   "options": "Sales Invoice"
+  },
+  {
+   "fieldname": "payment_entry",
+   "fieldtype": "Link",
+   "label": "Deposit Payment Entry (Receipt)",
+   "options": "Payment Entry"
+  },
+  {
+   "default": "0",
+   "fieldname": "debris_cleared",
+   "fieldtype": "Check",
+   "label": "Debris Cleared by Owner"
+  },
+  {
+   "default": "4000",
+   "fieldname": "refund_amount",
+   "fieldtype": "Currency",
+   "label": "Refund Amount (INR)"
+  },
+  {
+   "fieldname": "refund_reference_no",
+   "fieldtype": "Data",
+   "label": "Refund Ref / UTR"
+  },
+  {
+   "fieldname": "refund_date",
+   "fieldtype": "Date",
+   "label": "Refund Date"
+  },
+  {
+   "fieldname": "refund_payment_entry",
+   "fieldtype": "Link",
+   "label": "Refund Payment Entry",
+   "options": "Payment Entry"
   }
  ],
  "grid_page_length": 50,

@@ -252,6 +252,16 @@ def get_committee_data(module_type="all"):
                 "status",
                 "remarks",
                 "creation",
+                "deposit_amount",
+                "payment_reference_no",
+                "payment_date",
+                "sales_invoice",
+                "payment_entry",
+                "debris_cleared",
+                "refund_amount",
+                "refund_reference_no",
+                "refund_date",
+                "refund_payment_entry",
             ],
             order_by="creation desc",
             limit_page_length=150,
@@ -578,7 +588,7 @@ def get_committee_data(module_type="all"):
 
 
 @frappe.whitelist()
-def update_item_status(doctype, docname, action, remarks=None, payment_reference_no=None, payment_date=None):
+def update_item_status(doctype, docname, action, remarks=None, payment_reference_no=None, payment_date=None, debris_cleared=None, refund_reference_no=None, refund_date=None):
     """
     Handles committee approval/rejection/status updates across target DocTypes:
     - Tenants: action in ('Verified Physically', 'Rejected')
@@ -663,6 +673,56 @@ def update_item_status(doctype, docname, action, remarks=None, payment_reference
 
     elif doctype == "Work Permit":
         if action in ("Approved", "Rejected", "Revoked", "Completed"):
+            if action == "Approved":
+                # If committee member entered/updated payment details
+                if payment_reference_no:
+                    clean_utr = payment_reference_no.strip()
+                    if len(clean_utr) < 5:
+                        frappe.throw(_("Please enter at least the last 5 digits of the UPI transaction ID / UTR for deposit."))
+                    doc.payment_reference_no = clean_utr
+                    if payment_date:
+                        doc.payment_date = payment_date
+                    elif not doc.get("payment_date"):
+                        doc.payment_date = today()
+                    if not doc.get("deposit_amount"):
+                        doc.deposit_amount = 5000.0
+
+                utr = (doc.get("payment_reference_no") or "").strip()
+                if not utr:
+                    frappe.throw(_("Cannot approve work permit: ₹5,000 Deposit payment UTR / reference is required for approval."))
+
+                # Auto-generate Sales Invoice (₹1,000 retained) & Deposit Payment Entry (₹5,000)
+                if not doc.get("sales_invoice"):
+                    try:
+                        from society_erp.accounting.work_permit_billing import create_work_permit_invoice_and_deposit
+                        si_name, pe_name = create_work_permit_invoice_and_deposit(doc)
+                        doc.sales_invoice = si_name
+                        doc.payment_entry = pe_name
+                    except Exception as e:
+                        frappe.log_error(title="Work Permit Deposit Billing Error", message=f"Failed to auto-bill permit {doc.name}: {str(e)}")
+
+            elif action == "Completed":
+                is_cleared = 1 if str(debris_cleared).lower() in ("1", "true", "yes") else 0
+                doc.debris_cleared = is_cleared
+                if is_cleared and not doc.get("refund_payment_entry"):
+                    clean_ref_utr = (refund_reference_no or "").strip()
+                    if clean_ref_utr and len(clean_ref_utr) < 5:
+                        frappe.throw(_("Please enter at least the last 5 digits of the refund UPI transaction ID / UTR."))
+                    doc.refund_reference_no = clean_ref_utr or f"REFUND-{doc.name}"
+                    doc.refund_date = refund_date or today()
+                    doc.refund_amount = 4000.0
+                    try:
+                        from society_erp.accounting.work_permit_billing import process_work_permit_refund
+                        ref_pe_name = process_work_permit_refund(
+                            doc,
+                            refund_utr=doc.refund_reference_no,
+                            refund_date=doc.refund_date,
+                            refund_amount=doc.refund_amount
+                        )
+                        doc.refund_payment_entry = ref_pe_name
+                    except Exception as e:
+                        frappe.log_error(title="Work Permit Refund Error", message=f"Failed to process refund for permit {doc.name}: {str(e)}")
+
             doc.status = action
         if remarks:
             doc.remarks = f"{doc.remarks or ''}\n[{today()}] {comm_name}: {remarks}".strip()

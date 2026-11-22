@@ -89,7 +89,7 @@
                             <th>Work Scope</th>
                             <th>Contractor</th>
                             <th>Validity Period</th>
-                            <th>Status</th>
+                            <th>Deposit & Status</th>
                             <th>Worker Passes</th>
                             <th class="text-right">Action</th>
                         </tr>
@@ -102,6 +102,7 @@
                             <td class="font-weight-bold text-dark">{{ p.contractor_name }}</td>
                             <td class="small text-muted">{{ p.formatted_start }} to {{ p.formatted_end }}</td>
                             <td>
+                                <div>
                                 {% if p.status == 'Pending' %}
                                     <span class="badge badge-warning text-dark font-weight-bold">⏳ Pending Approval</span>
                                 {% elif p.status == 'Approved' %}
@@ -112,6 +113,28 @@
                                     <span class="badge badge-info font-weight-bold">🏁 Completed</span>
                                 {% else %}
                                     <span class="badge badge-secondary font-weight-bold">{{ p.status }}</span>
+                                {% endif %}
+                                </div>
+                                {% if p.payment_reference_no %}
+                                    <div class="mt-1 small" style="font-size: 11px;">
+                                        <span class="badge badge-light border text-dark">₹{{ "%.0f"|format(p.deposit_amount or 5000) }} Deposit</span>
+                                        <span class="text-muted">UTR: <code>{{ p.payment_reference_no }}</code></span>
+                                    </div>
+                                {% endif %}
+                                {% if p.sales_invoice %}
+                                    <div class="mt-1">
+                                        <a href="/api/method/society_erp.resident_portal.download_invoice_pdf?invoice_name={{ p.sales_invoice }}" target="_blank" class="badge badge-info text-white p-1" style="font-size: 10px;">
+                                            🧾 Admin Invoice (₹1,000)
+                                        </a>
+                                    </div>
+                                {% endif %}
+                                {% if p.status == 'Completed' and p.debris_cleared %}
+                                    <div class="mt-1 text-success small" style="font-size: 11px;">
+                                        <span>♻️ Debris Cleared &bull; ₹4,000 Refunded</span>
+                                        {% if p.refund_reference_no %}
+                                            <div class="text-muted">UTR: <code>{{ p.refund_reference_no }}</code></div>
+                                        {% endif %}
+                                    </div>
                                 {% endif %}
                             </td>
                             <td>
@@ -162,6 +185,15 @@
                     <div class="small text-muted mb-2">
                         <div>Scope: <strong>{{ p.work_type }}</strong></div>
                         <div>📅 Period: {{ p.formatted_start }} to {{ p.formatted_end }}</div>
+                        {% if p.payment_reference_no %}
+                            <div class="mt-1 text-dark">💳 ₹{{ "%.0f"|format(p.deposit_amount or 5000) }} Deposit &bull; UTR: <code>{{ p.payment_reference_no }}</code></div>
+                        {% endif %}
+                        {% if p.sales_invoice %}
+                            <div class="mt-1"><a href="/api/method/society_erp.resident_portal.download_invoice_pdf?invoice_name={{ p.sales_invoice }}" target="_blank" class="badge badge-info text-white p-1">🧾 Admin Invoice (₹1,000)</a></div>
+                        {% endif %}
+                        {% if p.status == 'Completed' and p.debris_cleared %}
+                            <div class="mt-1 text-success font-weight-bold">♻️ Debris Cleared &bull; ₹4,000 Refunded</div>
+                        {% endif %}
                         {% if p.remarks %}
                             <div class="mt-1 text-dark"><em>Note:</em> {{ p.remarks }}</div>
                         {% endif %}
@@ -236,8 +268,56 @@
                             </div>
                             <div class="form-group mb-3">
                                 <label for="permit-remarks" class="font-weight-bold small text-dark">Scope Details / Remarks</label>
-                                <textarea class="form-control" id="permit-remarks" rows="3" placeholder="Describe the planned work scope, number of workers, etc."></textarea>
+                                <textarea class="form-control" id="permit-remarks" rows="2" placeholder="Describe the planned work scope, number of workers, etc."></textarea>
                             </div>
+
+                            <!-- UPI Deposit Payment Card (₹5,000) -->
+                            <div class="card p-3 mb-3 bg-light border">
+                                <div class="row align-items-center mb-2">
+                                    <div class="col-sm-4 text-center mb-2 mb-sm-0">
+                                        <img src="{{ upi_qr_url }}" alt="UPI QR Code" class="img-fluid rounded border bg-white p-1 shadow-sm" style="max-width: 130px;">
+                                        <div class="mt-1 small font-weight-bold text-dark">Scan & Pay ₹5,000</div>
+                                        <a href="{{ upi_intent_uri }}" class="btn btn-sm btn-outline-primary mt-1 font-weight-bold d-md-none" style="font-size: 11px;">
+                                            ⚡ Tap to Pay via UPI
+                                        </a>
+                                    </div>
+                                    <div class="col-sm-8">
+                                        <h6 class="font-weight-bold text-dark mb-1">💳 Work Permit Deposit: ₹5,000.00</h6>
+                                        <p class="small text-muted mb-2">
+                                            ₹5,000 security deposit collected via UPI.<br>
+                                            <strong>₹4,000 refunded</strong> upon work completion & debris clearance by the owner.<br>
+                                            <strong>₹1,000 retained</strong> as AoA admin & debris fee (invoice generated).
+                                        </p>
+                                        <div class="p-2 bg-white rounded border small font-monospace" style="line-height: 1.4; font-size: 11px;">
+                                            <div><strong>A/C:</strong> {{ bank_details.account_no }}</div>
+                                            <div><strong>IFSC:</strong> {{ bank_details.ifsc }}</div>
+                                            <div><strong>Bank:</strong> {{ bank_details.bank_name }}</div>
+                                            <div><strong>Beneficiary:</strong> {{ bank_details.beneficiary }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="my-2">
+                                <div class="row">
+                                    <div class="col-md-7 form-group mb-2">
+                                        <label class="font-weight-bold small text-dark">UPI Ref / UTR Number <span class="text-danger">*</span></label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control font-monospace font-weight-bold" id="permit_payment_utr" placeholder="Last 5 digits or full UTR (e.g. 42268)" minlength="5" maxlength="20" required>
+                                            <div class="input-group-append">
+                                                <button class="btn btn-outline-secondary" type="button" id="btn-paste-wp-utr" title="Paste from Clipboard">
+                                                    📋 Paste
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted" style="font-size: 11px;">Enter at least the last 5 digits of your UPI transaction ID from GPay / PhonePe / Paytm.</small>
+                                    </div>
+                                    <div class="col-md-5 form-group mb-2">
+                                        <label class="font-weight-bold small text-dark">Payment Date <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control form-control-sm font-weight-bold" id="permit_payment_date" required>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="alert alert-info py-2 px-3 small mb-3">
                                 ℹ️ Working hours are strictly 09:00 AM to 06:00 PM on weekdays and Saturdays per Society Bye-Laws.
                             </div>
@@ -302,6 +382,33 @@ function openWorkerPassModal(permitId, contractorName) {
 }
 
 frappe.ready(function() {
+    // Set default payment date to today
+    const todayStr = new Date().toISOString().split('T')[0];
+    if ($("#permit_payment_date").length && !$("#permit_payment_date").val()) {
+        $("#permit_payment_date").val(todayStr);
+    }
+
+    // Paste button for Work Permit UTR
+    $("#btn-paste-wp-utr").on("click", async function() {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            try {
+                const clipText = await navigator.clipboard.readText();
+                if (clipText) {
+                    const cleanDigits = clipText.replace(/\D/g, '');
+                    if (cleanDigits.length >= 5) {
+                        $("#permit_payment_utr").val(cleanDigits.length >= 12 ? cleanDigits.slice(-12) : cleanDigits);
+                    } else {
+                        $("#permit_payment_utr").val(clipText.trim());
+                    }
+                }
+            } catch (err) {
+                $("#permit_payment_utr").focus();
+            }
+        } else {
+            $("#permit_payment_utr").focus();
+        }
+    });
+
     $("#form-worker-pass").on("submit", function(e) {
         e.preventDefault();
         const permitId = $("#wp-permit-id").val();
@@ -347,9 +454,17 @@ frappe.ready(function() {
         const startDate = $("#permit-start-date").val();
         const endDate = $("#permit-end-date").val();
         const remarks = $("#permit-remarks").val().trim();
+        const paymentUtr = ($("#permit_payment_utr").val() || "").trim();
+        const paymentDate = $("#permit_payment_date").val();
 
         if (!contractor || !startDate || !endDate) {
             frappe.msgprint({ title: __("Required Fields"), message: __("Please fill all required fields."), indicator: "orange" });
+            return;
+        }
+
+        if (!paymentUtr || paymentUtr.length < 5) {
+            frappe.msgprint({ title: __("Deposit Payment Required"), message: __("Please enter at least the last 5 digits of your UPI transaction ID / UTR for the ₹5,000 deposit."), indicator: "red" });
+            $("#permit_payment_utr").focus();
             return;
         }
 
@@ -364,7 +479,9 @@ frappe.ready(function() {
                 work_type: workType,
                 start_date: startDate,
                 end_date: endDate,
-                remarks: remarks
+                remarks: remarks,
+                payment_reference_no: paymentUtr,
+                payment_date: paymentDate
             },
             callback: function(r) {
                 $btn.prop("disabled", false).html(origText);
