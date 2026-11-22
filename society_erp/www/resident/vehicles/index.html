@@ -121,6 +121,18 @@
                                 <span class="badge badge-{{ 'success' if v.approval_status == 'Approved' else 'warning' if v.approval_status == 'Pending' else 'secondary' if v.approval_status in ['Inactive', 'Sticker Returned'] else 'danger' }}">
                                     Status: {{ v.approval_status }}
                                 </span>
+                                {% if v.payment_reference_no %}
+                                <div class="mt-1 small text-muted" style="font-size: 11px;">
+                                    <span>UTR: <code>{{ v.payment_reference_no }}</code></span>
+                                </div>
+                                {% endif %}
+                                {% if v.sales_invoice %}
+                                <div class="mt-1">
+                                    <a href="/api/method/society_erp.resident_portal.download_invoice_pdf?invoice_name={{ v.sales_invoice }}" target="_blank" class="badge badge-info text-white p-1">
+                                        🧾 Download Invoice / Receipt
+                                    </a>
+                                </div>
+                                {% endif %}
                             </div>
                             
                             <!-- Dynamic Action Buttons -->
@@ -277,6 +289,59 @@
                             <small class="text-muted">Required because vehicle is not in your name.</small>
                         </div>
                     </div>
+
+                    <!-- UPI Payment Section -->
+                    <div class="card bg-light border p-3 my-3" style="border-radius: 8px;">
+                        <div class="row align-items-center">
+                            <div class="col-md-4 text-center mb-3 mb-md-0">
+                                <a href="{{ upi_intent_uri }}" class="d-inline-block">
+                                    <img src="{{ upi_qr_url }}" alt="UPI QR Code" class="img-fluid border rounded shadow-sm bg-white p-2" style="max-width: 140px;">
+                                </a>
+                                <div class="mt-1 small font-weight-bold text-dark">Scan & Pay ₹{{ "%.2f"|format(bank_details.fee) }}</div>
+                                <a href="{{ upi_intent_uri }}" class="btn btn-sm btn-outline-primary mt-1 font-weight-bold d-md-none" style="font-size: 11px;">
+                                    ⚡ Tap to Pay via UPI App
+                                </a>
+                            </div>
+                            <div class="col-md-8">
+                                <h6 class="font-weight-bold text-dark mb-1">💳 Vehicle Sticker Fee: ₹{{ "%.2f"|format(bank_details.fee) }}</h6>
+                                <p class="small text-muted mb-2">Scan the QR code via GPay, PhonePe, Paytm, or BHIM, or transfer to the account below:</p>
+                                <div class="p-2 bg-white rounded border small mb-2 font-monospace" style="line-height: 1.4;">
+                                    <div><strong>A/C:</strong> {{ bank_details.account_no }}</div>
+                                    <div><strong>IFSC:</strong> {{ bank_details.ifsc }}</div>
+                                    <div><strong>Bank:</strong> {{ bank_details.bank_name }}</div>
+                                    <div><strong>Beneficiary:</strong> {{ bank_details.beneficiary }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-2">
+                        <div class="row mt-2">
+                            <div class="col-md-12 mb-2">
+                                <label class="small font-weight-bold text-muted mb-1">📸 Upload Payment Screenshot (Optional Auto-Fill)</label>
+                                <div class="input-group input-group-sm mb-1">
+                                    <input type="file" class="form-control-file small" id="upi_screenshot_file" accept="image/*">
+                                </div>
+                                <div id="ocr_status" class="small mt-1 text-info" style="display: none;"></div>
+                            </div>
+                            <div class="col-md-6 form-group mb-2">
+                                <label class="font-weight-bold">UPI Ref / UTR Number <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-monospace font-weight-bold" id="payment_reference_no" placeholder="Last 5 digits or full UTR (e.g. 42268)" minlength="5" maxlength="20" required>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary btn-sm" type="button" id="btn-paste-clipboard" title="Paste from Clipboard">
+                                            📋 Paste
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="text-muted" style="font-size: 11px;">Enter the <strong>last 5 digits</strong> of UPI transaction ID or full 12-digit UTR from GPay / PhonePe / Paytm.</small>
+                            </div>
+                            <div class="col-md-6 form-group mb-2">
+                                <label class="font-weight-bold">Payment Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control font-weight-bold" id="payment_date" required>
+                            </div>
+                        </div>
+                    </div>
+
                     <button type="submit" class="btn btn-primary btn-block mt-3" id="btn-submit">Submit Registration</button>
                 </form>
             </div>
@@ -415,4 +480,5 @@
         }
     }
 </style>
+<script src="/assets/society_erp/js/lib/tesseract.min.js"></script>
 {% endblock %}

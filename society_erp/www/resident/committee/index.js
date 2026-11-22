@@ -240,6 +240,7 @@ frappe.ready(function () {
                             <th>Vehicle No</th>
                             <th>Type & Model</th>
                             <th>Resident / Owner</th>
+                            <th>UPI Payment</th>
                             <th>Documents</th>
                             <th>Status</th>
                             <th class="text-right">Action</th>
@@ -258,6 +259,23 @@ frappe.ready(function () {
             if (v.noc) docs.push(`<a href="${v.noc}" target="_blank" class="badge badge-light border mr-1">📄 NOC</a>`);
             const docsHtml = docs.length ? docs.join("") : `<span class="text-muted small">None</span>`;
 
+            let payHtml = `<span class="badge badge-secondary">Unpaid / No UTR</span>`;
+            if (v.payment_reference_no) {
+                const isShort = String(v.payment_reference_no).trim().length < 12;
+                payHtml = `
+                    <div class="small">
+                        <span class="badge badge-success font-monospace">₹${v.payment_amount || 50}</span>
+                        <div class="font-weight-bold text-dark font-monospace mt-1" style="font-size: 11px;">
+                            ${isShort ? 'Last 5 Digits' : 'UTR'}: <span class="badge badge-light border text-dark font-monospace">${escapeHtml(v.payment_reference_no)}</span>
+                        </div>
+                        <div class="text-muted" style="font-size: 10px;">📅 ${escapeHtml(v.payment_date || '')}</div>
+                        ${v.sales_invoice ? `<div class="text-info mt-1" style="font-size: 10px;"><a href="/api/method/society_erp.resident_portal.download_invoice_pdf?invoice_name=${encodeURIComponent(v.sales_invoice)}" target="_blank">🧾 Inv: ${escapeHtml(v.sales_invoice)}</a></div>` : ''}
+                    </div>
+                `;
+            }
+
+            const isPaid = Boolean(v.payment_reference_no && v.payment_reference_no.trim());
+
             tableHtml += `
                 <tr>
                     <td><span class="comm-flat-badge">${escapeHtml(v.flat)}</span></td>
@@ -270,13 +288,20 @@ frappe.ready(function () {
                         <div>${escapeHtml(v.registered_owner_name || '-')}</div>
                         <span class="badge badge-light text-muted border">${escapeHtml(v.relationship_to_resident || v.belongs_to || 'Resident')}</span>
                     </td>
+                    <td>${payHtml}</td>
                     <td>${docsHtml}</td>
                     <td>${getStatusBadge(v.approval_status)}</td>
                     <td class="text-right">
                         ${isPend ? `
-                            <button type="button" class="btn btn-sm btn-success py-1 px-2 btn-action" data-doctype="Resident Vehicle" data-docname="${v.name}" data-action="Approved" data-title="Approve Vehicle Sticker">
-                                ✅ Approve
-                            </button>
+                            ${isPaid ? `
+                                <button type="button" class="btn btn-sm btn-success py-1 px-2 btn-action" data-doctype="Resident Vehicle" data-docname="${v.name}" data-action="Approved" data-title="Approve Vehicle Sticker">
+                                    ✅ Approve
+                                </button>
+                            ` : `
+                                <button type="button" class="btn btn-sm btn-secondary py-1 px-2" disabled title="Cannot approve without verified UPI payment details">
+                                    🔒 Unpaid
+                                </button>
+                            `}
                             <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 btn-action" data-doctype="Resident Vehicle" data-docname="${v.name}" data-action="Rejected" data-title="Reject Vehicle Registration">
                                 ❌ Reject
                             </button>
@@ -295,15 +320,22 @@ frappe.ready(function () {
                     <div class="small text-muted mb-2">
                         <div>🚗 ${escapeHtml(v.vehicle_type)} &bull; ${escapeHtml(v.make || '')} ${escapeHtml(v.model || '')} (${escapeHtml(v.color || '-')})</div>
                         <div>👤 Reg Owner: ${escapeHtml(v.registered_owner_name || '-')} (${escapeHtml(v.relationship_to_resident || 'Self')})</div>
+                        ${v.payment_reference_no ? `<div class="mt-1 text-success">💳 Paid ₹${v.payment_amount || 50} &bull; UTR: <strong>${escapeHtml(v.payment_reference_no)}</strong> (${escapeHtml(v.payment_date || '')})</div>` : '<div class="mt-1 text-danger">⚠️ Unpaid / No UPI Payment details</div>'}
                     </div>
                     <div class="mb-3">
                         <small class="text-muted font-weight-bold mr-1">Documents:</small> ${docsHtml}
                     </div>
                     ${isPend ? `
                         <div class="d-flex pt-2 border-top">
-                            <button type="button" class="btn btn-success btn-sm flex-grow-1 mr-2 font-weight-bold btn-action" data-doctype="Resident Vehicle" data-docname="${v.name}" data-action="Approved" data-title="Approve Vehicle Registration">
-                                ✅ Approve Sticker
-                            </button>
+                            ${isPaid ? `
+                                <button type="button" class="btn btn-success btn-sm flex-grow-1 mr-2 font-weight-bold btn-action" data-doctype="Resident Vehicle" data-docname="${v.name}" data-action="Approved" data-title="Approve Vehicle Registration">
+                                    ✅ Approve Sticker
+                                </button>
+                            ` : `
+                                <button type="button" class="btn btn-secondary btn-sm flex-grow-1 mr-2 font-weight-bold" disabled title="Cannot approve without verified UPI payment details">
+                                    🔒 Awaiting Payment
+                                </button>
+                            `}
                             <button type="button" class="btn btn-outline-danger btn-sm font-weight-bold btn-action" data-doctype="Resident Vehicle" data-docname="${v.name}" data-action="Rejected" data-title="Reject Vehicle Registration">
                                 ❌ Reject
                             </button>

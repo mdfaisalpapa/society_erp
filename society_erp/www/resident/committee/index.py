@@ -223,6 +223,11 @@ def get_committee_data(module_type="all"):
                 "relationship_to_resident",
                 "approval_status",
                 "rfid_number",
+                "payment_reference_no",
+                "payment_date",
+                "payment_amount",
+                "sales_invoice",
+                "payment_entry",
                 "rc_copy",
                 "noc",
                 "creation",
@@ -621,7 +626,24 @@ def update_item_status(doctype, docname, action, remarks=None):
 
     elif doctype == "Resident Vehicle":
         if action in ("Approved", "Rejected", "Inactive"):
+            if action == "Approved":
+                utr = (doc.get("payment_reference_no") or "").strip()
+                if not utr:
+                    frappe.throw(_("Cannot approve vehicle sticker: UPI Payment UTR / reference is required for approval."))
+
             doc.approval_status = action
+            
+            # If approved, auto-generate Sales Invoice & Payment Entry (Receipt) if not already generated
+            if action == "Approved" and not doc.get("sales_invoice"):
+                try:
+                    from society_erp.accounting.vehicle_billing import create_vehicle_sticker_invoice_and_receipt
+                    si_name, pe_name = create_vehicle_sticker_invoice_and_receipt(doc)
+                    doc.sales_invoice = si_name
+                    doc.payment_entry = pe_name
+                except Exception as e:
+                    frappe.log_error(title="Vehicle Sticker Billing Error", message=f"Failed to auto-bill vehicle {doc.name}: {str(e)}")
+                    # Do not block approval if invoice creation encounters an edge case
+
         if remarks:
             doc.remarks = f"{doc.remarks or ''}\n[{today()}] {comm_name}: {remarks}".strip()
 

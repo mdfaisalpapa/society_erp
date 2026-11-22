@@ -56,6 +56,136 @@ frappe.ready(function() {
         }
     });
 
+    // Set default payment date to today
+    if ($('#payment_date').length && !$('#payment_date').val()) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        $('#payment_date').val(todayStr);
+    }
+
+    // Helper to parse UPI text (from pasted text or text files)
+    function parseAndPopulateUPIText(rawText) {
+        if (!rawText) return false;
+        
+        // Regex 1: Explicit labels (Google Pay, PhonePe, Paytm, BHIM)
+        // e.g. "UPI transaction ID: 632391942268" or "Google transaction ID: CICAg..." or "UTR: 412389123456"
+        let utr = null;
+        const utrLabelRegex = /(?:UPI\s*(?:transaction\s*ID|Ref\s*No|UTR|Reference)|UTR(?:\s*No)?)\s*[:\n\r\s]+([0-9]{12})/i;
+        const labelMatch = rawText.match(utrLabelRegex);
+        if (labelMatch) {
+            utr = labelMatch[1];
+        } else {
+            // Regex 2: Any 12 consecutive digits
+            const digitMatch = rawText.match(/\b([0-9]{12})\b/);
+            if (digitMatch) {
+                utr = digitMatch[1];
+            }
+        }
+
+        if (utr) {
+            $('#payment_reference_no').val(utr);
+        }
+
+        // Date extraction e.g. "19 Nov 2026" or "19/11/2026" or "2026-11-19"
+        const dateRegex = /(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})/i;
+        const dateMatch = rawText.match(dateRegex);
+        if (dateMatch) {
+            const months = {jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"};
+            const mm = months[dateMatch[2].toLowerCase().slice(0,3)] || "01";
+            const dd = String(dateMatch[1]).padStart(2, '0');
+            const yyyy = dateMatch[3];
+            $('#payment_date').val(`${yyyy}-${mm}-${dd}`);
+        }
+
+        return Boolean(utr);
+    }
+
+    // 1-Click Clipboard Paste button for Mobile & Desktop
+    $('#btn-paste-clipboard').on('click', async function() {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            try {
+                const clipText = await navigator.clipboard.readText();
+                if (clipText) {
+                    if (parseAndPopulateUPIText(clipText)) {
+                        const utr = $('#payment_reference_no').val();
+                        $('#ocr_status').show().html(`✅ Pasted UTR: <strong class="text-success">${utr}</strong> from clipboard!`);
+                    } else {
+                        // If user just copied the raw 12 digits directly
+                        const cleanDigits = clipText.replace(/\D/g, '');
+                        if (cleanDigits.length === 12) {
+                            $('#payment_reference_no').val(cleanDigits);
+                            $('#ocr_status').show().html(`✅ Pasted 12-digit UTR: <strong class="text-success">${cleanDigits}</strong>!`);
+                        } else {
+                            $('#payment_reference_no').val(clipText.trim());
+                        }
+                    }
+                }
+            } catch (err) {
+                // Clipboard permission blocked; focus field so user can paste natively
+                $('#payment_reference_no').focus();
+            }
+        } else {
+            $('#payment_reference_no').focus();
+        }
+    });
+
+    // Client-side ephemeral screenshot / shared file OCR reader using Tesseract.js (processes locally in browser)
+    $('#upi_screenshot_file').on('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const $status = $('#ocr_status').show().html('⏳ <span class="spinner-border spinner-border-sm" role="status"></span> Scanning receipt / file for UPI details...');
+
+        // 1. If user uploaded a text file or shared receipt file
+        if (file.type === "text/plain" || file.name.endsWith(".txt")) {
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                if (parseAndPopulateUPIText(evt.target.result)) {
+                    const utr = $('#payment_reference_no').val();
+                    $status.html(`✅ Extracted UTR: <strong class="text-success">${utr}</strong> from shared receipt file!`);
+                } else {
+                    $status.html('⚠️ Could not detect 12-digit UTR. Please enter it manually below.');
+                }
+            };
+            reader.readAsText(file);
+            return;
+        }
+
+        // 2. Quick check: If 12-digit UTR is already in the filename
+        const nameMatch = file.name.match(/\b\d{12}\b/);
+        if (nameMatch) {
+            $('#payment_reference_no').val(nameMatch[0]);
+            $status.html('✅ Extracted 12-digit UTR <strong>' + nameMatch[0] + '</strong> from filename!');
+            return;
+        }
+
+        // 3. Perform OCR via Tesseract.js in the browser (for images)
+        if (window.Tesseract && window.Tesseract.recognize) {
+            try {
+                const res = await window.Tesseract.recognize(file, 'eng', {
+                    logger: m => {
+                        if (m && m.status === 'recognizing text' && m.progress) {
+                            $status.html(`🔍 OCR scanning in progress (${Math.round(m.progress * 100)}%)...`);
+                        }
+                    }
+                });
+
+                const text = (res && res.data && res.data.text) || '';
+                if (parseAndPopulateUPIText(text)) {
+                    const utr = $('#payment_reference_no').val();
+                    $status.html(`✅ Extracted UTR: <strong class="text-success">${utr}</strong>! Please verify.`);
+                } else {
+                    $status.html('⚠️ UTR not detected (GPay may have hidden it in screenshot). Tap <strong>Share Receipt</strong> in GPay and paste the text or share image.');
+                }
+
+            } catch (err) {
+                console.warn('OCR Recognition failed:', err);
+                $status.html('ℹ️ Screenshot loaded. Please enter the 12-digit UPI UTR Number below.');
+            }
+        } else {
+            $status.html('ℹ️ Screenshot loaded. Please enter the 12-digit UPI UTR Number below.');
+        }
+    });
+
     // 4. Submit Form Sequence
     $('#vehicle-form').on('submit', async function(e) {
         e.preventDefault();
@@ -71,6 +201,12 @@ frappe.ready(function() {
         }
         if (v_type === 'Bike' && bike_el <= 0) {
             frappe.msgprint({title: 'Limit Reached', message: 'Maximum 2 bikes allowed per flat.', indicator: 'red'});
+            return;
+        }
+
+        let utrNo = ($('#payment_reference_no').val() || '').trim();
+        if (!utrNo || utrNo.length < 5) {
+            frappe.msgprint({title: 'Payment Details Missing', message: 'Please enter at least the last 5 digits of the UPI Transaction ID / UTR.', indicator: 'red'});
             return;
         }
         
@@ -103,6 +239,8 @@ frappe.ready(function() {
                     model: $('#model').val(),
                     color: $('#color').val(),
                     is_electric: 0,
+                    payment_reference_no: utrNo,
+                    payment_date: $('#payment_date').val(),
                     rc_copy: rc_url,
                     noc: noc_url
                 },

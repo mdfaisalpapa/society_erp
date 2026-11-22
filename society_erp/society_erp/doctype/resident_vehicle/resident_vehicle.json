@@ -24,7 +24,12 @@
   "rfid_number",
   "approval_status",
   "rc_copy",
-  "noc"
+  "noc",
+  "payment_reference_no",
+  "payment_date",
+  "payment_amount",
+  "sales_invoice",
+  "payment_entry"
  ],
  "fields": [
   {
@@ -129,6 +134,36 @@
    "fieldtype": "Link",
    "label": "Parking Slot",
    "options": "Parking Slot"
+  },
+  {
+   "fieldname": "payment_reference_no",
+   "fieldtype": "Data",
+   "label": "UPI Transaction ID / UTR"
+  },
+  {
+   "fieldname": "payment_date",
+   "fieldtype": "Date",
+   "label": "Payment Date"
+  },
+  {
+   "default": "50.00",
+   "fieldname": "payment_amount",
+   "fieldtype": "Currency",
+   "label": "Payment Amount"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_entry",
+   "fieldtype": "Link",
+   "label": "Payment Entry (Receipt)",
+   "options": "Payment Entry",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

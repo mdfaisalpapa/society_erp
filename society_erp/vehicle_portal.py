@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import flt
 from society_erp.resident_portal import get_verified_owner_records
 from society_erp.api.utils import portal_api
 
@@ -34,6 +35,11 @@ def get_vehicles(for_user=None):
             "active",
             "approval_status",
             "parking_slot",
+            "payment_reference_no",
+            "payment_date",
+            "payment_amount",
+            "sales_invoice",
+            "payment_entry",
         ],
         order_by="creation desc",
         limit_page_length=100,
@@ -142,6 +148,8 @@ def register_vehicle(
     color=None,
     is_electric=0,
     remarks=None,
+    payment_reference_no=None,
+    payment_date=None,
     for_user=None,
 ):
     """Register a vehicle with required documents and flat-specific parking."""
@@ -304,6 +312,14 @@ def register_vehicle(
             parking_slot = ""
             open_parking_msg = "Assigned to Open Parking (Unreserved)"
             remarks = open_parking_msg if not remarks else f"{remarks} - {open_parking_msg}"
+    clean_utr = (payment_reference_no or "").strip()
+    if not clean_utr:
+        frappe.throw("UPI Transaction ID / UTR (or last 5 digits) is mandatory for vehicle sticker registration.")
+    if len(clean_utr) < 5:
+        frappe.throw("Please enter at least the last 5 digits of your UPI Transaction ID / UTR.")
+
+    fee_amount = flt(frappe.db.get_single_value("Society ERP Settings", "vehicle_sticker_fee") or 50.0)
+
     doc = frappe.get_doc({
         "doctype": "Resident Vehicle",
         "flat": owner.flat,
@@ -324,6 +340,9 @@ def register_vehicle(
         "rc_copy": rc_copy,
         "noc": noc if noc_required else None,
         "parking_slot": parking_slot,
+        "payment_reference_no": clean_utr,
+        "payment_date": payment_date or frappe.utils.today(),
+        "payment_amount": fee_amount,
         "active": 0,
         "approval_status": "Pending",
     })

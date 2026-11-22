@@ -112,6 +112,7 @@ scheduler_events = {
 #app_include_js = "/assets/society_erp/js/login_redirect.js"
 # Inject script into the public frontend (including the /login page)
 web_include_js = [
+    "/assets/society_erp/js/lib/tesseract.min.js",
     "/assets/society_erp/js/login_redirect.js",
     "/assets/society_erp/js/push_registration.js",
 ]
