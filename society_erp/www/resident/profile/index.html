@@ -116,8 +116,11 @@
             <!-- 2. Primary Owner Details Card (From Owners DocType) -->
             <div class="col-md-6 mb-4">
                 <div class="card h-100 shadow-sm border-0">
-                    <div class="card-header bg-success text-white py-3">
+                    <div class="card-header bg-success text-white py-3 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 font-weight-bold">📜 Primary Owner Records</h5>
+                        <a href="/api/method/society_erp.www.resident.profile.index.download_flat_details_pdf?flat={{ flat_number }}" target="_blank" class="btn btn-light btn-sm font-weight-bold text-success shadow-sm" style="font-size: 0.8rem; border-radius: 6px;">
+                            📄 Download PDF
+                        </a>
                     </div>
                     <div class="card-body d-flex flex-column justify-content-between">
                         <table class="table table-borderless table-sm">
@@ -150,8 +153,13 @@
         <div class="row">
             <div class="col-12 mb-4">
                 <div class="card shadow-sm border-0">
-                    <div class="card-header bg-primary text-white py-3">
+                    <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center flex-wrap">
                         <h5 class="mb-0 font-weight-bold">🏢 Flat Property Information</h5>
+                        <div class="mt-1 mt-sm-0">
+                            <a href="/api/method/society_erp.www.resident.profile.index.download_flat_details_pdf?flat={{ flat_number }}" target="_blank" class="btn btn-light btn-sm font-weight-bold text-primary shadow-sm" style="font-size: 0.82rem; border-radius: 6px;">
+                                📄 Share / Download PDF
+                            </a>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="row">

@@ -534,3 +534,262 @@ def verify_and_update_email(new_email, otp):
         "message": _("Email address updated successfully to {0}. Please log in with your new email in future.").format(target_email),
         "new_email": target_email,
     }
+
+
+@frappe.whitelist(allow_guest=False)
+def download_flat_details_pdf(flat=None):
+    """
+    Generates and downloads a clean, beautifully formatted PDF report of the
+    flat property & ownership details (Flat No, Block, UDS, EB Service No,
+    Property Tax No, Owner details, Corpus fund contribution, Parking slots).
+    """
+    from frappe.utils.pdf import get_pdf
+    from frappe.utils import format_date, today, flt, fmt_money
+
+    user = frappe.session.user
+    user_email = (user or "").strip().lower()
+
+    # Determine flat
+    if not flat:
+        # Check logged in user's flat
+        tenant = frappe.db.get_value("Tenants", {"email": user_email, "active": 1}, "flat")
+        owner = frappe.db.get_value("Owners", {"linked_user": user, "active": 1}, "flat") or frappe.db.get_value("Owners", {"email": user_email, "active": 1}, "flat")
+        flat = tenant or owner
+
+    if not flat:
+        frappe.throw(_("Flat not identified for user."), frappe.PermissionError)
+
+    # Permission check: ensure user is resident of this flat or committee/staff
+    user_roles = frappe.get_roles(user)
+    has_staff = any(r in user_roles for r in ["System Manager", "Accounts User", "Accounts Manager"])
+    is_res = (
+        frappe.db.exists("Tenants", {"email": user_email, "active": 1, "flat": flat})
+        or frappe.db.exists("Owners", {"linked_user": user, "active": 1, "flat": flat})
+        or frappe.db.exists("Owners", {"email": user_email, "active": 1, "flat": flat})
+    )
+    if not has_staff and not is_res:
+        frappe.throw(_("Access Denied: You are not authorized to download details for this flat."), frappe.PermissionError)
+
+    # Fetch flat customer record
+    flat_doc = frappe.get_doc("Customer", flat) if frappe.db.exists("Customer", flat) else None
+    block = flat_doc.get("custom_block") or "-" if flat_doc else "-"
+    floor = flat_doc.get("custom_floor") if flat_doc and flat_doc.get("custom_floor") is not None else "-"
+    cgewho_reg = flat_doc.get("custom_cgewho_reg_no") or "-" if flat_doc else "-"
+    uds = flat_doc.get("custom_uds") or "0.00" if flat_doc else "0.00"
+    eb_no = (flat_doc.get("custom_eb_service_no") or flat_doc.get("eb_service_no") or "-") if flat_doc else "-"
+    tax_no = (flat_doc.get("custom_property_tax_no") or flat_doc.get("property_tax_no") or "-") if flat_doc else "-"
+
+    # Fetch registered owner details
+    owner_records = frappe.get_all(
+        "Owners",
+        filters={"flat": flat, "active": 1},
+        fields=["owner_name", "mobile_no", "email", "registration_status"],
+        order_by="creation asc"
+    )
+    primary_owner = owner_records[0] if owner_records else None
+
+    # Fetch dedicated parking slots
+    parking_slots = frappe.get_all(
+        "Parking Slot",
+        filters={"owned_by": flat},
+        fields=["name", "slot_type"],
+        order_by="name asc"
+    )
+    slots_str = ", ".join([f"{s.name} ({s.slot_type})" for s in parking_slots]) if parking_slots else "Open / Unreserved Parking"
+
+    # Corpus fund & Dues
+    corpus_gl = frappe.get_all(
+        "GL Entry",
+        filters={"party_type": "Customer", "party": flat, "account": ["like", "Corpus Fund%"], "is_cancelled": 0},
+        fields=["debit", "credit"],
+    )
+    corpus_total = sum(flt(e.credit) - flt(e.debit) for e in corpus_gl)
+
+    unpaid_inv = frappe.get_all("Sales Invoice", filters={"customer": flat, "docstatus": 1}, fields=["outstanding_amount"])
+    outstanding_total = sum(flt(i.outstanding_amount) for i in unpaid_inv)
+
+    society_name = "Kendriya Vihar Phase-3 Apartment Owners Association"
+    society_addr = "Paruthippattu, Avadi, Chennai - 600071"
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>Flat Details - {flat}</title>
+        <style>
+            body {{
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                color: #1e293b;
+                margin: 0;
+                padding: 24px;
+                font-size: 13px;
+                line-height: 1.5;
+            }}
+            .header-table {{
+                width: 100%;
+                border-bottom: 2px solid #0f172a;
+                padding-bottom: 12px;
+                margin-bottom: 20px;
+            }}
+            .society-title {{
+                font-size: 18px;
+                font-weight: bold;
+                color: #0f172a;
+                margin: 0 0 4px 0;
+            }}
+            .society-sub {{
+                font-size: 12px;
+                color: #64748b;
+                margin: 0;
+            }}
+            .doc-title-badge {{
+                display: inline-block;
+                background: #e2e8f0;
+                color: #0f172a;
+                font-weight: bold;
+                padding: 4px 10px;
+                border-radius: 4px;
+                font-size: 13px;
+                margin-bottom: 16px;
+            }}
+            .section-heading {{
+                font-size: 13px;
+                font-weight: bold;
+                color: #1e293b;
+                border-bottom: 1px solid #cbd5e1;
+                padding-bottom: 4px;
+                margin-top: 18px;
+                margin-bottom: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }}
+            .info-table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 12px;
+            }}
+            .info-table th {{
+                width: 32%;
+                text-align: left;
+                padding: 6px 8px;
+                background-color: #f8fafc;
+                color: #475569;
+                font-weight: 600;
+                border: 1px solid #e2e8f0;
+                font-size: 12px;
+            }}
+            .info-table td {{
+                padding: 6px 8px;
+                border: 1px solid #e2e8f0;
+                font-size: 12px;
+            }}
+            .footer {{
+                margin-top: 30px;
+                border-top: 1px dashed #cbd5e1;
+                padding-top: 10px;
+                font-size: 10px;
+                color: #94a3b8;
+                text-align: center;
+            }}
+        </style>
+    </head>
+    <body>
+        <table class="header-table">
+            <tr>
+                <td>
+                    <div class="society-title">{society_name}</div>
+                    <div class="society-sub">{society_addr} | Registration No: 123/2022</div>
+                </td>
+                <td style="text-align: right; vertical-align: bottom;">
+                    <div style="font-size: 11px; color: #64748b;">Generated: {today()}</div>
+                </td>
+            </tr>
+        </table>
+
+        <div style="text-align: center;">
+            <span class="doc-title-badge">FLAT & OWNERSHIP SUMMARY DOSSIER</span>
+        </div>
+
+        <div class="section-heading">🏢 Property & Flat Specifications</div>
+        <table class="info-table">
+            <tr>
+                <th>Flat Number</th>
+                <td><strong style="font-size: 14px; color: #0f172a;">{flat}</strong></td>
+            </tr>
+            <tr>
+                <th>Residential Block</th>
+                <td>{block} (Floor: {floor})</td>
+            </tr>
+            <tr>
+                <th>CGEWHO Reg. Number</th>
+                <td><code>{cgewho_reg}</code></td>
+            </tr>
+            <tr>
+                <th>Undivided Share of Land (UDS)</th>
+                <td><strong>{uds} sq.ft</strong></td>
+            </tr>
+            <tr>
+                <th>Dedicated Parking Slot(s)</th>
+                <td>{slots_str}</td>
+            </tr>
+        </table>
+
+        <div class="section-heading">⚡ Civic Utility & Tax Identifiers</div>
+        <table class="info-table">
+            <tr>
+                <th>TANGEDCO EB Service No</th>
+                <td><strong style="font-size: 13px; font-family: monospace;">{eb_no}</strong></td>
+            </tr>
+            <tr>
+                <th>Greater Chennai Corporation Property Tax No</th>
+                <td><strong style="font-size: 13px; font-family: monospace;">{tax_no}</strong></td>
+            </tr>
+        </table>
+
+        <div class="section-heading">📜 Registered Ownership Details</div>
+        <table class="info-table">
+            <tr>
+                <th>Registered Owner Name</th>
+                <td><strong style="font-size: 13px;">{primary_owner.owner_name if primary_owner else 'Not Available'}</strong></td>
+            </tr>
+            <tr>
+                <th>Contact Mobile</th>
+                <td>{primary_owner.mobile_no or 'Not Available' if primary_owner else 'Not Available'}</td>
+            </tr>
+            <tr>
+                <th>Registered Email</th>
+                <td>{primary_owner.email or 'Not Available' if primary_owner else 'Not Available'}</td>
+            </tr>
+            <tr>
+                <th>AoA Verification Status</th>
+                <td>{primary_owner.registration_status if primary_owner else 'Active Record'}</td>
+            </tr>
+        </table>
+
+        <div class="section-heading">💰 Association Standing & Contributions</div>
+        <table class="info-table">
+            <tr>
+                <th>Corpus Fund Contribution</th>
+                <td><strong>₹ {corpus_total:,.2f}</strong></td>
+            </tr>
+            <tr>
+                <th>Current Maintenance Outstanding</th>
+                <td><span style="color: {'#dc2626' if outstanding_total > 0 else '#16a34a'}; font-weight: bold;">₹ {outstanding_total:,.2f}</span> ({'Dues Outstanding' if outstanding_total > 0 else 'All Dues Cleared'})</td>
+            </tr>
+        </table>
+
+        <div class="footer">
+            This document is generated digitally from Kendriya Vihar Phase-3 Society ERP for resident records and administrative reference.
+        </div>
+    </body>
+    </html>
+    """
+
+    pdf_content = get_pdf(html)
+    filename = f"Flat_Details_{flat}.pdf"
+
+    frappe.response["filename"] = filename
+    frappe.response["filecontent"] = pdf_content
+    frappe.response["type"] = "download"
+
