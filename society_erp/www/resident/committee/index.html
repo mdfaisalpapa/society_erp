@@ -210,13 +210,13 @@
                             </li>
                             {% endif %}
                             <li class="nav-item mr-2">
-                                <a class="nav-link font-weight-bold text-primary" href="/app/bye-law-consultation">📜 Manage Bye-Laws</a>
+                                <a class="nav-link font-weight-bold text-primary" id="tab-byelaws-manage" data-toggle="pill" href="#pane-byelaws-manage" role="tab">📜 Manage Bye-Laws</a>
                             </li>
                             <li class="nav-item mr-2">
-                                <a class="nav-link font-weight-bold text-info" href="/app/query-report/Bye-Law%20Disposition%20Matrix">📊 Disposition Matrix</a>
+                                <a class="nav-link font-weight-bold text-info" id="tab-byelaws-matrix" data-toggle="pill" href="#pane-byelaws-matrix" role="tab">📊 Disposition Matrix</a>
                             </li>
                             <li class="nav-item mr-2">
-                                <a class="nav-link font-weight-bold text-secondary" href="/byelaws">👁️ Preview Owner Portal</a>
+                                <a class="nav-link font-weight-bold text-secondary" href="/byelaws" target="_blank">👁️ Preview Owner Portal</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link font-weight-bold" id="tab-resolutions" data-toggle="pill" href="#pane-resolutions" role="tab" data-module="resolutions">
@@ -358,6 +358,175 @@
             </div>
 
             <!-- 8. Board Resolutions Pane -->
+            
+            <!-- Manage Bye-Laws Pane -->
+            <div class="tab-pane fade" id="pane-byelaws-manage" role="tabpanel">
+                <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+                            <h5 class="font-weight-bold mb-0">📜 Manage Bye-Law Consultations</h5>
+                            <button class="btn btn-sm btn-outline-primary" id="bl-new-toggle">+ New Consultation</button>
+                        </div>
+                        <div id="bl-new-form" class="border rounded p-3 mb-3 bg-light" style="display:none;">
+                            <div class="form-row">
+                                <div class="col-md-6 mb-2"><input type="text" id="bl-new-title" class="form-control form-control-sm" placeholder="Consultation Title"></div>
+                                <div class="col-md-4 mb-2"><select id="bl-new-status" class="form-control form-control-sm"><option value="Draft">Draft</option><option value="Consultation Open">Consultation Open</option></select></div>
+                                <div class="col-md-2 mb-2"><button class="btn btn-sm btn-primary btn-block" id="bl-new-save">Create</button></div>
+                            </div>
+                        </div>
+                        <div class="form-row align-items-end">
+                            <div class="col-md-4 mb-2"><label class="small font-weight-bold">Consultation</label><select id="bl-consult-select" class="form-control form-control-sm"></select></div>
+                            <div class="col-md-3 mb-2"><label class="small font-weight-bold">Status</label><select id="bl-status-select" class="form-control form-control-sm"><option value="Draft">Draft</option><option value="Consultation Open">Consultation Open</option><option value="Under Review">Under Review</option><option value="Finalized for Voting">Finalized for Voting</option><option value="Closed">Closed</option></select></div>
+                            <div class="col-md-2 mb-2"><label class="small font-weight-bold">Start</label><input type="datetime-local" id="bl-start-input" class="form-control form-control-sm"></div>
+                            <div class="col-md-2 mb-2"><label class="small font-weight-bold">End</label><input type="datetime-local" id="bl-end-input" class="form-control form-control-sm"></div>
+                            <div class="col-md-1 mb-2"><button class="btn btn-sm btn-primary btn-block" id="bl-save-btn">Save</button></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-body">
+                        <h6 class="font-weight-bold mb-2">Import Clauses (.docx / .csv)</h6>
+                        <div class="form-row align-items-center">
+                            <div class="col-md-4 mb-2"><input type="file" id="bl-import-file" accept=".docx,.csv" class="form-control-file form-control-sm"></div>
+                            <div class="col-md-4 mb-2"><input type="text" id="bl-import-ro" class="form-control form-control-sm" placeholder="Read-only overrides (e.g. 1, 2, CHAPTER I)"></div>
+                            <div class="col-md-4 mb-2 d-flex align-items-center" style="gap: 10px;">
+                                <label class="small mb-0"><input type="checkbox" id="bl-import-lock" checked> Lock unmodified TN Model</label>
+                                <label class="small mb-0"><input type="checkbox" id="bl-import-replace"> Replace</label>
+                                <button class="btn btn-sm btn-success" id="bl-import-btn">Upload &amp; Import</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="font-weight-bold mb-0">Clauses</h6>
+                            <select id="bl-chapter-filter" class="form-control form-control-sm" style="max-width: 260px;"><option value="ALL">All Chapters</option></select>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0" id="bl-clauses-table">
+                                <thead class="thead-light"><tr><th>#</th><th>Chapter</th><th>Title</th><th>Status</th><th>Disposition</th><th>Comments</th><th>Action</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Disposition Matrix Pane -->
+            <div class="tab-pane fade" id="pane-byelaws-matrix" role="tabpanel">
+                <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+                            <h5 class="font-weight-bold mb-0">📊 Bye-Law Disposition Matrix</h5>
+                            <div style="gap: 6px;" class="d-flex">
+                                <button class="btn btn-sm btn-outline-primary" id="mx-refresh-btn">Refresh</button>
+                                <button class="btn btn-sm btn-outline-success" id="mx-export-btn">Export CSV</button>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="col-md-3 mb-2"><select id="mx-consult-select" class="form-control form-control-sm"></select></div>
+                            <div class="col-md-3 mb-2"><input type="text" id="mx-chapter-input" class="form-control form-control-sm" placeholder="Filter chapter..."></div>
+                            <div class="col-md-3 mb-2"><select id="mx-type-select" class="form-control form-control-sm"><option value="">All Types</option><option value="Suggestion">Suggestion</option><option value="Objection">Objection</option><option value="Clarification">Clarification</option><option value="Support">Support</option></select></div>
+                            <div class="col-md-3 mb-2"><select id="mx-status-select" class="form-control form-control-sm"><option value="">All Dispositions</option><option value="Pending">Pending</option><option value="Accepted">Accepted</option><option value="Partially Accepted">Partially Accepted</option><option value="Rejected">Rejected</option><option value="Noted">Noted</option></select></div>
+                        </div>
+                        <div class="row text-center mt-2" id="mx-kpi-row"></div>
+                    </div>
+                </div>
+                <div class="card shadow-sm border-0">
+                    <div class="card-body table-responsive">
+                        <table class="table table-sm table-bordered mb-0" id="mx-table">
+                            <thead class="thead-light"><tr><th>Clause</th><th>Flat</th><th>Type</th><th>+1</th><th>Comment</th><th>Disposition</th><th>Response</th><th>Action</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Modal -->
+            <div class="modal fade" id="mx-review-modal" tabindex="-1" role="dialog">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header"><h5 class="modal-title">Review Comment</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                        <div class="modal-body">
+                            <input type="hidden" id="mx-rev-name">
+                            <div class="form-group"><label class="small font-weight-bold">Disposition Status</label><select id="mx-rev-status" class="form-control form-control-sm"><option value="Pending">Pending</option><option value="Accepted">Accepted</option><option value="Partially Accepted">Partially Accepted</option><option value="Rejected">Rejected</option><option value="Noted">Noted</option></select></div>
+                            <div class="form-group"><label class="small font-weight-bold">Committee Response</label><textarea id="mx-rev-response" class="form-control form-control-sm" rows="3"></textarea></div>
+                            <div class="form-group mb-0"><label class="small font-weight-bold">Clause Disposition (optional)</label><select id="mx-rev-clause-disp" class="form-control form-control-sm"><option value="">— No Change —</option><option value="Pending">Pending</option><option value="Uncontested">Uncontested</option><option value="Modified">Modified</option><option value="Contested - Poll Required">Contested - Poll Required</option><option value="Locked">Locked</option></select></div>
+                        </div>
+                        <div class="modal-footer"><button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Cancel</button><button type="button" class="btn btn-sm btn-primary" id="mx-rev-save">Save Review</button></div>
+                    </div>
+                </div>
+            </div>
+<script>
+frappe.ready(function () {
+    let blConsultations = [], blClauses = [], mxRows = [];
+    const esc = (v) => frappe.utils.escape_html(v == null ? "" : String(v));
+    function loadConsultations(cb) {
+        frappe.call({ method: "society_erp.byelaws_api.committee_list_consultations", callback(r) {
+            blConsultations = r.message || [];
+            $("#bl-consult-select, #mx-consult-select").html(blConsultations.map(c => `<option value="${esc(c.name)}">${esc(c.title)} (${esc(c.status)})</option>`).join(""));
+            if (blConsultations.length) syncConsultationForm();
+            if (cb) cb();
+        }});
+    }
+    function syncConsultationForm() {
+        const name = $("#bl-consult-select").val();
+        const c = blConsultations.find(x => x.name === name);
+        if (!c) return;
+        $("#bl-status-select").val(c.status);
+        $("#bl-start-input").val(c.consultation_start ? c.consultation_start.slice(0, 16).replace(" ", "T") : "");
+        $("#bl-end-input").val(c.consultation_end ? c.consultation_end.slice(0, 16).replace(" ", "T") : "");
+        loadClauses(name);
+    }
+    function loadClauses(consultation) {
+        if (!consultation) return;
+        frappe.call({ method: "society_erp.byelaws_api.committee_get_clauses", args: { consultation }, callback(r) {
+            blClauses = r.message || [];
+            const chs = Array.from(new Set(blClauses.map(x => x.chapter).filter(Boolean)));
+            $("#bl-chapter-filter").html(`<option value="ALL">All Chapters</option>` + chs.map(ch => `<option value="${esc(ch)}">${esc(ch)}</option>`).join(""));
+            renderClauses();
+        }});
+    }
+    function renderClauses() {
+        const ch = $("#bl-chapter-filter").val();
+        const rows = blClauses.filter(c => ch === "ALL" || c.chapter === ch);
+        $("#bl-clauses-table tbody").html(rows.map(c => `<tr><td>${esc(c.clause_number)}</td><td class="small">${esc(c.chapter)}</td><td class="small">${esc(c.clause_title)}</td><td>${c.is_readonly ? '<span class="badge badge-secondary">Locked TN Model</span>' : '<span class="badge badge-warning">Open Deviation</span>'}</td><td><select class="form-control form-control-sm bl-clause-disp" data-name="${esc(c.name)}">${["Pending","Uncontested","Modified","Contested - Poll Required","Locked"].map(o => `<option value="${o}" ${c.clause_disposition === o ? "selected" : ""}>${o}</option>`).join("")}</select></td><td>${c.comment_count || 0}</td><td><button class="btn btn-xs btn-outline-secondary bl-lock-toggle" data-name="${esc(c.name)}" data-ro="${c.is_readonly ? 1 : 0}">${c.is_readonly ? "Unlock" : "Lock"}</button></td></tr>`).join(""));
+    }
+    function loadMatrix() {
+        frappe.call({ method: "society_erp.byelaws_api.committee_get_disposition_matrix", args: { consultation: $("#mx-consult-select").val() || null, chapter: $("#mx-chapter-input").val() || null, comment_type: $("#mx-type-select").val() || null, disposition_status: $("#mx-status-select").val() || null }, callback(r) {
+            if (!r.message) return;
+            const s = r.message.summary || {}; mxRows = r.message.rows || [];
+            $("#mx-kpi-row").html(Object.entries(s).map(([k, v]) => `<div class="col"><div class="border rounded p-2"><div class="h5 mb-0 font-weight-bold">${v}</div><div class="small text-muted">${esc(k)}</div></div></div>`).join(""));
+            $("#mx-table tbody").html(mxRows.map(row => `<tr><td class="small">${esc(row.clause_number)} ${esc(row.clause_title)}</td><td class="small">${esc(row.flat_unit)}</td><td><span class="badge badge-info">${esc(row.comment_type)}</span></td><td>${row.endorsement_count || 0}</td><td class="small">${esc(row.comment_text)}</td><td><span class="badge badge-secondary">${esc(row.disposition_status)}</span></td><td class="small">${esc(row.committee_response)}</td><td><button class="btn btn-xs btn-primary mx-review-btn" data-name="${esc(row.comment)}" data-status="${esc(row.disposition_status)}" data-resp="${esc(row.committee_response || "")}">Review</button></td></tr>`).join(""));
+        }});
+    }
+    $("#tab-byelaws-manage").on("shown.bs.tab click", () => { if (!blConsultations.length) loadConsultations(); });
+    $("#tab-byelaws-matrix").on("shown.bs.tab click", () => { if (!blConsultations.length) loadConsultations(loadMatrix); else loadMatrix(); });
+    $("#bl-new-toggle").on("click", () => $("#bl-new-form").toggle());
+    $("#bl-new-save").on("click", () => frappe.call({ method: "society_erp.byelaws_api.committee_save_consultation", args: { title: $("#bl-new-title").val(), status: $("#bl-new-status").val() }, callback() { $("#bl-new-form").hide(); loadConsultations(); } }));
+    $("#bl-consult-select").on("change", syncConsultationForm);
+    $("#bl-save-btn").on("click", () => frappe.call({ method: "society_erp.byelaws_api.committee_save_consultation", args: { name: $("#bl-consult-select").val(), status: $("#bl-status-select").val(), consultation_start: $("#bl-start-input").val(), consultation_end: $("#bl-end-input").val() }, callback() { frappe.show_alert({ message: "Saved", indicator: "green" }); loadConsultations(); } }));
+    $("#bl-chapter-filter").on("change", renderClauses);
+    $(document).on("click", ".bl-lock-toggle", function () { frappe.call({ method: "society_erp.byelaws_api.committee_update_clause", args: { clause_name: $(this).data("name"), is_readonly: $(this).data("ro") ? 0 : 1 }, callback() { loadClauses($("#bl-consult-select").val()); } }); });
+    $(document).on("change", ".bl-clause-disp", function () { frappe.call({ method: "society_erp.byelaws_api.committee_update_clause", args: { clause_name: $(this).data("name"), clause_disposition: $(this).val() } }); });
+    $("#bl-import-btn").on("click", () => {
+        const file = $("#bl-import-file")[0].files[0]; if (!file) return frappe.msgprint("Select a .docx or .csv file first.");
+        const reader = new FileReader();
+        reader.onload = () => frappe.call({ method: "society_erp.byelaws_api.committee_import_clauses_upload", args: { consultation: $("#bl-consult-select").val(), filename: file.name, file_content_b64: reader.result, lock_unmodified: $("#bl-import-lock").is(":checked") ? 1 : 0, replace_existing: $("#bl-import-replace").is(":checked") ? 1 : 0, readonly_clauses: $("#bl-import-ro").val() }, freeze: true, callback(r) { if (r.message) { frappe.show_alert({ message: `Imported ${r.message.imported} clauses`, indicator: "green" }); loadClauses($("#bl-consult-select").val()); } } });
+        reader.readAsDataURL(file);
+    });
+    $("#mx-refresh-btn, #mx-consult-select, #mx-type-select, #mx-status-select").on("change click", loadMatrix);
+    $("#mx-export-btn").on("click", () => {
+        const cols = ["clause_number", "clause_title", "flat_unit", "comment_type", "endorsement_count", "comment_text", "disposition_status", "committee_response"];
+        const csv = [cols.join(",")].concat(mxRows.map(r => cols.map(c => `"${String(r[c] || "").replace(/"/g, '""')}"`).join(","))).join("\n");
+        const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "bye_law_disposition_matrix.csv"; a.click();
+    });
+    $(document).on("click", ".mx-review-btn", function () { $("#mx-rev-name").val($(this).data("name")); $("#mx-rev-status").val($(this).data("status")); $("#mx-rev-response").val($(this).data("resp")); $("#mx-review-modal").modal("show"); });
+    $("#mx-rev-save").on("click", () => frappe.call({ method: "society_erp.byelaws_api.committee_review_comment", args: { comment_name: $("#mx-rev-name").val(), disposition_status: $("#mx-rev-status").val(), committee_response: $("#mx-rev-response").val(), clause_disposition: $("#mx-rev-clause-disp").val() || null }, callback() { $("#mx-review-modal").modal("hide"); loadMatrix(); } }));
+});
+</script>
+
             <div class="tab-pane fade" id="pane-resolutions" role="tabpanel">
                 <div id="container-resolutions"></div>
             </div>

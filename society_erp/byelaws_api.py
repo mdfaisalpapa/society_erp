@@ -235,3 +235,243 @@ def toggle_comment_endorsement(comment: str) -> dict:
 
     count = frappe.db.count("Bye-Law Comment Endorsement", {"comment": comment})
     return {"endorsed": endorsed, "endorsement_count": count}
+
+
+def _require_committee_access() -> str:
+    user = _require_logged_in()
+    from society_erp.www.resident.committee.index import check_committee_access
+
+    has_access, _info = check_committee_access(user)
+    if not has_access:
+        frappe.throw(_("Committee access required."), frappe.PermissionError)
+    return user
+
+
+@frappe.whitelist()
+def committee_list_consultations() -> list[dict]:
+    _require_committee_access()
+    consultations = frappe.get_all(
+        "Bye-Law Consultation",
+        fields=["name", "title", "status", "consultation_start", "consultation_end"],
+        order_by="creation desc",
+        ignore_permissions=True,
+    )
+    for c in consultations:
+        clauses = frappe.get_all(
+            "Bye-Law Clause",
+            filters={"consultation": c.name},
+            fields=["is_readonly"],
+            ignore_permissions=True,
+        )
+        c["total_clauses"] = len(clauses)
+        c["locked_clauses"] = sum(1 for cl in clauses if cl.is_readonly)
+        c["open_clauses"] = c["total_clauses"] - c["locked_clauses"]
+
+        comments = frappe.get_all(
+            "Bye-Law Clause Comment",
+            filters={"consultation": c.name},
+            fields=["disposition_status"],
+            ignore_permissions=True,
+        )
+        c["total_comments"] = len(comments)
+        c["pending_comments"] = sum(1 for cm in comments if (cm.disposition_status or "Pending") == "Pending")
+        c["accepted_comments"] = sum(
+            1 for cm in comments if cm.disposition_status in ("Accepted", "Partially Accepted")
+        )
+        c["rejected_comments"] = sum(
+            1 for cm in comments if cm.disposition_status in ("Rejected", "Noted")
+        )
+    return consultations
+
+
+@frappe.whitelist()
+def committee_save_consultation(
+    name: str | None = None,
+    title: str | None = None,
+    status: str | None = None,
+    consultation_start: str | None = None,
+    consultation_end: str | None = None,
+    description: str | None = None,
+) -> dict:
+    _require_committee_access()
+    if name:
+        doc = frappe.get_doc("Bye-Law Consultation", name)
+    else:
+        if not title:
+            frappe.throw(_("Title is required."), frappe.ValidationError)
+        doc = frappe.new_doc("Bye-Law Consultation")
+
+    if title is not None:
+        doc.title = title
+    if status is not None:
+        doc.status = status
+    if consultation_start is not None:
+        doc.consultation_start = consultation_start or None
+    if consultation_end is not None:
+        doc.consultation_end = consultation_end or None
+
+    doc.save(ignore_permissions=True)
+    return {
+        "name": doc.name,
+        "title": doc.title,
+        "status": doc.status,
+        "consultation_start": str(doc.consultation_start) if doc.consultation_start else None,
+        "consultation_end": str(doc.consultation_end) if doc.consultation_end else None,
+    }
+
+
+@frappe.whitelist()
+def committee_get_clauses(consultation: str) -> list[dict]:
+    _require_committee_access()
+    clauses = frappe.get_all(
+        "Bye-Law Clause",
+        filters={"consultation": consultation},
+        fields=[
+            "name",
+            "sequence_no",
+            "chapter",
+            "clause_number",
+            "clause_title",
+            "is_readonly",
+            "readonly_reason",
+            "disposition_outcome AS clause_disposition",
+        ],
+        order_by="sequence_no asc, creation asc",
+        ignore_permissions=True,
+    )
+    comment_counts = {}
+    for cm in frappe.get_all(
+        "Bye-Law Clause Comment",
+        filters={"consultation": consultation},
+        fields=["clause"],
+        ignore_permissions=True,
+    ):
+        comment_counts[cm.clause] = comment_counts.get(cm.clause, 0) + 1
+
+    for cl in clauses:
+        cl["comment_count"] = comment_counts.get(cl.name, 0)
+    return clauses
+
+
+@frappe.whitelist()
+def committee_update_clause(
+    clause_name: str,
+    is_readonly: int | None = None,
+    readonly_reason: str | None = None,
+    clause_disposition: str | None = None,
+) -> dict:
+    _require_committee_access()
+    doc = frappe.get_doc("Bye-Law Clause", clause_name)
+    if is_readonly is not None:
+        doc.is_readonly = frappe.utils.cint(is_readonly)
+    if readonly_reason is not None:
+        doc.readonly_reason = readonly_reason
+    if clause_disposition is not None:
+        doc.disposition_outcome = clause_disposition
+    doc.save(ignore_permissions=True)
+    return {
+        "name": doc.name,
+        "is_readonly": doc.is_readonly,
+        "readonly_reason": doc.readonly_reason,
+        "clause_disposition": doc.disposition_outcome,
+    }
+
+
+@frappe.whitelist()
+def committee_import_clauses_upload(
+    consultation: str,
+    filename: str,
+    file_content_b64: str,
+    lock_unmodified: int = 1,
+    replace_existing: int = 0,
+    readonly_clauses: str | None = None,
+    readonly_reason: str | None = None,
+) -> dict:
+    import base64
+    from society_erp.byelaws_importer import import_clauses_from_file
+
+    _require_committee_access()
+    if "," in file_content_b64:
+        file_content_b64 = file_content_b64.split(",", 1)[1]
+    raw_bytes = base64.b64decode(file_content_b64)
+
+    file_doc = frappe.get_doc(
+        {
+            "doctype": "File",
+            "file_name": filename,
+            "attached_to_doctype": "Bye-Law Consultation",
+            "attached_to_name": consultation,
+            "is_private": 1,
+            "content": raw_bytes,
+        }
+    ).insert(ignore_permissions=True)
+
+    return import_clauses_from_file(
+        consultation=consultation,
+        file_url=file_doc.file_url,
+        replace_existing=replace_existing,
+        readonly_clauses=readonly_clauses,
+        readonly_reason=readonly_reason,
+        lock_unmodified=lock_unmodified,
+    )
+
+
+@frappe.whitelist()
+def committee_get_disposition_matrix(
+    consultation: str | None = None,
+    chapter: str | None = None,
+    comment_type: str | None = None,
+    disposition_status: str | None = None,
+    clause_disposition: str | None = None,
+) -> dict:
+    from society_erp.society_erp.report.bye_law_disposition_matrix.bye_law_disposition_matrix import (
+        get_data,
+        get_report_summary,
+    )
+
+    _require_committee_access()
+    filters = frappe._dict(
+        {
+            "consultation": consultation,
+            "chapter": chapter,
+            "comment_type": comment_type,
+            "disposition_status": disposition_status,
+            "clause_disposition": clause_disposition,
+            "only_visible": 1,
+        }
+    )
+    rows = get_data(filters)
+    summary_list = get_report_summary(rows)
+    summary = {s["label"]: s["value"] for s in summary_list}
+    return {"summary": summary, "rows": rows}
+
+
+@frappe.whitelist()
+def committee_review_comment(
+    comment_name: str,
+    disposition_status: str,
+    committee_response: str | None = None,
+    clause_disposition: str | None = None,
+) -> dict:
+    user = _require_committee_access()
+    doc = frappe.get_doc("Bye-Law Clause Comment", comment_name)
+    doc.disposition_status = disposition_status
+    if committee_response is not None:
+        doc.committee_response = committee_response
+    doc.reviewed_by = user
+    doc.reviewed_on = now_datetime()
+    doc.flags.ignore_validate = True
+    doc.save(ignore_permissions=True)
+
+    if clause_disposition:
+        clause_doc = frappe.get_doc("Bye-Law Clause", doc.clause)
+        clause_doc.disposition_outcome = clause_disposition
+        clause_doc.save(ignore_permissions=True)
+
+    return {
+        "name": doc.name,
+        "disposition_status": doc.disposition_status,
+        "committee_response": doc.committee_response,
+        "reviewed_by": doc.reviewed_by,
+        "reviewed_on": str(doc.reviewed_on),
+    }

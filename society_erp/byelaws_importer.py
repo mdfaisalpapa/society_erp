@@ -5,6 +5,7 @@ import html
 import os
 import re
 import unicodedata
+import xml.etree.ElementTree as ET
 
 import docx
 import frappe
@@ -14,6 +15,8 @@ from frappe.utils import cint
 CHAPTER_RE = re.compile(r"^(CHAPTER\s+[IVXLCDM]+)\b(.*)", re.I)
 CLAUSE_RE = re.compile(r"^(\d+[A-Z]?)\.\s+(.+)")
 TITLE_SPLIT_RE = re.compile(r"\s*(?:\.─|\.-|\.—|:-)\s*")
+W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+W_PREFIX = f"{{{W_NS}}}"
 
 
 def _split_clause_title_and_body(rest: str) -> tuple[str, str]:
@@ -34,38 +37,126 @@ def _split_clause_title_and_body(rest: str) -> tuple[str, str]:
     return title, body
 
 
-def parse_docx_clauses(file_path: str) -> list[dict]:
+def _is_run_deviated(r_elem: ET.Element) -> bool:
+    rPr = r_elem.find(f"{W_PREFIX}rPr")
+    if rPr is None:
+        return False
+    col = rPr.find(f"{W_PREFIX}color")
+    if col is not None:
+        val = (col.attrib.get(f"{W_PREFIX}val") or "").strip().lower()
+        if val not in ("", "000000", "auto"):
+            return True
+    hl = rPr.find(f"{W_PREFIX}highlight")
+    if hl is not None:
+        val = (hl.attrib.get(f"{W_PREFIX}val") or "").strip().lower()
+        if val not in ("", "none", "white"):
+            return True
+    return False
+
+
+def _extract_paragraph_info(p) -> tuple[str, str, bool]:
+    """Return (plain_text, rendered_inner_html, has_deviation) for a python-docx Paragraph."""
+    p_elem = p._p
+    plain_parts: list[str] = []
+    html_parts: list[str] = []
+    has_dev = False
+
+    for r_elem in p_elem.findall(f".//{W_PREFIX}r"):
+        t_texts = [t.text or "" for t in r_elem.findall(f"{W_PREFIX}t")]
+        raw = unicodedata.normalize("NFKC", "".join(t_texts))
+        if not raw:
+            continue
+        plain_parts.append(raw)
+        escaped = html.escape(raw)
+        if _is_run_deviated(r_elem):
+            has_dev = True
+            html_parts.append(f'<span class="byelaw-deviation">{escaped}</span>')
+        else:
+            html_parts.append(escaped)
+
+    plain = "".join(plain_parts).strip()
+    if "[" in plain and "]" in plain:
+        has_dev = True
+    inner_html = "".join(html_parts).strip()
+    return plain, inner_html, has_dev
+
+
+def _format_para_html(inner_html: str, has_dev: bool) -> str:
+    if has_dev:
+        return (
+            '<p class="byelaw-subclause-deviated">'
+            '<span class="badge badge-warning mr-1">Modified from Model</span>'
+            f"{inner_html}</p>"
+        )
+    return f'<p class="byelaw-subclause-model">{inner_html}</p>'
+
+
+def _normalize_plain(text: str) -> str:
+    return re.sub(r"\s+", " ", text or "").strip().lower()
+
+
+def parse_docx_clauses(
+    file_path: str,
+    baseline_file_path: str | None = None,
+    lock_unmodified: bool = True,
+) -> list[dict]:
+    baseline_map: dict[str, str] = {}
+    if baseline_file_path and os.path.isfile(baseline_file_path):
+        for b_row in parse_docx_clauses(baseline_file_path, baseline_file_path=None, lock_unmodified=False):
+            baseline_map[b_row["clause_number"]] = _normalize_plain(b_row.get("plain_text", ""))
+
     doc = docx.Document(file_path)
-    non_empty = [unicodedata.normalize("NFKC", p.text).strip() for p in doc.paragraphs if p.text and p.text.strip()]
+    para_items = [_extract_paragraph_info(p) for p in doc.paragraphs]
+    non_empty = [(plain, h_inner, dev) for (plain, h_inner, dev) in para_items if plain]
 
     chapter_i_indices = [
-        i for i, t in enumerate(non_empty) if re.match(r"^CHAPTER\s+I\b", t, re.I)
+        i for i, (t, _, _) in enumerate(non_empty) if re.match(r"^CHAPTER\s+I\b", t, re.I)
     ]
-    start_idx = chapter_i_indices[1] if len(chapter_i_indices) >= 2 else (chapter_i_indices[0] if chapter_i_indices else 0)
+    start_idx = (
+        chapter_i_indices[1]
+        if len(chapter_i_indices) >= 2
+        else (chapter_i_indices[0] if chapter_i_indices else 0)
+    )
 
     clauses: list[dict] = []
     current_chapter = ""
     current_clause: dict | None = None
-    body_paras: list[str] = []
+    body_paras: list[tuple[str, str, bool]] = []
 
     def flush_clause():
         nonlocal current_clause, body_paras
         if current_clause is not None:
-            current_clause["draft_text"] = "\n".join(f"<p>{html.escape(p)}</p>" for p in body_paras if p)
+            clause_has_dev = current_clause["has_deviation"] or any(dev for _, _, dev in body_paras)
+            plain_all = " ".join(pl for pl, _, _ in body_paras)
+            if baseline_map:
+                b_text = baseline_map.get(current_clause["clause_number"])
+                if b_text is None or b_text != _normalize_plain(plain_all):
+                    clause_has_dev = True
+
+            current_clause["has_deviation"] = clause_has_dev
+            current_clause["plain_text"] = plain_all
+            current_clause["draft_text"] = "\n".join(
+                _format_para_html(h_inner, dev) for _, h_inner, dev in body_paras if h_inner
+            )
+            if lock_unmodified and not clause_has_dev:
+                current_clause["is_readonly"] = 1
+                current_clause["readonly_reason"] = (
+                    "Unmodified TN Model Bye-Law (Statutory Baseline — Not Open for Consultation)"
+                )
             clauses.append(current_clause)
             current_clause = None
             body_paras = []
 
     i = start_idx
     while i < len(non_empty):
-        line = non_empty[i]
+        line, h_inner, dev = non_empty[i]
         ch_m = CHAPTER_RE.match(line)
         if ch_m:
             flush_clause()
             ch_head = ch_m.group(1).upper()
             ch_tail = ch_m.group(2).strip(" .:-─—")
             if not ch_tail and i + 1 < len(non_empty):
-                next_line = non_empty[i + 1]
+                next_line = non_empty[i + 1][0]
                 if not CLAUSE_RE.match(next_line) and not CHAPTER_RE.match(next_line):
                     ch_tail = next_line
                     i += 1
@@ -86,14 +177,15 @@ def parse_docx_clauses(file_path: str) -> list[dict]:
                 "draft_text": "",
                 "is_readonly": 0,
                 "readonly_reason": "",
+                "has_deviation": dev,
             }
             if inline_body:
-                body_paras.append(inline_body)
+                body_paras.append((inline_body, html.escape(inline_body), dev))
             i += 1
             continue
 
         if current_clause is not None:
-            body_paras.append(line)
+            body_paras.append((line, h_inner, dev))
         i += 1
 
     flush_clause()
@@ -157,9 +249,14 @@ def import_clauses_from_file(
     readonly_clauses: str | None = None,
     readonly_reason: str | None = None,
     dry_run: int = 0,
+    baseline_file_url: str | None = None,
+    lock_unmodified: int = 1,
 ) -> dict:
     if "System Manager" not in frappe.get_roles(frappe.session.user):
-        frappe.has_permission("Bye-Law Consultation", "write", consultation, throw=True)
+        from society_erp.www.resident.committee.index import check_committee_access
+        has_access, _info = check_committee_access(frappe.session.user)
+        if not has_access:
+            frappe.has_permission("Bye-Law Consultation", "write", consultation, throw=True)
 
     file_path = _resolve_file_path(file_url)
     if not file_path or not os.path.isfile(file_path):
@@ -167,7 +264,12 @@ def import_clauses_from_file(
 
     ext = os.path.splitext(file_path)[1].lower()
     if ext == ".docx":
-        rows = parse_docx_clauses(file_path)
+        baseline_path = _resolve_file_path(baseline_file_url) if baseline_file_url else None
+        rows = parse_docx_clauses(
+            file_path,
+            baseline_file_path=baseline_path,
+            lock_unmodified=bool(cint(lock_unmodified)),
+        )
     elif ext == ".csv":
         rows = parse_csv_clauses(file_path)
     else:
@@ -219,7 +321,7 @@ def import_clauses_from_file(
                 "is_readonly": cint(row["is_readonly"]),
                 "readonly_reason": row["readonly_reason"] if cint(row["is_readonly"]) else "",
             }
-        ).insert()
+        ).insert(ignore_permissions=True)
         if doc.is_readonly:
             readonly_count += 1
 
