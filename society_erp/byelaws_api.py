@@ -475,3 +475,255 @@ def committee_review_comment(
         "reviewed_by": doc.reviewed_by,
         "reviewed_on": str(doc.reviewed_on),
     }
+
+
+def _assert_consultation_closed_for_polling(consultation_doc, starts_at=None):
+    if consultation_doc.status in ("Draft", "Consultation Open"):
+        frappe.throw(
+            _("Polling cannot start while consultation is still in Draft or Consultation Open status. Close the consultation first."),
+            frappe.ValidationError,
+        )
+    if consultation_doc.consultation_end and now_datetime() < get_datetime(consultation_doc.consultation_end):
+        frappe.throw(
+            _("Polling cannot start before the consultation end time."),
+            frappe.ValidationError,
+        )
+    if starts_at and consultation_doc.consultation_end and get_datetime(starts_at) < get_datetime(consultation_doc.consultation_end):
+        frappe.throw(
+            _("Poll start time must be after the consultation end time."),
+            frappe.ValidationError,
+        )
+
+
+def _create_consensus_poll_draft(
+    title: str,
+    poll_type: str,
+    starts_at: str,
+    ends_at: str,
+    electorate_pub_doc,
+    options_spec: list[tuple[str, str]],
+    description: str | None = None,
+) -> str:
+    if electorate_pub_doc.status != "Approved" or not electorate_pub_doc.electorate_content_hash:
+        frappe.throw(
+            _("An Approved Electorate Publication with a valid content hash is required."),
+            frappe.ValidationError,
+        )
+    if not starts_at or not ends_at or get_datetime(ends_at) <= get_datetime(starts_at):
+        frappe.throw(_("Poll end time must be after start time."), frappe.ValidationError)
+
+    poll_doc = frappe.get_doc(
+        {
+            "doctype": "Consensus Poll",
+            "title": title[:140],
+            "poll_type": poll_type,
+            "status": "Draft",
+            "starts_at": starts_at,
+            "ends_at": ends_at,
+            "description": description or "",
+            "approved_publication_id": electorate_pub_doc.name,
+            "approved_publication_version": electorate_pub_doc.version or 1,
+            "approved_electorate_content_hash": electorate_pub_doc.electorate_content_hash,
+            "scope_selections": [
+                {
+                    "scope_type": "publication",
+                    "entity_ref": electorate_pub_doc.name,
+                    "inclusion": "Include",
+                }
+            ],
+        }
+    ).insert(ignore_permissions=True)
+
+    for idx, (opt_key, opt_label) in enumerate(options_spec, start=1):
+        frappe.get_doc(
+            {
+                "doctype": "Consensus Poll Option",
+                "poll": poll_doc.name,
+                "option_key": opt_key,
+                "option_label": opt_label,
+                "display_order": idx,
+                "enabled": 1,
+            }
+        ).insert(ignore_permissions=True)
+
+    return poll_doc.name
+
+
+@frappe.whitelist()
+def committee_get_polling_readiness(consultation: str) -> dict:
+    _require_committee_access()
+    doc = frappe.get_doc("Bye-Law Consultation", consultation)
+
+    consultation_closed = doc.status not in ("Draft", "Consultation Open")
+    end_time_passed = (
+        not doc.consultation_end or now_datetime() >= get_datetime(doc.consultation_end)
+    )
+
+    electorate_approved = False
+    if doc.electorate_publication:
+        pub_status = frappe.db.get_value("Electorate Publication", doc.electorate_publication, "status")
+        electorate_approved = pub_status == "Approved"
+
+    final_pdf_hashed = bool(doc.final_pdf and doc.final_pdf_sha256)
+
+    contested_clauses = frappe.get_all(
+        "Bye-Law Clause",
+        filters={"consultation": doc.name, "disposition_outcome": "Contested - Poll Required"},
+        fields=["name", "clause_number", "clause_title", "linked_consensus_poll"],
+        order_by="sequence_no asc",
+        ignore_permissions=True,
+    )
+    for cl in contested_clauses:
+        cl["poll_status"] = (
+            frappe.db.get_value("Consensus Poll", cl.linked_consensus_poll, "status")
+            if cl.linked_consensus_poll
+            else None
+        )
+
+    final_poll_status = (
+        frappe.db.get_value("Consensus Poll", doc.final_adoption_poll, "status")
+        if doc.final_adoption_poll
+        else None
+    )
+
+    approved_publications = frappe.get_all(
+        "Electorate Publication",
+        filters={"status": "Approved"},
+        fields=["name", "title", "version"],
+        order_by="creation desc",
+        ignore_permissions=True,
+    )
+    poll_types = frappe.get_all(
+        "Consensus Poll Type",
+        filters={"enabled": 1},
+        fields=["name", "label"],
+        order_by="name asc",
+        ignore_permissions=True,
+    )
+
+    consensus_enabled = False
+    if frappe.db.exists("DocType", "Voting Integration Settings"):
+        consensus_enabled = bool(frappe.utils.cint(frappe.db.get_single_value("Voting Integration Settings", "enabled")))
+
+    return {
+        "consensus_enabled": consensus_enabled,
+        "consultation_closed": consultation_closed,
+        "end_time_passed": end_time_passed,
+        "electorate_approved": electorate_approved,
+        "electorate_publication": doc.electorate_publication,
+        "final_pdf_hashed": final_pdf_hashed,
+        "final_pdf_sha256": doc.final_pdf_sha256,
+        "contested_clauses": contested_clauses,
+        "final_adoption_poll": doc.final_adoption_poll,
+        "final_poll_status": final_poll_status,
+        "approved_publications": approved_publications,
+        "poll_types": poll_types,
+    }
+
+
+@frappe.whitelist()
+def committee_save_polling_config(consultation: str, electorate_publication: str | None = None) -> dict:
+    _require_committee_access()
+    doc = frappe.get_doc("Bye-Law Consultation", consultation)
+    if electorate_publication:
+        pub_status = frappe.db.get_value("Electorate Publication", electorate_publication, "status")
+        if pub_status != "Approved":
+            frappe.throw(_("Only an Approved Electorate Publication can be linked."), frappe.ValidationError)
+    doc.electorate_publication = electorate_publication or None
+    doc.save(ignore_permissions=True)
+    return {"electorate_publication": doc.electorate_publication}
+
+
+@frappe.whitelist()
+def committee_generate_contested_clause_polls(
+    consultation: str,
+    poll_type: str,
+    starts_at: str,
+    ends_at: str,
+) -> dict:
+    _require_committee_access()
+    doc = frappe.get_doc("Bye-Law Consultation", consultation)
+    _assert_consultation_closed_for_polling(doc, starts_at=starts_at)
+
+    if not doc.electorate_publication:
+        frappe.throw(_("Please link an Approved Electorate Publication first."), frappe.ValidationError)
+    pub_doc = frappe.get_doc("Electorate Publication", doc.electorate_publication)
+
+    clauses = frappe.get_all(
+        "Bye-Law Clause",
+        filters={
+            "consultation": doc.name,
+            "disposition_outcome": "Contested - Poll Required",
+            "linked_consensus_poll": ["in", ["", None]],
+        },
+        fields=["name", "clause_number", "clause_title"],
+        order_by="sequence_no asc",
+        ignore_permissions=True,
+    )
+
+    created_polls = []
+    options_spec = [
+        ("approve_proposed", "Approve Proposed Clause"),
+        ("retain_model", "Retain TN Model / Reject"),
+        ("abstain", "Abstain"),
+    ]
+    for cl in clauses:
+        poll_title = f"{doc.title} — Clause {cl.clause_number}: {cl.clause_title}"
+        poll_name = _create_consensus_poll_draft(
+            title=poll_title,
+            poll_type=poll_type,
+            starts_at=starts_at,
+            ends_at=ends_at,
+            electorate_pub_doc=pub_doc,
+            options_spec=options_spec,
+        )
+        frappe.db.set_value("Bye-Law Clause", cl.name, "linked_consensus_poll", poll_name)
+        created_polls.append({"clause": cl.name, "poll": poll_name})
+
+    if doc.status == "Under Review":
+        doc.status = "Finalized for Voting"
+        doc.save(ignore_permissions=True)
+
+    return {"created_polls": created_polls}
+
+
+@frappe.whitelist()
+def committee_generate_final_adoption_poll(
+    consultation: str,
+    poll_type: str,
+    starts_at: str,
+    ends_at: str,
+) -> dict:
+    _require_committee_access()
+    doc = frappe.get_doc("Bye-Law Consultation", consultation)
+    _assert_consultation_closed_for_polling(doc, starts_at=starts_at)
+
+    if doc.final_adoption_poll:
+        frappe.throw(_("Final adoption poll already exists for this consultation."), frappe.ValidationError)
+    if not doc.final_pdf or not doc.final_pdf_sha256:
+        frappe.throw(_("Final PDF and its SHA-256 hash are required before generating the final adoption poll."), frappe.ValidationError)
+    if not doc.electorate_publication:
+        frappe.throw(_("Please link an Approved Electorate Publication first."), frappe.ValidationError)
+
+    pub_doc = frappe.get_doc("Electorate Publication", doc.electorate_publication)
+    sha_short = doc.final_pdf_sha256[:12]
+    poll_title = f"{doc.title} — Final Adoption (SHA-256: {sha_short})"
+    options_spec = [
+        ("approve_final", "Approve Final Bye-Laws"),
+        ("reject_final", "Reject Final Bye-Laws"),
+        ("abstain", "Abstain"),
+    ]
+    poll_name = _create_consensus_poll_draft(
+        title=poll_title,
+        poll_type=poll_type,
+        starts_at=starts_at,
+        ends_at=ends_at,
+        electorate_pub_doc=pub_doc,
+        options_spec=options_spec,
+        description=f"Final PDF SHA-256: {doc.final_pdf_sha256}",
+    )
+    doc.final_adoption_poll = poll_name
+    doc.status = "Finalized for Voting"
+    doc.save(ignore_permissions=True)
+
+    return {"poll": poll_name, "final_pdf_sha256": doc.final_pdf_sha256}

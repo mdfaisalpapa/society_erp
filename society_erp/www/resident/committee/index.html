@@ -411,6 +411,41 @@
                         </div>
                     </div>
                 </div>
+                <div class="card shadow-sm border-0 mt-3" id="bl-stage3-card">
+                    <div class="card-body">
+                        <h6 class="font-weight-bold mb-2">🗳️ Stage 3: Consensus Polling Handoff</h6>
+                        <div class="d-flex flex-wrap mb-3" id="bl-readiness-badges" style="gap: 6px;"></div>
+                        <div class="form-row align-items-end mb-2">
+                            <div class="col-md-5 mb-2">
+                                <label class="small font-weight-bold">Approved Electorate Publication</label>
+                                <select id="bl-pub-select" class="form-control form-control-sm"></select>
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <button class="btn btn-sm btn-outline-primary btn-block" id="bl-pub-save-btn">Save Link</button>
+                            </div>
+                            <div class="col-md-5 mb-2">
+                                <label class="small font-weight-bold">Consensus Poll Type</label>
+                                <select id="bl-poll-type-select" class="form-control form-control-sm"></select>
+                            </div>
+                        </div>
+                        <div class="form-row align-items-end mb-3">
+                            <div class="col-md-4 mb-2">
+                                <label class="small font-weight-bold">Poll Starts At</label>
+                                <input type="datetime-local" id="bl-poll-start" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="small font-weight-bold">Poll Ends At</label>
+                                <input type="datetime-local" id="bl-poll-end" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-4 mb-2 d-flex flex-wrap" style="gap: 6px;">
+                                <button class="btn btn-sm btn-warning" id="bl-gen-contested-btn">Generate Contested Clause Polls</button>
+                                <button class="btn btn-sm btn-primary" id="bl-gen-final-btn">Generate Final Adoption Poll</button>
+                            </div>
+                        </div>
+                        <div id="bl-stage3-hint" class="small text-muted mb-2"></div>
+                        <div id="bl-linked-polls-list" class="small"></div>
+                    </div>
+                </div>
             </div>
 
             <!-- Disposition Matrix Pane -->
@@ -478,6 +513,7 @@ frappe.ready(function () {
         $("#bl-start-input").val(c.consultation_start ? c.consultation_start.slice(0, 16).replace(" ", "T") : "");
         $("#bl-end-input").val(c.consultation_end ? c.consultation_end.slice(0, 16).replace(" ", "T") : "");
         loadClauses(name);
+        loadPollingReadiness(name);
     }
     function loadClauses(consultation) {
         if (!consultation) return;
@@ -524,6 +560,38 @@ frappe.ready(function () {
     });
     $(document).on("click", ".mx-review-btn", function () { $("#mx-rev-name").val($(this).data("name")); $("#mx-rev-status").val($(this).data("status")); $("#mx-rev-response").val($(this).data("resp")); $("#mx-review-modal").modal("show"); });
     $("#mx-rev-save").on("click", () => frappe.call({ method: "society_erp.byelaws_api.committee_review_comment", args: { comment_name: $("#mx-rev-name").val(), disposition_status: $("#mx-rev-status").val(), committee_response: $("#mx-rev-response").val(), clause_disposition: $("#mx-rev-clause-disp").val() || null }, callback() { $("#mx-review-modal").modal("hide"); loadMatrix(); } }));
+
+    function loadPollingReadiness(consultation) {
+        if (!consultation) return;
+        frappe.call({
+            method: "society_erp.byelaws_api.committee_get_polling_readiness",
+            args: { consultation },
+            callback(r) {
+                const d = r.message;
+                if (!d) return;
+                const badge = (ok, label) => `<span class="badge ${ok ? "badge-success" : "badge-secondary"} px-2 py-1">${ok ? "✓" : "✗"} ${label}</span>`;
+                $("#bl-readiness-badges").html(
+                    badge(d.consensus_enabled, "Consensus Engine Enabled") +
+                    badge(d.consultation_closed, "Consultation Closed") +
+                    badge(d.end_time_passed, "End Time Passed") +
+                    badge(d.electorate_approved, "Approved Electorate Linked") +
+                    badge(d.final_pdf_hashed, "Final PDF SHA-256 Ready")
+                );
+                $("#bl-pub-select").html(`<option value="">— Select Approved Publication —</option>` + (d.approved_publications || []).map(p => `<option value="${esc(p.name)}" ${p.name === d.electorate_publication ? "selected" : ""}>${esc(p.title)} (v${p.version})</option>`).join(""));
+                $("#bl-poll-type-select").html((d.poll_types || []).map(pt => `<option value="${esc(pt.name)}">${esc(pt.label || pt.name)}</option>`).join(""));
+                const canPoll = d.consensus_enabled && d.consultation_closed && d.end_time_passed && d.electorate_approved;
+                $("#bl-gen-contested-btn").prop("disabled", !canPoll);
+                $("#bl-gen-final-btn").prop("disabled", !(canPoll && d.final_pdf_hashed && !d.final_adoption_poll));
+                $("#bl-stage3-hint").text(canPoll ? "Ready to generate Draft Consensus Polls." : "Polling is blocked until consultation is closed, end time has passed, and an Approved Electorate Publication is linked.");
+                const items = (d.contested_clauses || []).map(cl => `<div>Clause ${esc(cl.clause_number)}: ${cl.linked_consensus_poll ? `<strong>${esc(cl.linked_consensus_poll)}</strong> (${esc(cl.poll_status || "Draft")})` : "<em>Pending Poll</em>"}</div>`);
+                if (d.final_adoption_poll) items.push(`<div>Final Adoption Poll: <strong>${esc(d.final_adoption_poll)}</strong> (${esc(d.final_poll_status || "Draft")})</div>`);
+                $("#bl-linked-polls-list").html(items.join(""));
+            }
+        });
+    }
+    $("#bl-pub-save-btn").on("click", () => frappe.call({ method: "society_erp.byelaws_api.committee_save_polling_config", args: { consultation: $("#bl-consult-select").val(), electorate_publication: $("#bl-pub-select").val() }, callback() { frappe.show_alert({ message: "Publication linked", indicator: "green" }); loadPollingReadiness($("#bl-consult-select").val()); } }));
+    $("#bl-gen-contested-btn").on("click", () => frappe.call({ method: "society_erp.byelaws_api.committee_generate_contested_clause_polls", args: { consultation: $("#bl-consult-select").val(), poll_type: $("#bl-poll-type-select").val(), starts_at: $("#bl-poll-start").val(), ends_at: $("#bl-poll-end").val() }, callback(r) { if (r.message) { frappe.show_alert({ message: `Created ${(r.message.created_polls || []).length} contested polls`, indicator: "green" }); loadPollingReadiness($("#bl-consult-select").val()); } } }));
+    $("#bl-gen-final-btn").on("click", () => frappe.call({ method: "society_erp.byelaws_api.committee_generate_final_adoption_poll", args: { consultation: $("#bl-consult-select").val(), poll_type: $("#bl-poll-type-select").val(), starts_at: $("#bl-poll-start").val(), ends_at: $("#bl-poll-end").val() }, callback(r) { if (r.message) { frappe.show_alert({ message: `Created final poll ${r.message.poll}`, indicator: "green" }); loadPollingReadiness($("#bl-consult-select").val()); } } }));
 });
 </script>
 
