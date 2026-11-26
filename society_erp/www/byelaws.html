@@ -1,0 +1,318 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_content %}
+<div class="container py-4" id="byelaws-portal" style="max-width: 960px;">
+  <div id="byelaws-root"></div>
+</div>
+
+<style>
+  .byelaw-card { border-radius: 10px; border: 1px solid #e2e8f0; }
+  .byelaw-readonly { background-color: #f8fafc; border-color: #cbd5e1; opacity: 0.92; }
+  .byelaw-comment { background: #f8fafc; border-left: 3px solid #cbd5e1; border-radius: 6px; padding: 10px 12px; }
+  .byelaw-sha-pill { font-family: monospace; font-size: 0.75rem; word-break: break-all; }
+  .filter-chip.active { background-color: #1e3c72 !important; color: #fff !important; border-color: #1e3c72 !important; }
+</style>
+
+<script>
+frappe.ready(function () {
+  const initialData = {{ initial_data_json | safe }};
+  let state = {
+    data: initialData,
+    chapter: "ALL",
+    search: "",
+    filter: "ALL"
+  };
+
+  function esc(val) {
+    return frappe.utils.escape_html(val == null ? "" : String(val));
+  }
+
+  function statusBadgeClass(status) {
+    switch (status) {
+      case "Consultation Open": return "badge-success";
+      case "Under Review": return "badge-warning";
+      case "Finalized for Voting": return "badge-primary";
+      case "Closed": return "badge-secondary";
+      default: return "badge-light border";
+    }
+  }
+
+  function render() {
+    const root = document.getElementById("byelaws-root");
+    const d = state.data;
+
+    if (!d || !d.authorized) {
+      root.innerHTML = `
+        <div class="card shadow-sm border-warning p-4 text-center">
+          <h4 class="text-warning font-weight-bold mb-2">Access Restricted</h4>
+          <p class="text-muted mb-0">${esc(d && d.message ? d.message : "Only verified residential flat owners can access Bye-Law Consultations.")}</p>
+        </div>`;
+      return;
+    }
+
+    if (!d.consultation) {
+      root.innerHTML = `
+        <div class="card shadow-sm p-4 text-center">
+          <h4 class="font-weight-bold mb-2">Bye-Law Consultations</h4>
+          <p class="text-muted mb-0">No active consultations are currently published.</p>
+        </div>`;
+      return;
+    }
+
+    const c = d.consultation;
+    const isOpen = c.status === "Consultation Open";
+    const chapters = Array.from(new Set((d.clauses || []).map(cl => cl.chapter).filter(Boolean)));
+
+    const consultationOptions = (d.consultations || []).map(item =>
+      `<option value="${esc(item.name)}" ${item.name === c.name ? "selected" : ""}>${esc(item.title)} (${esc(item.status)})</option>`
+    ).join("");
+
+    const chapterOptions = [`<option value="ALL">All Chapters</option>`]
+      .concat(chapters.map(ch => `<option value="${esc(ch)}" ${state.chapter === ch ? "selected" : ""}>${esc(ch)}</option>`))
+      .join("");
+
+    const filteredClauses = (d.clauses || []).filter(cl => {
+      if (state.chapter !== "ALL" && cl.chapter !== state.chapter) return false;
+      if (state.filter === "OPEN" && cl.is_readonly) return false;
+      if (state.filter === "READONLY" && !cl.is_readonly) return false;
+      if (state.filter === "CONTESTED" && cl.disposition_outcome !== "Contested - Poll Required") return false;
+      if (state.search) {
+        const q = state.search.toLowerCase();
+        const hay = `${cl.clause_number || ""} ${cl.clause_title || ""} ${cl.chapter || ""} ${cl.draft_text || ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const headerHtml = `
+      <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body p-3 p-md-4">
+          <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+              <h2 class="h4 font-weight-bold mb-1">${esc(c.title)}</h2>
+              <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                <span class="badge ${statusBadgeClass(c.status)} px-2 py-1">${esc(c.status)}</span>
+                ${d.flat_units && d.flat_units.length ? `<span class="badge badge-light border px-2 py-1">Flat: ${esc(d.flat_units.join(", "))}</span>` : ""}
+                ${c.consultation_start || c.consultation_end ? `<span class="text-muted small">Window: ${esc(c.consultation_start || "—")} to ${esc(c.consultation_end || "—")}</span>` : ""}
+              </div>
+            </div>
+            ${(d.consultations || []).length > 1 ? `
+              <div class="mt-2 mt-md-0">
+                <select id="consultation-select" class="form-control form-control-sm">${consultationOptions}</select>
+              </div>` : ""}
+          </div>
+
+          <div class="mt-3 d-flex flex-wrap align-items-center" style="gap: 8px;">
+            ${c.draft_pdf ? `<a href="${esc(c.draft_pdf)}" target="_blank" class="btn btn-sm btn-outline-primary">Draft PDF</a>` : ""}
+            ${c.final_pdf ? `<a href="${esc(c.final_pdf)}" target="_blank" class="btn btn-sm btn-outline-success">Final PDF</a>` : ""}
+            ${c.final_pdf_sha256 ? `<span class="badge badge-light border byelaw-sha-pill px-2 py-1">SHA-256: ${esc(c.final_pdf_sha256)}</span>` : ""}
+            ${c.final_adoption_poll ? `<a href="/vote?poll=${encodeURIComponent(c.final_adoption_poll)}" class="btn btn-sm btn-primary">Final Adoption Poll</a>` : ""}
+          </div>
+        </div>
+      </div>`;
+
+    const filterHtml = `
+      <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body p-3">
+          <div class="row g-2 align-items-center">
+            <div class="col-md-4 mb-2 mb-md-0">
+              <select id="chapter-select" class="form-control form-control-sm">${chapterOptions}</select>
+            </div>
+            <div class="col-md-4 mb-2 mb-md-0">
+              <input id="clause-search" type="text" class="form-control form-control-sm" placeholder="Search clauses..." value="${esc(state.search)}">
+            </div>
+            <div class="col-md-4 d-flex flex-wrap" style="gap: 4px;">
+              <button class="btn btn-xs btn-outline-secondary filter-chip ${state.filter === "ALL" ? "active" : ""}" data-filter="ALL">All</button>
+              <button class="btn btn-xs btn-outline-secondary filter-chip ${state.filter === "OPEN" ? "active" : ""}" data-filter="OPEN">Open for Comments</button>
+              <button class="btn btn-xs btn-outline-secondary filter-chip ${state.filter === "READONLY" ? "active" : ""}" data-filter="READONLY">Statutory Read-Only</button>
+              <button class="btn btn-xs btn-outline-secondary filter-chip ${state.filter === "CONTESTED" ? "active" : ""}" data-filter="CONTESTED">Contested</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    const clausesHtml = filteredClauses.length ? filteredClauses.map(cl => {
+      const commentsHtml = (cl.comments || []).map(cm => `
+        <div class="byelaw-comment mb-2">
+          <div class="d-flex justify-content-between align-items-center flex-wrap mb-1">
+            <div>
+              <span class="badge badge-info mr-1">${esc(cm.comment_type)}</span>
+              ${cm.flat_unit ? `<span class="badge badge-light border mr-1">${esc(cm.flat_unit)}</span>` : ""}
+              <span class="badge badge-secondary">${esc(cm.disposition_status || "Pending")}</span>
+            </div>
+            <button class="btn btn-xs ${cm.endorsed_by_me ? "btn-primary" : "btn-outline-primary"} endorse-btn" data-comment="${esc(cm.name)}" ${!isOpen ? "disabled" : ""}>
+              +1 Support (${cm.endorsement_count || 0})
+            </button>
+          </div>
+          <div class="small text-dark">${esc(cm.comment_text)}</div>
+          ${cm.proposed_wording ? `<div class="small text-muted mt-1"><strong>Proposed Wording:</strong> ${esc(cm.proposed_wording)}</div>` : ""}
+          ${cm.committee_response ? `<div class="small text-success mt-1"><strong>Committee Response:</strong> ${esc(cm.committee_response)}</div>` : ""}
+        </div>
+      `).join("");
+
+      const commentFormHtml = (!cl.is_readonly && isOpen) ? `
+        <form class="mt-3 comment-form" data-clause="${esc(cl.name)}">
+          <div class="form-row">
+            <div class="col-md-4 mb-2">
+              <select class="form-control form-control-sm comment-type">
+                <option value="Suggestion">Suggestion</option>
+                <option value="Objection">Objection</option>
+                <option value="Clarification">Clarification</option>
+                <option value="Support">Support</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-2">
+            <textarea class="form-control form-control-sm comment-text" rows="2" placeholder="Enter your comment..." required></textarea>
+          </div>
+          <div class="mb-2">
+            <textarea class="form-control form-control-sm proposed-wording" rows="2" placeholder="Proposed wording (optional)..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-sm btn-primary">Submit Comment</button>
+        </form>` : "";
+
+      return `
+        <div class="card byelaw-card mb-3 ${cl.is_readonly ? "byelaw-readonly" : ""}">
+          <div class="card-body p-3 p-md-4">
+            <div class="d-flex justify-content-between align-items-start flex-wrap mb-2">
+              <div>
+                ${cl.chapter ? `<div class="text-muted small font-weight-bold">${esc(cl.chapter)}</div>` : ""}
+                <h5 class="h6 font-weight-bold mb-0">${esc(cl.clause_number)} — ${esc(cl.clause_title)}</h5>
+              </div>
+              <div class="d-flex align-items-center" style="gap: 6px;">
+                ${cl.is_readonly ? `<span class="badge badge-secondary">🔒 Statutory Read-Only</span>` : ""}
+                ${cl.disposition_outcome ? `<span class="badge badge-light border">${esc(cl.disposition_outcome)}</span>` : ""}
+                ${cl.linked_consensus_poll ? `<a href="/vote?poll=${encodeURIComponent(cl.linked_consensus_poll)}" class="btn btn-xs btn-outline-primary">Vote on Clause Poll</a>` : ""}
+              </div>
+            </div>
+            ${cl.is_readonly && cl.readonly_reason ? `<div class="alert alert-secondary py-1 px-2 small mb-2">${esc(cl.readonly_reason)}</div>` : ""}
+            <div class="row">
+              <div class="${cl.final_text ? "col-md-6" : "col-12"} mb-2">
+                <div class="small text-muted font-weight-bold mb-1">Draft Text</div>
+                <div class="small p-2 bg-white border rounded">${cl.draft_text || "<span class=text-muted>—</span>"}</div>
+              </div>
+              ${cl.final_text ? `
+              <div class="col-md-6 mb-2">
+                <div class="small text-success font-weight-bold mb-1">Final Text</div>
+                <div class="small p-2 bg-white border border-success rounded">${cl.final_text}</div>
+              </div>` : ""}
+            </div>
+            ${!cl.is_readonly ? `
+              <div class="mt-2">
+                <div class="small font-weight-bold text-muted mb-2">Comments (${(cl.comments || []).length})</div>
+                ${commentsHtml || `<div class="small text-muted">No comments yet.</div>`}
+                ${commentFormHtml}
+              </div>` : ""}
+          </div>
+        </div>`;
+    }).join("") : `<div class="card p-4 text-center text-muted">No clauses match the current filter.</div>`;
+
+    root.innerHTML = headerHtml + filterHtml + clausesHtml;
+    bindEvents();
+  }
+
+  function bindEvents() {
+    const cSelect = document.getElementById("consultation-select");
+    if (cSelect) {
+      cSelect.addEventListener("change", function () {
+        frappe.call({
+          method: "society_erp.byelaws_api.get_consultation_data",
+          args: { consultation: this.value },
+          callback: function (r) {
+            if (r.message) {
+              state.data = r.message;
+              state.chapter = "ALL";
+              render();
+            }
+          }
+        });
+      });
+    }
+
+    const chSelect = document.getElementById("chapter-select");
+    if (chSelect) {
+      chSelect.addEventListener("change", function () {
+        state.chapter = this.value;
+        render();
+      });
+    }
+
+    const searchInput = document.getElementById("clause-search");
+    if (searchInput) {
+      searchInput.addEventListener("input", function () {
+        state.search = this.value;
+        render();
+        const el = document.getElementById("clause-search");
+        if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+      });
+    }
+
+    document.querySelectorAll(".filter-chip").forEach(btn => {
+      btn.addEventListener("click", function () {
+        state.filter = this.dataset.filter;
+        render();
+      });
+    });
+
+    document.querySelectorAll(".endorse-btn").forEach(btn => {
+      btn.addEventListener("click", function () {
+        const commentName = this.dataset.comment;
+        frappe.call({
+          method: "society_erp.byelaws_api.toggle_comment_endorsement",
+          args: { comment: commentName },
+          callback: function (r) {
+            if (r.message) {
+              (state.data.clauses || []).forEach(cl => {
+                (cl.comments || []).forEach(cm => {
+                  if (cm.name === commentName) {
+                    cm.endorsed_by_me = r.message.endorsed;
+                    cm.endorsement_count = r.message.endorsement_count;
+                  }
+                });
+              });
+              render();
+            }
+          }
+        });
+      });
+    });
+
+    document.querySelectorAll(".comment-form").forEach(form => {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        const clauseName = this.dataset.clause;
+        const commentType = this.querySelector(".comment-type").value;
+        const commentText = this.querySelector(".comment-text").value.trim();
+        const proposedWording = this.querySelector(".proposed-wording").value.trim();
+        if (!commentText) return;
+
+        frappe.call({
+          method: "society_erp.byelaws_api.submit_clause_comment",
+          args: {
+            clause: clauseName,
+            comment_type: commentType,
+            comment_text: commentText,
+            proposed_wording: proposedWording
+          },
+          callback: function (r) {
+            if (r.message) {
+              const target = (state.data.clauses || []).find(cl => cl.name === clauseName);
+              if (target) {
+                target.comments = target.comments || [];
+                target.comments.push(r.message);
+              }
+              frappe.show_alert({ message: "Comment submitted", indicator: "green" });
+              render();
+            }
+          }
+        });
+      });
+    });
+  }
+
+  render();
+});
+</script>
+{% endblock %}
