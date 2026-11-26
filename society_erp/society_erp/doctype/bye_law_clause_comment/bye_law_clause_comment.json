@@ -1,0 +1,159 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-11-26 10:35:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "consultation",
+  "clause",
+  "comment_type",
+  "comment_text",
+  "proposed_wording",
+  "submitted_by_user",
+  "flat_unit",
+  "disposition_status",
+  "committee_response",
+  "reviewed_by",
+  "reviewed_on",
+  "is_visible"
+ ],
+ "fields": [
+  {
+   "fieldname": "consultation",
+   "fieldtype": "Link",
+   "fetch_from": "clause.consultation",
+   "label": "Consultation",
+   "options": "Bye-Law Consultation",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "clause",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Clause",
+   "options": "Bye-Law Clause",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "Suggestion",
+   "fieldname": "comment_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Comment Type",
+   "options": "Suggestion\nObjection\nClarification\nSupport"
+  },
+  {
+   "fieldname": "comment_text",
+   "fieldtype": "Text",
+   "label": "Comment Text",
+   "reqd": 1
+  },
+  {
+   "fieldname": "proposed_wording",
+   "fieldtype": "Small Text",
+   "label": "Proposed Wording"
+  },
+  {
+   "fieldname": "submitted_by_user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Submitted By User",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "flat_unit",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Flat Unit",
+   "read_only": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "disposition_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Disposition Status",
+   "options": "Pending\nAccepted\nPartially Accepted\nRejected\nNoted"
+  },
+  {
+   "fieldname": "committee_response",
+   "fieldtype": "Small Text",
+   "label": "Committee Response"
+  },
+  {
+   "fieldname": "reviewed_by",
+   "fieldtype": "Link",
+   "label": "Reviewed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reviewed_on",
+   "fieldtype": "Datetime",
+   "label": "Reviewed On",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "is_visible",
+   "fieldtype": "Check",
+   "label": "Is Visible"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-26 10:35:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Bye-Law Clause Comment",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee Member",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "if_owner": 1,
+   "print": 0,
+   "read": 1,
+   "report": 0,
+   "role": "All",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

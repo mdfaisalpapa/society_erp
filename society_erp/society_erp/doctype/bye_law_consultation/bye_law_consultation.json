@@ -1,0 +1,124 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:BYELAW-{YYYY}-{####}",
+ "creation": "2026-11-26 10:35:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "status",
+  "consultation_start",
+  "consultation_end",
+  "electorate_publication",
+  "draft_pdf",
+  "final_pdf",
+  "final_pdf_sha256",
+  "final_adoption_poll"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nConsultation Open\nUnder Review\nFinalized for Voting\nClosed"
+  },
+  {
+   "fieldname": "consultation_start",
+   "fieldtype": "Datetime",
+   "label": "Consultation Start"
+  },
+  {
+   "fieldname": "consultation_end",
+   "fieldtype": "Datetime",
+   "label": "Consultation End"
+  },
+  {
+   "fieldname": "electorate_publication",
+   "fieldtype": "Link",
+   "label": "Electorate Publication",
+   "options": "Electorate Publication"
+  },
+  {
+   "fieldname": "draft_pdf",
+   "fieldtype": "Attach",
+   "label": "Draft PDF"
+  },
+  {
+   "fieldname": "final_pdf",
+   "fieldtype": "Attach",
+   "label": "Final PDF"
+  },
+  {
+   "fieldname": "final_pdf_sha256",
+   "fieldtype": "Data",
+   "label": "Final PDF SHA-256",
+   "read_only": 1
+  },
+  {
+   "fieldname": "final_adoption_poll",
+   "fieldtype": "Link",
+   "label": "Final Adoption Poll",
+   "options": "Consensus Poll"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-26 10:35:00.000000",
+ "modified_by": "Administrator",
+ "module": "Society Erp",
+ "name": "Bye-Law Consultation",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Society Committee Member",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 0,
+   "role": "All",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
