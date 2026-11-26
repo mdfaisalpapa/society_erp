@@ -4,6 +4,11 @@
 frappe.ui.form.on("Bye-Law Consultation", {
 	refresh(frm) {
 		if (!frm.is_new()) {
+			frm.add_custom_button(__("Disposition Matrix"), () => {
+				frappe.set_route("query-report", "Bye-Law Disposition Matrix", {
+					consultation: frm.doc.name,
+				});
+			});
 			frm.add_custom_button(__("Import Clauses"), () => {
 				const d = new frappe.ui.Dialog({
 					title: __("Import Clauses"),
